@@ -1,0 +1,74 @@
+import Taro, { getCurrentInstance } from '@tarojs/taro'
+import { View, Text, Image } from '@tarojs/components'
+import Shell from '../../components/Shell'
+import AppIcon from '../../components/AppIcon'
+import BrandLogo from '../../components/BrandLogo'
+import { getWorks, removeWork } from '../../utils/storage'
+
+export default function WorkDetail() {
+  const { id } = getCurrentInstance().router.params
+  const work = getWorks().find((item) => item.id === id) || getWorks()[0]
+
+  const remove = () => {
+    Taro.showModal({
+      title: '删除作品',
+      content: '确认删除这条作品记录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          removeWork(work.id)
+          Taro.showToast({ title: '已删除', icon: 'success' })
+          Taro.redirectTo({ url: '/pages/works/index' })
+        }
+      }
+    })
+  }
+
+  const retry = () => {
+    Taro.navigateTo({ url: `/pages/tool/index?id=factory-painter&prompt=${encodeURIComponent(work.prompt || '')}` })
+  }
+
+  return (
+    <Shell title='作品详情' showTab={false}>
+      <Image className='detail-image' src={work.image} mode='aspectFill' />
+      <View className='section-head'>
+        <View className='panel-brand-row section-brand-row'>
+          <BrandLogo size={42} />
+          <View className='brand-title-copy'>
+          <Text className='section-kicker'>{work.toolName}</Text>
+          <Text className='section-title'>{work.title}</Text>
+          </View>
+        </View>
+        <View className={work.status === 'failed' ? 'status failed' : 'status'}>
+          <AppIcon name={work.status === 'failed' ? 'alert' : 'badge'} size={12} />
+          <Text>{work.status === 'failed' ? '失败' : '成功'}</Text>
+        </View>
+      </View>
+
+      <View className='prompt-box'>
+        <Text>{work.prompt}</Text>
+        {work.failReason && <Text className='tool-desc'>失败原因：{work.failReason}</Text>}
+      </View>
+
+      <View className='hero-actions'>
+        <View className='primary-button' onClick={() => Taro.showToast({ title: '已模拟保存', icon: 'success' })}>
+          <AppIcon name='download' size={16} />
+          <Text>保存</Text>
+        </View>
+        <View className='ghost-button glass-button' onClick={() => Taro.showShareMenu({})}>
+          <AppIcon name='share' size={16} />
+          <Text>分享</Text>
+        </View>
+      </View>
+      <View className='hero-actions'>
+        <View className='ghost-button glass-button' onClick={retry}>
+          <AppIcon name='refresh' size={16} />
+          <Text>重新生成</Text>
+        </View>
+        <View className='danger-button transparent-button' onClick={remove}>
+          <AppIcon name='delete' size={16} />
+          <Text>删除</Text>
+        </View>
+      </View>
+    </Shell>
+  )
+}

@@ -1,0 +1,97 @@
+import { useMemo, useState } from 'react'
+import Taro from '@tarojs/taro'
+import { View, Text, Image } from '@tarojs/components'
+import Shell from '../../components/Shell'
+import AppIcon from '../../components/AppIcon'
+import BrandLogo from '../../components/BrandLogo'
+import { toolCategories } from '../../data/mock'
+import { clearFailedWorks, getWorks, isLoggedIn, requireLogin } from '../../utils/storage'
+
+export default function Works() {
+  const loggedIn = isLoggedIn()
+  const [category, setCategory] = useState('all')
+  const [works, setWorks] = useState(loggedIn ? getWorks() : [])
+
+  const categories = toolCategories.filter((item) => ['all', 'image', 'quick', 'video', 'image-video', 'text-video', 'fusion', 'comic'].includes(item.key))
+
+  const filtered = useMemo(() => {
+    if (category === 'all') return works
+    return works.filter((item) => item.category === category)
+  }, [category, works])
+
+  const clearFailed = () => {
+    Taro.showModal({
+      title: '清除失败记录',
+      content: '确认清除所有失败的生成记录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          setWorks(clearFailedWorks())
+          Taro.showToast({ title: '已清除', icon: 'success' })
+        }
+      }
+    })
+  }
+
+  if (!loggedIn) {
+    return (
+      <Shell active='works' title='我的作品'>
+        <View className='empty' onClick={() => requireLogin('/pages/works/index')}>登录后查看你的生成记录</View>
+      </Shell>
+    )
+  }
+
+  return (
+    <Shell active='works' title='我的作品'>
+      <View className='section-head'>
+        <View className='panel-brand-row section-brand-row'>
+          <BrandLogo size={42} />
+          <View className='brand-title-copy'>
+          <Text className='section-kicker'>Usage records</Text>
+          <Text className='section-title'>使用记录</Text>
+          </View>
+        </View>
+        <View className='danger-button compact transparent-button' onClick={clearFailed}>
+          <AppIcon name='delete' size={14} />
+          <Text>清除失败记录</Text>
+        </View>
+      </View>
+
+      <View className='filter-row'>
+        {categories.map((item) => (
+          <View
+            key={item.key}
+            className={category === item.key ? 'filter-chip active' : 'filter-chip'}
+            onClick={() => setCategory(item.key)}
+          >
+            {item.key === 'all' ? '全部' : item.label}
+          </View>
+        ))}
+      </View>
+
+      {filtered.length === 0 ? (
+        <View className='empty'>暂无记录</View>
+      ) : (
+        <View className='case-grid'>
+          {filtered.map((item) => (
+            <View key={item.id} className='work-card' onClick={() => Taro.navigateTo({ url: `/pages/work-detail/index?id=${item.id}` })}>
+              <Image className='work-image' src={item.image} mode='aspectFill' />
+              <View className='work-body'>
+                <Text className='work-title'>{item.title}</Text>
+                <View className='meta-row'>
+                  <View className='meta-icon-text'>
+                    <AppIcon name={item.category === 'video' ? 'video' : item.category === 'fusion' ? 'fusion' : 'image'} size={12} />
+                    <Text>{item.toolName}</Text>
+                  </View>
+                  <View className={item.status === 'failed' ? 'status failed' : 'status'}>
+                    <AppIcon name={item.status === 'failed' ? 'alert' : 'badge'} size={11} />
+                    <Text>{item.status === 'failed' ? '失败' : '成功'}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </Shell>
+  )
+}
