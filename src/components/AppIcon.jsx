@@ -16,6 +16,7 @@ const iconParts = {
   download: ['download-stem', 'download-head', 'download-tray'],
   film: ['film-body', 'film-frame', 'film-dot'],
   fusion: ['fusion-a', 'fusion-b', 'fusion-core'],
+  gallery: ['panel-a', 'panel-b', 'panel-c', 'spark'],
   headphones: ['phone-arch', 'phone-left', 'phone-right'],
   home: ['home-roof', 'home-body', 'home-door'],
   image: ['image-frame', 'image-sun', 'image-mount'],

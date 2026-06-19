@@ -2,6 +2,7 @@ export default defineAppConfig({
   pages: [
     'pages/index/index',
     'pages/create-center/index',
+    'pages/gallery/index',
     'pages/works/index',
     'pages/mine/index',
     'pages/login/index',

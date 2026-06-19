@@ -1,13 +1,30 @@
+import { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { tools } from '../../data/mock'
+import { tools as mockTools } from '../../data/mock'
+import { fetchTools } from '../../services/api'
 import { isLoggedIn } from '../../utils/storage'
 
 export default function Index() {
   const loggedIn = isLoggedIn()
+  const [tools, setTools] = useState(mockTools)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    fetchTools()
+      .then((list) => {
+        if (mounted && list.length) setTools(list)
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const openTool = (tool) => {
     Taro.navigateTo({ url: `/pages/tool/index?id=${tool.id}` })
@@ -41,7 +58,7 @@ export default function Index() {
           <Text className='section-kicker'>Factory modules</Text>
           <Text className='section-title'>创作工具</Text>
         </View>
-        <Text className='muted small'>全部使用假数据</Text>
+        <Text className='muted small'>{loading ? '同步配置中' : 'Admin 配置驱动'}</Text>
       </View>
 
       <View className='tool-grid'>

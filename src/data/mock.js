@@ -1,6 +1,7 @@
 export const tabs = [
   { key: 'home', label: '首页', icon: 'home', path: '/pages/index/index' },
   { key: 'center', label: '创作中心', icon: 'center', path: '/pages/create-center/index' },
+  { key: 'gallery', label: '广场', icon: 'gallery', path: '/pages/gallery/index' },
   { key: 'works', label: '我的作品', icon: 'book', path: '/pages/works/index' },
   { key: 'mine', label: '我的', icon: 'user', path: '/pages/mine/index' }
 ]
@@ -29,7 +30,7 @@ export const tools = [
     icon: 'wand',
     desc: '输入一句想法，生成海报、插画、场景图与风格化视觉。',
     cost: 2,
-    fields: ['prompt', 'style', 'ratio', 'count']
+    fields: ['prompt', 'style', 'ratio']
   },
   {
     id: 'quick-image',
@@ -95,7 +96,7 @@ export const tools = [
     icon: 'comic',
     desc: '生成品牌故事漫画、宣传分镜和知识型长图。',
     cost: 5,
-    fields: ['prompt', 'style', 'count']
+    fields: ['prompt', 'style']
   },
   {
     id: 'audio-video',
@@ -217,6 +218,16 @@ export const seedWorks = [
     failReason: '参考图数量不足，请至少上传 2 张图片。'
   }
 ]
+
+export const galleryWorks = seedWorks
+  .filter((item) => item.status === 'success')
+  .map((item, index) => ({
+    ...item,
+    author: { nickname: index === 0 ? 'seeFactory 用户' : '创作者' },
+    viewCount: index === 0 ? 1288 : 642,
+    likeCount: index === 0 ? 86 : 41,
+    downloadEnabled: true
+  }))
 
 export const styles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹', '极简黑白', '电商精修']
 export const ratios = ['1:1', '3:4', '9:16', '16:9']

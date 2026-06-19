@@ -1,19 +1,33 @@
+import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { cases, tools } from '../../data/mock'
-import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { fetchPromptCase, fetchTools } from '../../services/api'
+import { requireLogin } from '../../utils/storage'
 
 export default function PromptDetail() {
   const { id } = getCurrentInstance().router.params
-  const item = cases.find((entry) => entry.id === id) || cases[0]
-  const tool = tools.find((entry) => entry.id === item.toolId)
-  const loggedIn = isLoggedIn()
+  const [item, setItem] = useState(cases.find((entry) => entry.id === id) || cases[0])
+  const [toolList, setToolList] = useState(tools)
+  const tool = toolList.find((entry) => entry.id === item.toolId)
 
+  useEffect(() => {
+    let mounted = true
+    Promise.all([fetchPromptCase(id), fetchTools()])
+      .then(([detail, apiTools]) => {
+        if (!mounted) return
+        if (detail) setItem(detail)
+        if (apiTools?.length) setToolList(apiTools)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [id])
   const copyPrompt = () => {
-    if (!requireLogin(`/pages/prompt-detail/index?id=${item.id}`)) return
     Taro.setClipboardData({
       data: item.prompt,
       success: () => Taro.showToast({ title: '提示词已复制', icon: 'success' })
@@ -43,14 +57,7 @@ export default function PromptDetail() {
         {item.tags.map((tag) => <View key={tag} className='filter-chip active'>{tag}</View>)}
       </View>
 
-      {loggedIn ? (
-        <View className='prompt-box'>{item.prompt}</View>
-      ) : (
-        <View className='prompt-box locked' onClick={() => requireLogin(`/pages/prompt-detail/index?id=${item.id}`)}>
-          <AppIcon name='lock' size={16} />
-          <Text>登录后可见完整提示词</Text>
-        </View>
-      )}
+      <View className='prompt-box'>{item.prompt}</View>
 
       <View className='hero-actions'>
         <View className='primary-button' onClick={sameCreation}>

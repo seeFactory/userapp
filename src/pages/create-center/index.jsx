@@ -1,14 +1,35 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Input, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { cases, toolCategories, tools } from '../../data/mock'
+import { cases as mockCases, toolCategories as mockCategories, tools as mockTools } from '../../data/mock'
+import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 
 export default function CreateCenter() {
   const [category, setCategory] = useState('all')
   const [keyword, setKeyword] = useState('')
+  const [cases, setCases] = useState(mockCases)
+  const [toolCategories, setToolCategories] = useState(mockCategories)
+  const [tools, setTools] = useState(mockTools)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    Promise.all([fetchPromptCases({ pageSize: 30 }), fetchToolCategories(), fetchTools()])
+      .then(([caseData, categories, toolList]) => {
+        if (!mounted) return
+        if (caseData.list?.length) setCases(caseData.list)
+        if (categories?.length) setToolCategories(categories)
+        if (toolList?.length) setTools(toolList)
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const filtered = useMemo(() => {
     const word = keyword.trim().toLowerCase()
@@ -27,7 +48,7 @@ export default function CreateCenter() {
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
-          <Text className='section-kicker'>Prompt gallery</Text>
+          <Text className='section-kicker'>{loading ? 'Loading prompts' : 'Prompt gallery'}</Text>
           <Text className='section-title'>案例与提示词</Text>
           </View>
         </View>

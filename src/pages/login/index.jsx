@@ -3,7 +3,8 @@ import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { login } from '../../utils/storage'
+import { login, saveAuth } from '../../utils/storage'
+import { loginDev, loginRuntime } from '../../services/api'
 
 export default function Login() {
   const { redirect } = getCurrentInstance().router.params
@@ -21,10 +22,15 @@ export default function Login() {
       Taro.showToast({ title: '请输入账号和密码', icon: 'none' })
       return
     }
-    login()
-    Taro.showToast({ title: '登录成功', icon: 'success' })
     const target = redirect ? decodeURIComponent(redirect) : '/pages/index/index'
-    Taro.redirectTo({ url: target })
+    const remoteLogin = mode === 'account' ? loginDev(account) : loginRuntime(`wechat-${Date.now()}`)
+    remoteLogin
+      .then((data) => saveAuth(data))
+      .catch(() => login())
+      .finally(() => {
+        Taro.showToast({ title: '登录成功', icon: 'success' })
+        Taro.redirectTo({ url: target })
+      })
   }
 
   return (
@@ -33,7 +39,7 @@ export default function Login() {
       <View className='login-card'>
         <Text className='hero-kicker'>seeFactory</Text>
         <Text className='hero-title'>AI 创作工厂</Text>
-        <Text className='hero-subtitle'>登录后解锁完整提示词、同款生成、作品记录和代理中心。</Text>
+        <Text className='hero-subtitle'>登录后可提交生成、查看作品记录和进入代理中心。案例完整提示词无需登录。</Text>
 
         <View className='filter-row login-mode-row'>
           <View className={mode === 'wechat' ? 'filter-chip active' : 'filter-chip'} onClick={() => setMode('wechat')}>一键登录</View>

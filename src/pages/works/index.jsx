@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
@@ -6,11 +6,28 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { toolCategories } from '../../data/mock'
 import { clearFailedWorks, getWorks, isLoggedIn, requireLogin } from '../../utils/storage'
+import { clearFailedWorksRemote, fetchWorks } from '../../services/api'
 
 export default function Works() {
   const loggedIn = isLoggedIn()
   const [category, setCategory] = useState('all')
   const [works, setWorks] = useState(loggedIn ? getWorks() : [])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!loggedIn) return undefined
+    let mounted = true
+    setLoading(true)
+    fetchWorks({ pageSize: 50 })
+      .then((data) => {
+        if (mounted && data.list?.length) setWorks(data.list)
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoading(false))
+    return () => {
+      mounted = false
+    }
+  }, [loggedIn])
 
   const categories = toolCategories.filter((item) => ['all', 'image', 'quick', 'video', 'image-video', 'text-video', 'fusion', 'comic'].includes(item.key))
 
@@ -25,6 +42,7 @@ export default function Works() {
       content: '确认清除所有失败的生成记录吗？',
       success: (res) => {
         if (res.confirm) {
+          clearFailedWorksRemote().catch(() => {})
           setWorks(clearFailedWorks())
           Taro.showToast({ title: '已清除', icon: 'success' })
         }
@@ -46,7 +64,7 @@ export default function Works() {
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
-          <Text className='section-kicker'>Usage records</Text>
+          <Text className='section-kicker'>{loading ? 'Loading records' : 'Usage records'}</Text>
           <Text className='section-title'>使用记录</Text>
           </View>
         </View>

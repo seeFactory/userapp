@@ -1,11 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
 import { homeVideo, tabs } from '../data/mock'
+import { fetchAppConfig } from '../services/api'
 import AppIcon from './AppIcon'
 import BrandLogo from './BrandLogo'
 
 export default function Shell({ active, children, showTab = true }) {
+  const [videoUrl, setVideoUrl] = useState(homeVideo)
+
+  useEffect(() => {
+    if (active !== 'home') return undefined
+    let mounted = true
+    fetchAppConfig()
+      .then((config) => {
+        if (mounted && config?.home?.videoUrl) setVideoUrl(config.home.videoUrl)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [active])
+
   useEffect(() => {
     if (active !== 'home') return undefined
 
@@ -40,7 +56,7 @@ export default function Shell({ active, children, showTab = true }) {
     }, 700)
 
     return () => clearInterval(timer)
-  }, [active])
+  }, [active, videoUrl])
 
   const go = (tab) => {
     if (tab.key === active) return
@@ -54,7 +70,7 @@ export default function Shell({ active, children, showTab = true }) {
           <Video
             id='home-background-video'
             className='home-bg-video'
-            src={homeVideo}
+            src={videoUrl}
             autoplay
             loop
             muted

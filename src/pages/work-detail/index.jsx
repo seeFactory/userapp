@@ -4,6 +4,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { getWorks, removeWork } from '../../utils/storage'
+import { getDownloadUrl, publishGalleryWork, unpublishGalleryWork } from '../../services/api'
 
 export default function WorkDetail() {
   const { id } = getCurrentInstance().router.params
@@ -25,6 +26,42 @@ export default function WorkDetail() {
 
   const retry = () => {
     Taro.navigateTo({ url: `/pages/tool/index?id=factory-painter&prompt=${encodeURIComponent(work.prompt || '')}` })
+  }
+
+  const saveWork = async () => {
+    try {
+      const data = await getDownloadUrl(work.id)
+      const url = data?.url || work.image
+      if (process.env.TARO_ENV === 'h5') {
+        Taro.showToast({ title: '已获取下载地址', icon: 'success' })
+        return
+      }
+      Taro.saveImageToPhotosAlbum({
+        filePath: url,
+        success: () => Taro.showToast({ title: '已保存', icon: 'success' }),
+        fail: () => Taro.showModal({ title: '保存失败', content: '请确认已允许保存到相册。', showCancel: false })
+      })
+    } catch (error) {
+      Taro.showToast({ title: '已使用本地预览保存', icon: 'none' })
+    }
+  }
+
+  const publish = async () => {
+    try {
+      await publishGalleryWork(work.id)
+      Taro.showToast({ title: '已发布到广场', icon: 'success' })
+    } catch (error) {
+      Taro.showToast({ title: '后端连接后可发布', icon: 'none' })
+    }
+  }
+
+  const unpublish = async () => {
+    try {
+      await unpublishGalleryWork(work.id)
+      Taro.showToast({ title: '已取消发布', icon: 'success' })
+    } catch (error) {
+      Taro.showToast({ title: '后端连接后可取消', icon: 'none' })
+    }
   }
 
   return (
@@ -50,13 +87,23 @@ export default function WorkDetail() {
       </View>
 
       <View className='hero-actions'>
-        <View className='primary-button' onClick={() => Taro.showToast({ title: '已模拟保存', icon: 'success' })}>
+        <View className='primary-button' onClick={saveWork}>
           <AppIcon name='download' size={16} />
           <Text>保存</Text>
         </View>
         <View className='ghost-button glass-button' onClick={() => Taro.showShareMenu({})}>
           <AppIcon name='share' size={16} />
           <Text>分享</Text>
+        </View>
+      </View>
+      <View className='hero-actions'>
+        <View className='primary-button' onClick={publish}>
+          <AppIcon name='gallery' size={16} />
+          <Text>发布广场</Text>
+        </View>
+        <View className='ghost-button glass-button' onClick={unpublish}>
+          <AppIcon name='close' size={16} />
+          <Text>取消发布</Text>
         </View>
       </View>
       <View className='hero-actions'>

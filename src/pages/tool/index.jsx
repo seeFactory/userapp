@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Textarea, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { durations, models, ratios, styles, tools } from '../../data/mock'
+import { createGenerationTask, fetchTool } from '../../services/api'
 import { addWork, requireLogin } from '../../utils/storage'
 
 function firstValue(list) {
@@ -13,7 +14,7 @@ function firstValue(list) {
 
 export default function ToolPage() {
   const params = getCurrentInstance().router.params
-  const tool = tools.find((entry) => entry.id === params.id) || tools[0]
+  const [tool, setTool] = useState(tools.find((entry) => entry.id === params.id) || tools[0])
   const [prompt, setPrompt] = useState(params.prompt ? decodeURIComponent(params.prompt) : '')
   const [style, setStyle] = useState(firstValue(styles))
   const [ratio, setRatio] = useState('9:16')
@@ -22,20 +23,43 @@ export default function ToolPage() {
   const [uploaded, setUploaded] = useState(false)
   const [busy, setBusy] = useState(false)
 
+  useEffect(() => {
+    let mounted = true
+    fetchTool(params.id)
+      .then((data) => {
+        if (mounted && data) setTool(data)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [params.id])
+
   const needs = (field) => tool.fields.includes(field)
 
   const submit = () => {
+    if (busy) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
     if (!prompt.trim()) {
       Taro.showToast({ title: '请输入提示词', icon: 'none' })
       return
     }
     if ((needs('upload') || needs('multiUpload')) && !uploaded) {
-      Taro.showToast({ title: '请先添加模拟素材', icon: 'none' })
+      Taro.showToast({ title: '请先添加参考素材', icon: 'none' })
       return
     }
     setBusy(true)
-    setTimeout(() => {
+    createGenerationTask({
+      toolKey: tool.id,
+      prompt,
+      params: { style, ratio, duration, model, count: 1 }
+    })
+      .then((result) => {
+        const work = result.work
+        Taro.showToast({ title: '任务已提交', icon: 'success' })
+        Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
+      })
+      .catch(() => {
       const work = {
         id: `work-${Date.now()}`,
         title: `${tool.name}生成结果`,
@@ -53,10 +77,10 @@ export default function ToolPage() {
         model
       }
       addWork(work)
-      setBusy(false)
-      Taro.showToast({ title: '生成成功', icon: 'success' })
+      Taro.showToast({ title: '预览结果已生成', icon: 'success' })
       Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
-    }, 600)
+      })
+      .finally(() => setBusy(false))
   }
 
   return (
@@ -78,7 +102,7 @@ export default function ToolPage() {
             <Text className='input-label'>{needs('multiUpload') ? '参考素材，多图融合' : '参考素材'}</Text>
             <View className='upload-box' onClick={() => setUploaded(true)}>
               <AppIcon name={uploaded ? 'badge' : 'image'} size={18} />
-              <Text>{uploaded ? '已添加模拟素材，可继续生成' : '点击添加模拟图片素材'}</Text>
+              <Text>{uploaded ? '已添加参考素材，可继续生成' : '点击添加图片素材'}</Text>
             </View>
           </>
         )}

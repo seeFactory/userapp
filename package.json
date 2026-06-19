@@ -7,7 +7,8 @@
     "dev:h5": "taro build --type h5 --watch",
     "build:h5": "taro build --type h5",
     "dev:weapp": "taro build --type weapp --watch",
-    "build:weapp": "taro build --type weapp"
+    "build:weapp": "taro build --type weapp",
+    "preview:h5": "node scripts/preview-static.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",
