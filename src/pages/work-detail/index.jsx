@@ -4,6 +4,7 @@ import { View, Text, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { ErrorState, PageLoading } from '../../components/PageState'
 import {
   cancelGenerationTask,
   deleteWorkRemote,
@@ -123,8 +124,9 @@ export default function WorkDetail() {
   const [refreshingTask, setRefreshingTask] = useState(false)
   const [cancelingTask, setCancelingTask] = useState(false)
 
-  useEffect(() => {
+  const loadWorkDetail = () => {
     let mounted = true
+    setLoading(true)
     const loadDetail = source === 'gallery' || !isLoggedIn()
       ? fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' }))
       : fetchWork(id)
@@ -144,6 +146,11 @@ export default function WorkDetail() {
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadWorkDetail()
+    return cleanup
   }, [id, source])
 
   useEffect(() => {
@@ -307,7 +314,11 @@ export default function WorkDetail() {
   if (!work) {
     return (
       <Shell title='作品详情' showTab={false}>
-        <View className='empty'>{loading ? '正在同步作品' : error || '作品不存在'}</View>
+        {loading ? (
+          <PageLoading title='正在同步作品' description='正在读取作品结果、任务状态和保存权限。' />
+        ) : (
+          <ErrorState title='作品不可访问' description={error || '作品不存在、已删除或暂未公开。'} onRetry={loadWorkDetail} />
+        )}
         <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
           <AppIcon name='back' size={16} />
           <Text>返回</Text>

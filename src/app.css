@@ -1622,6 +1622,13 @@ taro-video-core {
   content: "";
 }
 
+.page-state.compact-state {
+  min-height: 110px;
+  gap: 7px;
+  padding: 16px 14px;
+  border-radius: 18px;
+}
+
 .page-state-icon {
   position: relative;
   display: flex;
@@ -1632,6 +1639,12 @@ taro-video-core {
   border: 1px solid rgba(92, 231, 255, 0.22);
   border-radius: 16px;
   background: rgba(92, 231, 255, 0.08);
+}
+
+.compact-state .page-state-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
 }
 
 .page-state-icon.danger {

@@ -4,6 +4,7 @@ import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import PaymentSheet from '../../components/PaymentSheet'
 import {
   createAsset,
@@ -287,22 +288,38 @@ export default function ToolPage() {
   const [uploading, setUploading] = useState(false)
   const [payment, setPayment] = useState(null)
   const [formErrors, setFormErrors] = useState({})
+  const [toolLoading, setToolLoading] = useState(true)
+  const [toolError, setToolError] = useState('')
 
-  useEffect(() => {
+  const loadTool = () => {
     let mounted = true
+    setToolLoading(true)
     fetchTool(params.id)
       .then((data) => {
-        if (!mounted || !data) return
+        if (!mounted) return
+        if (!data) {
+          setToolError('工具配置不存在或已下架，请稍后重试。')
+          return
+        }
         setTool(data)
         setStyle((current) => nextSelected(data, 'styles', defaultStyles, current))
         setRatio((current) => nextSelected(data, 'ratios', defaultRatios, current))
         setDuration((current) => nextSelected(data, 'durations', defaultDurations, current))
         setModel((current) => nextSelected(data, 'models', defaultModels, current))
+        setToolError('')
       })
-      .catch(() => {})
+      .catch((error) => {
+        if (mounted) setToolError(error.message || '工具配置暂未同步，请稍后重试。')
+      })
+      .finally(() => mounted && setToolLoading(false))
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadTool()
+    return cleanup
   }, [params.id])
 
   const needs = (field) => (tool.fields || []).includes(field)
@@ -313,6 +330,30 @@ export default function ToolPage() {
   const uploadConfig = inferUploadConfig(tool)
   const assetIds = uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
   const uploaded = assetIds.length > 0
+
+  if (toolLoading) {
+    return (
+      <Shell title='创作工具' showTab={false}>
+        <PageLoading title='正在同步工具配置' description='正在读取工具字段、模型、比例和素材规则。' />
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
+  }
+
+  if (toolError) {
+    return (
+      <Shell title='创作工具' showTab={false}>
+        <ErrorState title='工具配置加载失败' description={toolError} onRetry={loadTool} />
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
+  }
 
   const updateUploadItem = (key, patch) => {
     setUploadItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)))
@@ -549,6 +590,9 @@ export default function ToolPage() {
       </View>
 
       <View className='form-panel'>
+        {!tool.fields?.length ? (
+          <InlineNotice tone='danger'>当前工具缺少可用字段配置，请联系管理员检查工具配置。</InlineNotice>
+        ) : null}
         {(needs('upload') || needs('multiUpload')) && (
           <>
             <Text className='input-label'>{uploadConfig.label}</Text>

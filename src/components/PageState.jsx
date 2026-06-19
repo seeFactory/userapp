@@ -16,10 +16,11 @@ export function EmptyState({
   description = '当前还没有可展示的内容。',
   icon = 'center',
   actionText,
-  onAction
+  onAction,
+  compact = false
 }) {
   return (
-    <View className='page-state page-state-empty'>
+    <View className={`page-state page-state-empty${compact ? ' compact-state' : ''}`}>
       <View className='page-state-icon'>
         <AppIcon name={icon} size={22} />
       </View>
@@ -65,4 +66,3 @@ export function InlineNotice({ children, tone = 'info' }) {
     </View>
   )
 }
-

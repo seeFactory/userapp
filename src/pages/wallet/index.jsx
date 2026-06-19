@@ -4,6 +4,7 @@ import { View, Text, Input, Picker } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import {
   cancelWalletWithdrawal,
   createWalletCryptoOrder,
@@ -128,6 +129,7 @@ function ChainTokenPicker({ title, chains, value, onChange }) {
 export default function Wallet() {
   const loggedIn = isLoggedIn()
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [overview, setOverview] = useState(null)
   const [options, setOptions] = useState(defaultOptions)
   const [rechargeRoute, setRechargeRoute] = useState({ chain: '', token: '', bridgeCurrency: '' })
@@ -166,6 +168,7 @@ export default function Wallet() {
       const chains = nextOptions.chains || []
       setOverview(accountData)
       setOptions(nextOptions)
+      setLoadError('')
       setWithdrawals(withdrawalData?.list || [])
       setRechargeRoute((current) => current.chain ? current : firstRoute(chains))
       setWithdrawRoute((current) => addressData?.chain ? firstRoute(chains, addressData) : (current.chain ? current : firstRoute(chains)))
@@ -178,7 +181,11 @@ export default function Wallet() {
       setRechargeAmount((value) => value || String(nextOptions.minRechargeAmount || 10))
       setWithdrawAmount((value) => value || String(accountData?.options?.minWithdrawalAmount || 10))
     } catch (error) {
-      Taro.showToast({ title: error.message || '钱包数据加载失败', icon: 'none' })
+      const message = error.message || '钱包数据加载失败'
+      setLoadError(message)
+      if (silent) {
+        Taro.showToast({ title: message, icon: 'none' })
+      }
     } finally {
       if (!silent) setLoading(false)
     }
@@ -208,8 +215,17 @@ export default function Wallet() {
   const chainCount = useMemo(() => options.chains?.length || 0, [options.chains])
 
   if (!loggedIn) {
-    requireLogin('/pages/wallet/index')
-    return <Shell title='钱包' showTab={false}><View className='empty'>正在前往登录</View></Shell>
+    return (
+      <Shell title='钱包' showTab={false}>
+        <EmptyState
+          title='请先登录'
+          description='登录后可管理钱包充值、提现地址和提现记录。'
+          icon='lock'
+          actionText='前往登录'
+          onAction={() => requireLogin('/pages/wallet/index')}
+        />
+      </Shell>
+    )
   }
 
   const createOrder = async () => {
@@ -376,10 +392,9 @@ export default function Wallet() {
       </View>
 
       {loading ? (
-        <View className='loading-state'>
-          <View className='loading-ring' />
-          <Text>正在同步钱包数据</Text>
-        </View>
+        <PageLoading title='正在同步钱包数据' description='正在读取余额、充值配置和提现记录。' />
+      ) : loadError && !overview ? (
+        <ErrorState title='钱包加载失败' description={loadError} onRetry={() => loadWallet(false)} />
       ) : (
         <>
           <View className='form-panel wallet-panel'>
@@ -392,6 +407,12 @@ export default function Wallet() {
                 {options.acquiringConfigured ? '已开放' : '未配置'}
               </Text>
             </View>
+            {loadError ? (
+              <InlineNotice tone='danger'>{loadError}</InlineNotice>
+            ) : null}
+            {!options.acquiringConfigured ? (
+              <InlineNotice tone='danger'>{options.unavailableReason || '充值暂不可用，请联系管理员配置收单地址。'}</InlineNotice>
+            ) : null}
             <Text className='input-label'>充值金额</Text>
             <Input
               className='text-input amount-input'
@@ -517,7 +538,12 @@ export default function Wallet() {
                 ))}
               </View>
             ) : (
-              <View className='empty compact-empty'>暂无提现记录</View>
+              <EmptyState
+                compact
+                title='暂无提现记录'
+                description='提交提现申请后会在这里显示审核和打款状态。'
+                icon='wallet'
+              />
             )}
           </View>
         </>
