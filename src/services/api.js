@@ -4,6 +4,9 @@ import { withInvitePayload } from '../platform/invite'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
+const GOOGLE_CLIENT_ID = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
+const X_REDIRECT_URI = process.env.SEEFACTORY_X_REDIRECT_URI || ''
+const DEV_LOGIN_ENABLED = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 let refreshPromise = null
 
 function token() {
@@ -65,6 +68,14 @@ export function getClientRuntime() {
   if (process.env.TARO_ENV === 'tt') return 'douyin-miniapp'
   if (process.env.TARO_ENV === 'qq') return 'qq-miniapp'
   return 'h5-google'
+}
+
+export function getFrontendLoginConfig() {
+  return {
+    googleClientId: GOOGLE_CLIENT_ID,
+    xRedirectUri: X_REDIRECT_URI,
+    devLoginEnabled: DEV_LOGIN_ENABLED
+  }
 }
 
 async function send(path, options = {}) {
@@ -240,6 +251,14 @@ export async function copyPromptCase(id) {
 
 export async function usePromptCase(id) {
   return request(`/prompt-cases/${id}/use`, { method: 'POST' })
+}
+
+export async function createXAuthorizeUrl(params) {
+  const query = new URLSearchParams({
+    codeChallenge: params.codeChallenge
+  })
+  if (params.redirectUri) query.set('redirectUri', params.redirectUri)
+  return request(`/auth/h5/x/authorize-url?${query.toString()}`, { noAuth: true })
 }
 
 export async function fetchWorks(params = {}) {

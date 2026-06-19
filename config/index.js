@@ -1,6 +1,9 @@
 const { defineConfig } = require('@tarojs/cli')
 
 const apiBase = process.env.SEEFACTORY_API_BASE || 'http://127.0.0.1:10087/api/v1'
+const googleClientId = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
+const xRedirectUri = process.env.SEEFACTORY_X_REDIRECT_URI || ''
+const devLoginEnabled = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 
 module.exports = defineConfig({
   projectName: 'seeFactory',
@@ -26,7 +29,10 @@ module.exports = defineConfig({
   },
   alias: {},
   defineConstants: {
-    'process.env.SEEFACTORY_API_BASE': JSON.stringify(apiBase)
+    'process.env.SEEFACTORY_API_BASE': JSON.stringify(apiBase),
+    'process.env.SEEFACTORY_GOOGLE_CLIENT_ID': JSON.stringify(googleClientId),
+    'process.env.SEEFACTORY_X_REDIRECT_URI': JSON.stringify(xRedirectUri),
+    'process.env.SEEFACTORY_DEV_LOGIN_ENABLED': JSON.stringify(devLoginEnabled ? 'true' : 'false')
   },
   copy: {
     patterns: [

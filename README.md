@@ -82,6 +82,16 @@ $env:SEEFACTORY_API_BASE="https://api.example.com/api/v1"; pnpm build:h5
 
 未设置时默认使用本地后端地址 `http://127.0.0.1:10087/api/v1`。本地可复制 `.env.example` 作为部署配置参考，但当前构建以进程环境变量为准。
 
+登录相关编译变量：
+
+```bash
+SEEFACTORY_GOOGLE_CLIENT_ID=your-google-client-id
+SEEFACTORY_X_REDIRECT_URI=https://h5.example.com/#/pages/login/index
+SEEFACTORY_DEV_LOGIN_ENABLED=false
+```
+
+`SEEFACTORY_DEV_LOGIN_ENABLED` 默认关闭。只有后端同时开启 `ALLOW_DEV_LOGIN=true` 时，开发账号入口才可完成登录。
+
 ## 目录结构
 
 ```text
@@ -176,6 +186,9 @@ app/
 ### 登录 `pages/login/index`
 
 - 根据当前运行环境识别 H5、TMA、微信小程序、支付宝小程序、抖音小程序、QQ 小程序。
+- Telegram Mini App 会加载 Telegram WebApp SDK，并在应用启动时调用 `ready`、`expand` 和视口同步。
+- H5 展示 Google 与 X 登录入口；Google 使用 Google Identity Services，X 使用后端授权 URL 与 PKCE。
+- 开发账号入口必须通过 `SEEFACTORY_DEV_LOGIN_ENABLED=true` 显式开启。
 - 登录完成后保存 access token、refresh token 和用户资料。
 - access token 失效时由 `src/services/api.js` 自动尝试 refresh，失败后跳转登录页。
 
