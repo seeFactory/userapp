@@ -4,6 +4,7 @@ const LOGIN_KEY = 'seeFactoryLoggedIn'
 const TOKEN_KEY = 'seeFactoryToken'
 const REFRESH_TOKEN_KEY = 'seeFactoryRefreshToken'
 const USER_KEY = 'seeFactoryUser'
+const AGREEMENT_PREFIX = 'seeFactoryAgreement'
 
 export function isLoggedIn() {
   return Taro.getStorageSync(LOGIN_KEY) === '1'
@@ -30,6 +31,21 @@ export function getRefreshToken() {
 
 export function getCurrentUser() {
   return Taro.getStorageSync(USER_KEY) || null
+}
+
+function currentUserKey() {
+  const user = getCurrentUser() || {}
+  return user.id || user._id || user.providerUserId || 'current'
+}
+
+export function hasAcceptedAgreement(type, version) {
+  if (!type || !version) return false
+  return Taro.getStorageSync(`${AGREEMENT_PREFIX}:${currentUserKey()}:${type}:${version}`) === '1'
+}
+
+export function acceptAgreement(type, version) {
+  if (!type || !version) return
+  Taro.setStorageSync(`${AGREEMENT_PREFIX}:${currentUserKey()}:${type}:${version}`, '1')
 }
 
 export function logout() {

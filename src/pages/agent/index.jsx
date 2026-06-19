@@ -5,8 +5,8 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
-import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats } from '../../services/api'
-import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats, fetchAgreement } from '../../services/api'
+import { acceptAgreement, hasAcceptedAgreement, isLoggedIn, requireLogin } from '../../utils/storage'
 
 const defaultStats = {
   invitedUsers: 0,
@@ -35,7 +35,37 @@ export default function Agent() {
   const [commissions, setCommissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [agreementError, setAgreementError] = useState('')
+  const [agreementDeclined, setAgreementDeclined] = useState(false)
   const loggedIn = isLoggedIn()
+
+  const ensureAgentAgreement = async () => {
+    setAgreementError('')
+    setAgreementDeclined(false)
+    Taro.showLoading({ title: '加载协议' })
+    try {
+      const agreement = await fetchAgreement('agent')
+      Taro.hideLoading()
+      const version = agreement.version || agreement.id || agreement.updatedAt
+      if (hasAcceptedAgreement('agent', version)) return true
+      const result = await Taro.showModal({
+        title: agreement.title || '代理推广协议',
+        content: agreement.contentMarkdown || '代理推广协议正文待后台发布，请确认后继续访问代理中心。',
+        cancelText: '暂不进入',
+        confirmText: '同意并进入'
+      })
+      if (result.confirm) {
+        acceptAgreement('agent', version)
+        return true
+      }
+      setAgreementDeclined(true)
+      return false
+    } catch (error) {
+      Taro.hideLoading()
+      setAgreementError(error.message || '代理推广协议加载失败')
+      return false
+    }
+  }
 
   const loadAgent = () => {
     let mounted = true
@@ -67,8 +97,21 @@ export default function Agent() {
 
   useEffect(() => {
     if (!loggedIn) return undefined
-    const cleanup = loadAgent()
-    return cleanup
+    let cleanup
+    let mounted = true
+    setLoading(true)
+    ensureAgentAgreement().then((accepted) => {
+      if (!mounted) return
+      if (!accepted) {
+        setLoading(false)
+        return
+      }
+      cleanup = loadAgent()
+    })
+    return () => {
+      mounted = false
+      cleanup?.()
+    }
   }, [loggedIn])
 
   if (!loggedIn) {
@@ -113,7 +156,35 @@ export default function Agent() {
       </View>
 
       {loading ? (
-        <PageLoading title='正在同步代理数据' description='正在读取代理身份、邀请码和佣金统计。' />
+        <PageLoading title='正在同步代理数据' description='正在确认代理推广协议并读取代理身份、邀请码和佣金统计。' />
+      ) : agreementError ? (
+        <ErrorState title='代理协议加载失败' description={agreementError} onRetry={() => {
+          setLoading(true)
+          ensureAgentAgreement().then((accepted) => {
+            if (!accepted) {
+              setLoading(false)
+              return
+            }
+            loadAgent()
+          })
+        }} />
+      ) : agreementDeclined ? (
+        <EmptyState
+          title='请先确认代理推广协议'
+          description='确认代理推广协议后，可继续查看代理身份、邀请码和佣金统计。'
+          icon='book'
+          actionText='查看并确认'
+          onAction={() => {
+            setLoading(true)
+            ensureAgentAgreement().then((accepted) => {
+              if (!accepted) {
+                setLoading(false)
+                return
+              }
+              loadAgent()
+            })
+          }}
+        />
       ) : error && !profile ? (
         <ErrorState title='代理数据加载失败' description={error} onRetry={loadAgent} />
       ) : (
