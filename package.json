@@ -2,6 +2,7 @@
   "name": "seefactory-miniapp",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.13.1",
   "description": "seeFactory mini program prototype built with React and Taro.",
   "scripts": {
     "dev:h5": "taro build --type h5 --watch",

@@ -24,13 +24,13 @@ seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5
 ## 快速开始
 
 ```bash
-npm install
+pnpm install
 ```
 
 启动 H5 开发预览：
 
 ```bash
-npm run dev:h5
+pnpm dev:h5
 ```
 
 默认 H5 地址：
@@ -42,13 +42,13 @@ http://127.0.0.1:10086/#/pages/index/index
 构建 H5：
 
 ```bash
-npm run build:h5
+pnpm build:h5
 ```
 
 构建微信小程序：
 
 ```bash
-npm run build:weapp
+pnpm build:weapp
 ```
 
 构建产物输出到 `dist/`，该目录不纳入 git 版本管理。
@@ -92,7 +92,7 @@ app/
 |   |-- app.jsx               # 应用入口
 |   `-- index.html            # H5 HTML 模板与 favicon
 |-- package.json
-|-- package-lock.json
+|-- pnpm-lock.yaml
 |-- project.config.json       # 微信开发者工具项目配置
 `-- README.md
 ```
@@ -189,19 +189,19 @@ app/
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm run dev:h5` | 启动 H5 watch 预览 |
-| `npm run build:h5` | 构建 H5 产物 |
-| `npm run dev:weapp` | 启动微信小程序 watch 构建 |
-| `npm run build:weapp` | 构建微信小程序产物 |
-| `npm run preview:h5` | 预览 H5 静态构建产物 |
+| `pnpm dev:h5` | 启动 H5 watch 预览 |
+| `pnpm build:h5` | 构建 H5 产物 |
+| `pnpm dev:weapp` | 启动微信小程序 watch 构建 |
+| `pnpm build:weapp` | 构建微信小程序产物 |
+| `pnpm preview:h5` | 预览 H5 静态构建产物 |
 
 ## 验收建议
 
 提交前建议至少执行：
 
 ```bash
-npm run build:h5
-npm run build:weapp
+pnpm build:h5
+pnpm build:weapp
 ```
 
 移动端视觉建议使用 iPhone 14 尺寸检查：
