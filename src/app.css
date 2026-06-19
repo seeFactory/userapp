@@ -1966,6 +1966,12 @@ taro-video-core {
   line-height: 1.45;
 }
 
+.modal-note.danger-note {
+  border-color: rgba(251, 113, 133, 0.24);
+  color: #fecdd3;
+  background: rgba(127, 29, 29, 0.2);
+}
+
 .qr-card {
   display: flex;
   flex-direction: column;

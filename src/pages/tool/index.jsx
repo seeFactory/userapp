@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import PaymentSheet from '../../components/PaymentSheet'
+import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import {
   createAsset,
   createCryptoOrder,
@@ -17,6 +18,7 @@ import {
   fetchPaymentOrder,
   fetchTelegramStarsOrder,
   fetchTool,
+  fetchWalletRechargeOptions,
   getClientRuntime,
   getUploadToken
 } from '../../services/api'
@@ -376,6 +378,35 @@ export default function ToolPage() {
     setUploadItems((prev) => prev.filter((item) => item.key !== key))
   }
 
+  const updatePaymentCryptoRoute = (route) => {
+    setPayment((current) => current ? { ...current, cryptoRoute: route } : current)
+  }
+
+  const createPaymentCryptoOrder = async (route) => {
+    if (!payment?.order?.id || payment.cryptoCreating) return
+    setPayment((current) => current ? { ...current, cryptoCreating: true } : current)
+    Taro.showLoading({ title: '创建 Crypto 订单' })
+    try {
+      const cryptoOrder = await createCryptoOrder({
+        paymentOrderId: payment.order.id,
+        chainName: route.chain,
+        token: route.token
+      })
+      setPayment((current) => current ? {
+        ...current,
+        cryptoOrder,
+        cryptoOrderRequired: false,
+        cryptoCreating: false
+      } : current)
+      Taro.showToast({ title: '打币订单已创建', icon: 'success' })
+    } catch (error) {
+      setPayment((current) => current ? { ...current, cryptoCreating: false } : current)
+      Taro.showToast({ title: error.message || 'Crypto 订单创建失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+    }
+  }
+
   const chooseUpload = async () => {
     if (uploading) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
@@ -476,14 +507,16 @@ export default function ToolPage() {
       } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
         nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
-        nextPayment.cryptoOrder = await createCryptoOrder({
-          paymentOrderId: order.id,
-          chainName: 'TRON',
-          token: 'USDT'
-        })
+        const cryptoOptions = await fetchWalletRechargeOptions()
+        nextPayment.cryptoOrderRequired = true
+        nextPayment.cryptoOptions = cryptoOptions
+        nextPayment.cryptoRoute = firstCryptoRoute(cryptoOptions.chains || [])
       }
       setPayment(nextPayment)
-      Taro.showToast({ title: '请完成支付后刷新状态', icon: 'none' })
+      Taro.showToast({
+        title: nextPayment.cryptoOrderRequired ? '请选择支付链并创建订单' : '请完成支付后刷新状态',
+        icon: 'none'
+      })
     } catch (error) {
       Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
     } finally {
@@ -746,6 +779,8 @@ export default function ToolPage() {
         payment={payment}
         onClose={() => setPayment(null)}
         onRefresh={refreshPayment}
+        onCryptoRouteChange={updatePaymentCryptoRoute}
+        onCreateCryptoOrder={createPaymentCryptoOrder}
       />
     </Shell>
   )

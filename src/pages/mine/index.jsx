@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import CustomerModal from '../../components/CustomerModal'
 import PaymentSheet from '../../components/PaymentSheet'
+import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import {
   createCryptoOrder,
   createPlatformPaymentOrder,
@@ -18,6 +19,7 @@ import {
   fetchRechargeSettings,
   fetchTelegramStarsOrder,
   fetchWalletAccount,
+  fetchWalletRechargeOptions,
   getClientRuntime,
   logoutRemote
 } from '../../services/api'
@@ -111,6 +113,35 @@ export default function Mine() {
     requireLogin('/pages/wallet/index')
   }
 
+  const updateRechargeCryptoRoute = (route) => {
+    setRechargePayment((current) => current ? { ...current, cryptoRoute: route } : current)
+  }
+
+  const createRechargeCryptoOrder = async (route) => {
+    if (!rechargePayment?.order?.id || rechargePayment.cryptoCreating) return
+    setRechargePayment((current) => current ? { ...current, cryptoCreating: true } : current)
+    Taro.showLoading({ title: '创建 Crypto 订单' })
+    try {
+      const cryptoOrder = await createCryptoOrder({
+        paymentOrderId: rechargePayment.order.id,
+        chainName: route.chain,
+        token: route.token
+      })
+      setRechargePayment((current) => current ? {
+        ...current,
+        cryptoOrder,
+        cryptoOrderRequired: false,
+        cryptoCreating: false
+      } : current)
+      Taro.showToast({ title: '打币订单已创建', icon: 'success' })
+    } catch (error) {
+      setRechargePayment((current) => current ? { ...current, cryptoCreating: false } : current)
+      Taro.showToast({ title: error.message || 'Crypto 订单创建失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+    }
+  }
+
   const reloadBalance = async () => {
     const { creditData, walletData, rechargeData } = await loadAccount()
     setBalance(creditData?.balance ?? null)
@@ -148,14 +179,16 @@ export default function Mine() {
       } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
         nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
-        nextPayment.cryptoOrder = await createCryptoOrder({
-          paymentOrderId: order.id,
-          chainName: 'TRON',
-          token: 'USDT'
-        })
+        const cryptoOptions = await fetchWalletRechargeOptions()
+        nextPayment.cryptoOrderRequired = true
+        nextPayment.cryptoOptions = cryptoOptions
+        nextPayment.cryptoRoute = firstCryptoRoute(cryptoOptions.chains || [])
       }
       setRechargePayment(nextPayment)
-      Taro.showToast({ title: '请完成支付后刷新状态', icon: 'none' })
+      Taro.showToast({
+        title: nextPayment.cryptoOrderRequired ? '请选择支付链并创建订单' : '请完成支付后刷新状态',
+        icon: 'none'
+      })
     } catch (error) {
       Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
     } finally {
@@ -317,6 +350,8 @@ export default function Mine() {
         payment={rechargePayment}
         onClose={() => setRechargePayment(null)}
         onRefresh={refreshRechargePayment}
+        onCryptoRouteChange={updateRechargeCryptoRoute}
+        onCreateCryptoOrder={createRechargeCryptoOrder}
       />
     </Shell>
   )

@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
 import AppIcon from './AppIcon'
+import CryptoRoutePicker from './CryptoRoutePicker'
 
 function formatMoney(cents = 0) {
   return `¥${(Number(cents || 0) / 100).toFixed(2)}`
@@ -103,21 +104,46 @@ function invokeTelegramStarsPayment(stars, onRefresh) {
   }
 }
 
-export default function PaymentSheet({ open, title = '支付订单', payment, onClose, onRefresh }) {
+export default function PaymentSheet({
+  open,
+  title = '支付订单',
+  payment,
+  onClose,
+  onRefresh,
+  onCryptoRouteChange,
+  onCreateCryptoOrder
+}) {
   if (!open || !payment) return null
   const order = payment.order || {}
   const crypto = payment.cryptoOrder
   const stars = payment.starsOrder
   const platformPayment = payment.platformPayment
+  const needsCryptoOrder = payment.cryptoOrderRequired && !crypto
   const status = order.status || crypto?.status || stars?.status
   const cryptoAddress = crypto?.depositAddress || crypto?.bridgeDepositAddress || crypto?.bridgeReceiveAddress
-  const primaryAction = platformPayment
+  const cryptoOptions = payment.cryptoOptions || {}
+  const primaryAction = needsCryptoOrder
+    ? () => {
+        if (payment.cryptoCreating) return
+        if (!cryptoOptions.acquiringConfigured) {
+          Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 收单暂未配置', icon: 'none' })
+          return
+        }
+        if (!payment.cryptoRoute?.chain || !payment.cryptoRoute?.token) {
+          Taro.showToast({ title: '请选择支付链和支付代币', icon: 'none' })
+          return
+        }
+        onCreateCryptoOrder?.(payment.cryptoRoute)
+      }
+    : platformPayment
     ? () => invokePlatformPayment(platformPayment)
     : stars
       ? () => invokeTelegramStarsPayment(stars, onRefresh)
       : onRefresh
-  const primaryIcon = platformPayment || stars ? 'agent' : 'refresh'
-  const primaryText = platformPayment ? '立即支付' : stars ? '打开 Stars 支付' : '刷新状态'
+  const primaryIcon = needsCryptoOrder ? 'wallet' : platformPayment || stars ? 'agent' : 'refresh'
+  const primaryText = needsCryptoOrder
+    ? payment.cryptoCreating ? '创建中...' : '创建 Crypto 订单'
+    : platformPayment ? '立即支付' : stars ? '打开 Stars 支付' : '刷新状态'
 
   return (
     <View className='modal-mask'>
@@ -149,6 +175,23 @@ export default function PaymentSheet({ open, title = '支付订单', payment, on
               <Text>{cryptoAddress || '收款地址生成中'}</Text>
               <AppIcon name='copy' size={14} />
             </View>
+          </View>
+        )}
+
+        {needsCryptoOrder && (
+          <View className='payment-info'>
+            <CryptoRoutePicker
+              title='选择支付链与代币'
+              chains={cryptoOptions.chains || []}
+              value={payment.cryptoRoute || {}}
+              onChange={onCryptoRouteChange}
+              disabled={payment.cryptoCreating}
+            />
+            <Text className={cryptoOptions.acquiringConfigured ? 'modal-note' : 'modal-note danger-note'}>
+              {cryptoOptions.acquiringConfigured
+                ? '创建订单后会展示打币地址、应付数量和过期时间。'
+                : cryptoOptions.unavailableReason || '后台尚未配置可用的 Crypto 收单地址。'}
+            </Text>
           </View>
         )}
 

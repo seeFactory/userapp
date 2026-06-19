@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Input, Picker } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
+import CryptoRoutePicker, { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import {
   cancelWalletWithdrawal,
   createWalletCryptoOrder,
@@ -69,63 +70,6 @@ function statusClass(status) {
   return 'status'
 }
 
-function firstRoute(chains, preferred = {}) {
-  const selectedChain = chains.find((item) => item.chain === preferred.chain) || chains[0]
-  const selectedToken = selectedChain?.tokens?.find((item) => item.token === preferred.token) || selectedChain?.tokens?.[0]
-  return {
-    chain: selectedChain?.chain || '',
-    token: selectedToken?.token || '',
-    bridgeCurrency: selectedToken?.bridgeCurrency || ''
-  }
-}
-
-function ChainTokenPicker({ title, chains, value, onChange }) {
-  const selectedChain = chains.find((item) => item.chain === value.chain) || chains[0]
-  const tokens = selectedChain?.tokens || []
-  const selectedToken = tokens.find((item) => item.token === value.token) || tokens[0]
-  const chainIndex = Math.max(0, chains.findIndex((item) => item.chain === selectedChain?.chain))
-  const tokenIndex = Math.max(0, tokens.findIndex((item) => item.token === selectedToken?.token))
-
-  const updateChain = (event) => {
-    const nextChain = chains[Number(event.detail.value)] || chains[0]
-    const nextToken = nextChain?.tokens?.[0]
-    onChange({
-      chain: nextChain?.chain || '',
-      token: nextToken?.token || '',
-      bridgeCurrency: nextToken?.bridgeCurrency || ''
-    })
-  }
-
-  const updateToken = (event) => {
-    const nextToken = tokens[Number(event.detail.value)] || tokens[0]
-    onChange({
-      chain: selectedChain?.chain || '',
-      token: nextToken?.token || '',
-      bridgeCurrency: nextToken?.bridgeCurrency || ''
-    })
-  }
-
-  return (
-    <View className='wallet-picker-block'>
-      <Text className='input-label'>{title}</Text>
-      <View className='wallet-select-grid'>
-        <Picker mode='selector' range={chains.map((item) => `${item.label} · ${item.network}`)} value={chainIndex} onChange={updateChain}>
-          <View className='select-field'>
-            <Text>{selectedChain ? `${selectedChain.label}` : '暂无支付链'}</Text>
-            <Text className='select-sub'>{selectedChain?.network || '--'}</Text>
-          </View>
-        </Picker>
-        <Picker mode='selector' range={tokens.map((item) => `${item.token} · ${item.bridgeCurrency}`)} value={tokenIndex} onChange={updateToken}>
-          <View className='select-field'>
-            <Text>{selectedToken?.token || '暂无代币'}</Text>
-            <Text className='select-sub'>{selectedToken?.bridgeCurrency || '--'}</Text>
-          </View>
-        </Picker>
-      </View>
-    </View>
-  )
-}
-
 export default function Wallet() {
   const loggedIn = isLoggedIn()
   const [loading, setLoading] = useState(true)
@@ -170,8 +114,8 @@ export default function Wallet() {
       setOptions(nextOptions)
       setLoadError('')
       setWithdrawals(withdrawalData?.list || [])
-      setRechargeRoute((current) => current.chain ? current : firstRoute(chains))
-      setWithdrawRoute((current) => addressData?.chain ? firstRoute(chains, addressData) : (current.chain ? current : firstRoute(chains)))
+      setRechargeRoute((current) => current.chain ? current : firstCryptoRoute(chains))
+      setWithdrawRoute((current) => addressData?.chain ? firstCryptoRoute(chains, addressData) : (current.chain ? current : firstCryptoRoute(chains)))
       if (addressData?.address) {
         setAddressForm({
           address: addressData.address,
@@ -422,7 +366,7 @@ export default function Wallet() {
               onInput={(event) => setRechargeAmount(event.detail.value)}
             />
             <Text className='wallet-hint'>当前钱包以 {currency} 记账，打币金额以订单页展示为准。</Text>
-            <ChainTokenPicker
+            <CryptoRoutePicker
               title='支付链与代币'
               chains={options.chains || []}
               value={rechargeRoute}
@@ -473,7 +417,7 @@ export default function Wallet() {
                 <Text className='section-title'>提现管理</Text>
               </View>
             </View>
-            <ChainTokenPicker
+            <CryptoRoutePicker
               title='提现链与代币'
               chains={options.chains || []}
               value={withdrawRoute}
