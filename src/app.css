@@ -1584,6 +1584,117 @@ taro-video-core {
   text-align: center;
 }
 
+.page-state {
+  position: relative;
+  display: flex;
+  min-height: 156px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 12px 0;
+  padding: 22px 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 22px;
+  color: #e2e8f0;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(92, 231, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 86% 72%, rgba(255, 53, 181, 0.12), transparent 34%),
+    linear-gradient(157deg, rgba(255, 255, 255, 0.075), rgba(7, 13, 28, 0.5) 36%, rgba(3, 6, 14, 0.9) 100%),
+    rgba(8, 11, 22, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 16px 34px rgba(0, 0, 0, 0.28);
+  text-align: center;
+  -webkit-backdrop-filter: blur(12px) saturate(1.12);
+  backdrop-filter: blur(12px) saturate(1.12);
+}
+
+.page-state::before {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(243, 214, 166, 0.18), transparent 35%, rgba(92, 231, 255, 0.14)) top / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 44%) top / 100% 46% no-repeat;
+  content: "";
+}
+
+.page-state-icon {
+  position: relative;
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(92, 231, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(92, 231, 255, 0.08);
+}
+
+.page-state-icon.danger {
+  border-color: rgba(255, 86, 137, 0.28);
+  background: rgba(255, 86, 137, 0.1);
+}
+
+.page-state-title,
+.page-state-desc,
+.state-action {
+  position: relative;
+}
+
+.page-state-title {
+  display: block;
+  max-width: 100%;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.page-state-desc {
+  display: block;
+  max-width: 286px;
+  color: #9fb1c8;
+  font-size: 12px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.state-action {
+  min-width: 128px;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.inline-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(92, 231, 255, 0.16);
+  border-radius: 16px;
+  color: #a5f3fc;
+  background: rgba(8, 13, 28, 0.56);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.inline-notice.danger {
+  border-color: rgba(255, 86, 137, 0.22);
+  color: #fecdd3;
+  background: rgba(76, 12, 35, 0.28);
+}
+
+.inline-notice text {
+  flex: 1;
+  min-width: 0;
+}
+
 .loading-state,
 .inline-note {
   display: flex;

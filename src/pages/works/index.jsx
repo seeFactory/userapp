@@ -4,6 +4,7 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 import { clearFailedWorksRemote, fetchToolCategories, fetchWorks } from '../../services/api'
 
@@ -30,9 +31,9 @@ export default function Works() {
   const [works, setWorks] = useState([])
   const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!loggedIn) return undefined
+  const loadWorks = () => {
     let mounted = true
     setLoading(true)
     Promise.all([fetchWorks({ pageSize: 50 }), fetchToolCategories()])
@@ -40,12 +41,21 @@ export default function Works() {
         if (!mounted) return
         setWorks(data.list || [])
         if (categoryList?.length) setCategories(categoryList)
+        setError('')
       })
-      .catch(() => {})
+      .catch(() => {
+        if (mounted) setError('作品记录暂未同步，请稍后重试。')
+      })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    if (!loggedIn) return undefined
+    const cleanup = loadWorks()
+    return cleanup
   }, [loggedIn])
 
   const filtered = useMemo(() => {
@@ -57,11 +67,18 @@ export default function Works() {
     Taro.showModal({
       title: '清除失败记录',
       content: '确认清除所有失败的生成记录吗？',
-      success: (res) => {
+      success: async (res) => {
         if (res.confirm) {
-          clearFailedWorksRemote().catch(() => {})
-          setWorks((prev) => prev.filter((item) => item.status !== 'failed'))
-          Taro.showToast({ title: '已清除', icon: 'success' })
+          Taro.showLoading({ title: '清除中' })
+          try {
+            await clearFailedWorksRemote()
+            setWorks((prev) => prev.filter((item) => item.status !== 'failed'))
+            Taro.showToast({ title: '已清除', icon: 'success' })
+          } catch (err) {
+            Taro.showToast({ title: err?.message || '清除失败，请重试', icon: 'none' })
+          } finally {
+            Taro.hideLoading()
+          }
         }
       }
     })
@@ -70,7 +87,13 @@ export default function Works() {
   if (!loggedIn) {
     return (
       <Shell active='works' title='我的作品'>
-        <View className='empty' onClick={() => requireLogin('/pages/works/index')}>登录后查看你的生成记录</View>
+        <EmptyState
+          title='请先登录'
+          description='登录后可查看生成记录、失败任务和已发布作品。'
+          icon='lock'
+          actionText='前往登录'
+          onAction={() => requireLogin('/pages/works/index')}
+        />
       </Shell>
     )
   }
@@ -103,8 +126,14 @@ export default function Works() {
         ))}
       </View>
 
-      {filtered.length === 0 ? (
-        <View className='empty'>暂无记录</View>
+      {error && works.length ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
+
+      {loading ? (
+        <PageLoading title='正在同步作品记录' description='正在读取你的生成任务、作品状态和分类。' />
+      ) : error && !works.length ? (
+        <ErrorState title='作品记录加载失败' description={error} onRetry={loadWorks} />
+      ) : filtered.length === 0 ? (
+        <EmptyState title='暂无记录' description='完成一次生成后，作品会出现在这里。' icon='image' />
       ) : (
         <View className='case-grid'>
           {filtered.map((item) => (

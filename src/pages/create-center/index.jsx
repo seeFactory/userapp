@@ -4,6 +4,7 @@ import { View, Text, Input, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 
 export default function CreateCenter() {
@@ -13,21 +14,31 @@ export default function CreateCenter() {
   const [toolCategories, setToolCategories] = useState([{ key: 'all', label: '全部产品' }])
   const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadCenter = () => {
     let mounted = true
+    setLoading(true)
     Promise.all([fetchPromptCases({ pageSize: 30 }), fetchToolCategories(), fetchTools()])
       .then(([caseData, categories, toolList]) => {
         if (!mounted) return
         setCases(caseData.list || [])
         if (categories?.length) setToolCategories(categories)
         setTools(toolList || [])
+        setError('')
       })
-      .catch(() => {})
+      .catch(() => {
+        if (mounted) setError('案例与提示词暂未同步，请稍后重试。')
+      })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadCenter()
+    return cleanup
   }, [])
 
   const filtered = useMemo(() => {
@@ -81,8 +92,12 @@ export default function CreateCenter() {
         </View>
       </View>
 
-      {filtered.length === 0 ? (
-        <View className='empty'>暂无匹配案例</View>
+      {loading ? (
+        <PageLoading title='正在加载提示词案例' description='正在同步案例、工具分类和同款创作配置。' />
+      ) : error ? (
+        <ErrorState title='案例加载失败' description={error} onRetry={loadCenter} />
+      ) : filtered.length === 0 ? (
+        <EmptyState title='暂无匹配案例' description={keyword.trim() ? '换个关键词或分类再试试。' : '请在管理后台发布至少一个公开案例。'} icon='book' />
       ) : (
         <View className='case-grid'>
           {filtered.map((item) => (

@@ -4,6 +4,7 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
 
 export default function Gallery() {
@@ -13,7 +14,7 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadGallery = () => {
     let mounted = true
     setLoading(true)
     Promise.all([fetchGalleryWorks({ pageSize: 24 }), fetchToolCategories()])
@@ -31,6 +32,11 @@ export default function Gallery() {
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadGallery()
+    return cleanup
   }, [])
 
   const filtered = useMemo(() => {
@@ -65,15 +71,14 @@ export default function Gallery() {
         ))}
       </View>
 
-      {error && <View className='inline-note'>{error}</View>}
+      {error && works.length ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
 
       {loading ? (
-        <View className='loading-state'>
-          <View className='loading-ring' />
-          <Text>正在加载广场作品</Text>
-        </View>
+        <PageLoading title='正在加载广场作品' description='正在同步公开作品、精选内容和分类。' />
+      ) : error && !works.length ? (
+        <ErrorState title='广场加载失败' description={error} onRetry={loadGallery} />
       ) : filtered.length === 0 ? (
-        <View className='empty'>暂无公开作品</View>
+        <EmptyState title='暂无公开作品' description='当前筛选下还没有公开发布的作品。' icon='gallery' />
       ) : (
         <>
           {featured && (

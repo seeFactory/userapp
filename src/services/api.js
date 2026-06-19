@@ -90,7 +90,8 @@ async function send(path, options = {}) {
     url: `${API_BASE}${path}`,
     method: options.method || 'GET',
     data: options.data,
-    header
+    header,
+    timeout: options.timeout || 15000
   })
 }
 

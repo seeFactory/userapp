@@ -4,6 +4,7 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { fetchTools } from '../../services/api'
 import { isLoggedIn } from '../../utils/storage'
 
@@ -13,8 +14,9 @@ export default function Index() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadTools = () => {
     let mounted = true
+    setLoading(true)
     fetchTools()
       .then((list) => {
         if (!mounted) return
@@ -28,6 +30,11 @@ export default function Index() {
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadTools()
+    return cleanup
   }, [])
 
   const openTool = (tool) => {
@@ -65,24 +72,30 @@ export default function Index() {
         <Text className='muted small'>{loading ? '同步配置中' : 'Admin 配置驱动'}</Text>
       </View>
 
-      <View className='tool-grid'>
-        {tools.length ? tools.map((tool) => (
-          <View
-            key={tool.id}
-            className={tool.featured ? 'tool-card featured' : 'tool-card'}
-            onClick={() => openTool(tool)}
-          >
-            <Text className='tool-chip'>{tool.label}</Text>
-            <View className='tool-icon'>
-              <AppIcon name={tool.icon} size={20} />
+      {loading ? (
+        <PageLoading title='正在同步工具配置' description='正在读取后台配置的创作工具。' />
+      ) : error ? (
+        <ErrorState title='工具配置加载失败' description={error} onRetry={loadTools} />
+      ) : tools.length ? (
+        <View className='tool-grid'>
+          {tools.map((tool) => (
+            <View
+              key={tool.id}
+              className={tool.featured ? 'tool-card featured' : 'tool-card'}
+              onClick={() => openTool(tool)}
+            >
+              <Text className='tool-chip'>{tool.label}</Text>
+              <View className='tool-icon'>
+                <AppIcon name={tool.icon} size={20} />
+              </View>
+              <Text className='tool-name'>{tool.name}</Text>
+              <Text className='tool-desc'>{tool.desc}</Text>
             </View>
-            <Text className='tool-name'>{tool.name}</Text>
-            <Text className='tool-desc'>{tool.desc}</Text>
-          </View>
-        )) : (
-          <View className='empty'>{loading ? '正在同步工具配置' : error || '暂无可用工具'}</View>
-        )}
-      </View>
+          ))}
+        </View>
+      ) : (
+        <EmptyState title='暂无可用工具' description='请在管理后台启用至少一个创作工具。' icon='wand' />
+      )}
     </Shell>
   )
 }
