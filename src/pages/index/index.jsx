@@ -41,7 +41,7 @@ export default function Index() {
           <View className='hero-orbit-icon'>
             <BrandLogo size={42} />
           </View>
-          <Text className='hero-kicker'>seeFactory AI creation plant</Text>
+          <Text className='hero-kicker'>seeFactory 智能创作工厂</Text>
         </View>
         <Text className='hero-title'>Hi，{loggedIn ? '创作者' : '游客'}</Text>
         <Text className='hero-subtitle'>用 AI 启动你的视觉工厂，从图片、视频到品牌漫画都在一个深色控制台里完成。</Text>
@@ -59,7 +59,7 @@ export default function Index() {
 
       <View className='section-head'>
         <View>
-          <Text className='section-kicker'>Factory modules</Text>
+          <Text className='section-kicker'>工厂模块</Text>
           <Text className='section-title'>创作工具</Text>
         </View>
         <Text className='muted small'>{loading ? '同步配置中' : 'Admin 配置驱动'}</Text>

@@ -354,7 +354,7 @@ export default function Wallet() {
         <View className='panel-brand-row'>
           <BrandLogo size={52} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>Wallet</Text>
+            <Text className='section-kicker'>钱包</Text>
             <Text className='section-title'>平台钱包</Text>
           </View>
         </View>
@@ -385,7 +385,7 @@ export default function Wallet() {
           <View className='form-panel wallet-panel'>
             <View className='section-head slim'>
               <View>
-                <Text className='section-kicker'>Recharge</Text>
+                <Text className='section-kicker'>充值</Text>
                 <Text className='section-title'>钱包充值</Text>
               </View>
               <Text className={options.acquiringConfigured ? 'status success' : 'status failed'}>
@@ -448,7 +448,7 @@ export default function Wallet() {
           <View className='form-panel wallet-panel'>
             <View className='section-head slim'>
               <View>
-                <Text className='section-kicker'>Withdrawal</Text>
+                <Text className='section-kicker'>提现</Text>
                 <Text className='section-title'>提现管理</Text>
               </View>
             </View>
@@ -465,7 +465,7 @@ export default function Wallet() {
               placeholder='填写链上收款地址'
               onInput={(event) => setAddressForm({ ...addressForm, address: event.detail.value })}
             />
-            <Text className='input-label'>Memo / Tag</Text>
+            <Text className='input-label'>备注 / 标签</Text>
             <Input
               className='text-input'
               value={addressForm.memo}
@@ -493,7 +493,7 @@ export default function Wallet() {
           <View className='panel wallet-panel'>
             <View className='section-head slim'>
               <View>
-                <Text className='section-kicker'>Records</Text>
+                <Text className='section-kicker'>记录</Text>
                 <Text className='section-title'>提现记录</Text>
               </View>
             </View>

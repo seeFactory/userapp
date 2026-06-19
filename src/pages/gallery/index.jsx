@@ -46,7 +46,7 @@ export default function Gallery() {
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={46} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>Public gallery</Text>
+            <Text className='section-kicker'>公开广场</Text>
             <Text className='section-title'>作品广场</Text>
           </View>
         </View>

@@ -83,7 +83,7 @@ export default function Mine() {
         <View className='panel-brand-row'>
           <BrandLogo size={54} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>Account</Text>
+            <Text className='section-kicker'>账户中心</Text>
             <Text className='section-title'>{loggedIn ? (currentUser?.nickname || 'seeFactory 创作者') : '未登录'}</Text>
           </View>
         </View>
@@ -115,7 +115,7 @@ export default function Mine() {
 
       <View className='section-head'>
         <View>
-          <Text className='section-kicker'>Service</Text>
+          <Text className='section-kicker'>服务支持</Text>
           <Text className='section-title'>服务入口</Text>
         </View>
       </View>

@@ -49,7 +49,7 @@ export default function CreateCenter() {
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
-          <Text className='section-kicker'>{loading ? 'Loading prompts' : 'Prompt gallery'}</Text>
+          <Text className='section-kicker'>{loading ? '正在加载提示词' : '提示词案例'}</Text>
           <Text className='section-title'>案例与提示词</Text>
           </View>
         </View>

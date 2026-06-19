@@ -87,7 +87,7 @@ export default function Agent() {
         <View className='panel-brand-row'>
           <BrandLogo size={50} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>Partner console</Text>
+            <Text className='section-kicker'>代理控制台</Text>
             <Text className='section-title'>{isAgent ? '推广关系面板' : '人工开通代理'}</Text>
           </View>
         </View>
@@ -151,7 +151,7 @@ export default function Agent() {
           <View className='panel'>
             <View className='section-head slim'>
               <View>
-                <Text className='section-kicker'>Commission records</Text>
+                <Text className='section-kicker'>佣金记录</Text>
                 <Text className='section-title'>佣金流水</Text>
               </View>
             </View>
