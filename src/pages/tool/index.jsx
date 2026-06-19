@@ -5,7 +5,6 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import PaymentSheet from '../../components/PaymentSheet'
-import { durations, models, ratios, styles, tools } from '../../data/mock'
 import {
   createAsset,
   createCryptoOrder,
@@ -21,18 +20,45 @@ import {
 } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
 
+const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
+const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
+const defaultDurations = ['5 秒', '8 秒', '12 秒']
+const defaultModels = ['seeFactory Core', 'Sora 风格', 'Veo 风格']
+
 function firstValue(list) {
   return list[0]
 }
 
+function fallbackTool(id) {
+  return {
+    id: id || 'factory-painter',
+    name: 'AI 创作工具',
+    label: '工具',
+    desc: '正在同步 Admin 配置的工具参数。',
+    cost: 0,
+    fields: ['prompt', 'style', 'ratio', 'model'],
+    options: {}
+  }
+}
+
+function optionList(tool, key, fallback) {
+  const list = tool?.options?.[key]
+  return Array.isArray(list) && list.length ? list : fallback
+}
+
+function nextSelected(tool, key, fallback, current) {
+  const list = optionList(tool, key, fallback)
+  return list.includes(current) ? current : firstValue(list)
+}
+
 export default function ToolPage() {
   const params = getCurrentInstance().router.params
-  const [tool, setTool] = useState(tools.find((entry) => entry.id === params.id) || tools[0])
+  const [tool, setTool] = useState(fallbackTool(params.id))
   const [prompt, setPrompt] = useState(params.prompt ? decodeURIComponent(params.prompt) : '')
-  const [style, setStyle] = useState(firstValue(styles))
+  const [style, setStyle] = useState(firstValue(defaultStyles))
   const [ratio, setRatio] = useState('9:16')
-  const [duration, setDuration] = useState(firstValue(durations))
-  const [model, setModel] = useState(firstValue(models))
+  const [duration, setDuration] = useState(firstValue(defaultDurations))
+  const [model, setModel] = useState(firstValue(defaultModels))
   const [uploaded, setUploaded] = useState(false)
   const [assetIds, setAssetIds] = useState([])
   const [busy, setBusy] = useState(false)
@@ -43,7 +69,12 @@ export default function ToolPage() {
     let mounted = true
     fetchTool(params.id)
       .then((data) => {
-        if (mounted && data) setTool(data)
+        if (!mounted || !data) return
+        setTool(data)
+        setStyle((current) => nextSelected(data, 'styles', defaultStyles, current))
+        setRatio((current) => nextSelected(data, 'ratios', defaultRatios, current))
+        setDuration((current) => nextSelected(data, 'durations', defaultDurations, current))
+        setModel((current) => nextSelected(data, 'models', defaultModels, current))
       })
       .catch(() => {})
     return () => {
@@ -51,7 +82,11 @@ export default function ToolPage() {
     }
   }, [params.id])
 
-  const needs = (field) => tool.fields.includes(field)
+  const needs = (field) => (tool.fields || []).includes(field)
+  const styleOptions = optionList(tool, 'styles', defaultStyles)
+  const ratioOptions = optionList(tool, 'ratios', defaultRatios)
+  const durationOptions = optionList(tool, 'durations', defaultDurations)
+  const modelOptions = optionList(tool, 'models', defaultModels)
 
   const chooseUpload = async () => {
     if (uploading) return
@@ -224,7 +259,7 @@ export default function ToolPage() {
           <>
             <Text className='input-label'>风格</Text>
             <View className='option-row'>
-              {styles.map((item) => (
+              {styleOptions.map((item) => (
                 <View key={item} className={style === item ? 'option-chip active' : 'option-chip'} onClick={() => setStyle(item)}>
                   {item}
                 </View>
@@ -237,7 +272,7 @@ export default function ToolPage() {
           <>
             <Text className='input-label'>画面比例</Text>
             <View className='option-row'>
-              {ratios.map((item) => (
+              {ratioOptions.map((item) => (
                 <View key={item} className={ratio === item ? 'option-chip active' : 'option-chip'} onClick={() => setRatio(item)}>
                   {item}
                 </View>
@@ -250,7 +285,7 @@ export default function ToolPage() {
           <>
             <Text className='input-label'>视频时长</Text>
             <View className='option-row'>
-              {durations.map((item) => (
+              {durationOptions.map((item) => (
                 <View key={item} className={duration === item ? 'option-chip active' : 'option-chip'} onClick={() => setDuration(item)}>
                   {item}
                 </View>
@@ -263,7 +298,7 @@ export default function ToolPage() {
           <>
             <Text className='input-label'>模型</Text>
             <View className='option-row'>
-              {models.map((item) => (
+              {modelOptions.map((item) => (
                 <View key={item} className={model === item ? 'option-chip active' : 'option-chip'} onClick={() => setModel(item)}>
                   {item}
                 </View>

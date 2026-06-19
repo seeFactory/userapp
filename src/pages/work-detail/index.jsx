@@ -4,7 +4,6 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { getWorks, removeWork } from '../../utils/storage'
 import {
   deleteWorkRemote,
   fetchGenerationTask,
@@ -46,16 +45,21 @@ function mergeTask(work, task) {
 
 export default function WorkDetail() {
   const { id } = getCurrentInstance().router.params
-  const [work, setWork] = useState(getWorks().find((item) => item.id === id) || getWorks()[0])
+  const [work, setWork] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
     fetchWork(id)
       .then((data) => {
-        if (mounted && data) setWork(data)
+        if (!mounted) return
+        setWork(data || null)
+        setError('')
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (mounted) setError(err.message || '作品不存在或暂不可访问')
+      })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
@@ -87,7 +91,6 @@ export default function WorkDetail() {
           try {
             await deleteWorkRemote(work.id)
           } catch (error) {
-            removeWork(work.id)
           }
           Taro.showToast({ title: '已删除', icon: 'success' })
           Taro.redirectTo({ url: '/pages/works/index' })
@@ -148,7 +151,19 @@ export default function WorkDetail() {
     }
   }
 
-  const image = work?.image || work?.coverUrl || work?.resultUrls?.[0] || 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'
+  if (!work) {
+    return (
+      <Shell title='作品详情' showTab={false}>
+        <View className='empty'>{loading ? '正在同步作品' : error || '作品不存在'}</View>
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
+  }
+
+  const image = work.image || work.coverUrl || work.resultUrls?.[0] || ''
   const pending = ['queued', 'processing'].includes(work?.status)
   const failed = ['failed', 'canceled'].includes(work?.status)
 

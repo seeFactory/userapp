@@ -4,22 +4,26 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { tools as mockTools } from '../../data/mock'
 import { fetchTools } from '../../services/api'
 import { isLoggedIn } from '../../utils/storage'
 
 export default function Index() {
   const loggedIn = isLoggedIn()
-  const [tools, setTools] = useState(mockTools)
+  const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
     fetchTools()
       .then((list) => {
-        if (mounted && list.length) setTools(list)
+        if (!mounted) return
+        setTools(list || [])
+        setError('')
       })
-      .catch(() => {})
+      .catch(() => {
+        if (mounted) setError('工具配置暂未同步，请稍后刷新。')
+      })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
@@ -42,7 +46,7 @@ export default function Index() {
         <Text className='hero-title'>Hi，{loggedIn ? '创作者' : '游客'}</Text>
         <Text className='hero-subtitle'>用 AI 启动你的视觉工厂，从图片、视频到品牌漫画都在一个深色控制台里完成。</Text>
         <View className='hero-actions'>
-          <View className='primary-button' onClick={() => Taro.navigateTo({ url: '/pages/tool/index?id=factory-painter' })}>
+          <View className='primary-button' onClick={() => Taro.navigateTo({ url: `/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}` })}>
             <AppIcon name='wand' size={16} />
             <Text>开始创作</Text>
           </View>
@@ -62,7 +66,7 @@ export default function Index() {
       </View>
 
       <View className='tool-grid'>
-        {tools.map((tool) => (
+        {tools.length ? tools.map((tool) => (
           <View
             key={tool.id}
             className={tool.featured ? 'tool-card featured' : 'tool-card'}
@@ -75,7 +79,9 @@ export default function Index() {
             <Text className='tool-name'>{tool.name}</Text>
             <Text className='tool-desc'>{tool.desc}</Text>
           </View>
-        ))}
+        )) : (
+          <View className='empty'>{loading ? '正在同步工具配置' : error || '暂无可用工具'}</View>
+        )}
       </View>
     </Shell>
   )

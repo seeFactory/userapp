@@ -4,9 +4,8 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { toolCategories } from '../../data/mock'
-import { clearFailedWorks, getWorks, isLoggedIn, requireLogin } from '../../utils/storage'
-import { clearFailedWorksRemote, fetchWorks } from '../../services/api'
+import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { clearFailedWorksRemote, fetchToolCategories, fetchWorks } from '../../services/api'
 
 function statusLabel(status) {
   const map = {
@@ -28,16 +27,19 @@ function statusIcon(status) {
 export default function Works() {
   const loggedIn = isLoggedIn()
   const [category, setCategory] = useState('all')
-  const [works, setWorks] = useState(loggedIn ? getWorks() : [])
+  const [works, setWorks] = useState([])
+  const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!loggedIn) return undefined
     let mounted = true
     setLoading(true)
-    fetchWorks({ pageSize: 50 })
-      .then((data) => {
-        if (mounted && data.list?.length) setWorks(data.list)
+    Promise.all([fetchWorks({ pageSize: 50 }), fetchToolCategories()])
+      .then(([data, categoryList]) => {
+        if (!mounted) return
+        setWorks(data.list || [])
+        if (categoryList?.length) setCategories(categoryList)
       })
       .catch(() => {})
       .finally(() => mounted && setLoading(false))
@@ -46,11 +48,9 @@ export default function Works() {
     }
   }, [loggedIn])
 
-  const categories = toolCategories.filter((item) => ['all', 'image', 'quick', 'video', 'image-video', 'text-video', 'fusion', 'comic'].includes(item.key))
-
   const filtered = useMemo(() => {
     if (category === 'all') return works
-    return works.filter((item) => item.category === category)
+    return works.filter((item) => item.category === category || item.toolKey === category)
   }, [category, works])
 
   const clearFailed = () => {
@@ -60,7 +60,7 @@ export default function Works() {
       success: (res) => {
         if (res.confirm) {
           clearFailedWorksRemote().catch(() => {})
-          setWorks(clearFailedWorks())
+          setWorks((prev) => prev.filter((item) => item.status !== 'failed'))
           Taro.showToast({ title: '已清除', icon: 'success' })
         }
       }

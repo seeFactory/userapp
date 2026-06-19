@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
-import { homeVideo, tabs } from '../data/mock'
 import { fetchAppConfig } from '../services/api'
 import { captureInviteFromParams } from '../platform/invite'
 import AppIcon from './AppIcon'
 import BrandLogo from './BrandLogo'
 
+const fallbackHomeVideo = 'https://videos.pexels.com/video-files/16998437/16998437-hd_1080_1920_30fps.mp4'
+const tabs = [
+  { key: 'home', label: '首页', icon: 'home', path: '/pages/index/index' },
+  { key: 'center', label: '创作', icon: 'center', path: '/pages/create-center/index' },
+  { key: 'gallery', label: '广场', icon: 'gallery', path: '/pages/gallery/index' },
+  { key: 'works', label: '作品', icon: 'works', path: '/pages/works/index' },
+  { key: 'mine', label: '我的', icon: 'user', path: '/pages/mine/index' }
+]
+
 export default function Shell({ active, children, showTab = true }) {
-  const [videoUrl, setVideoUrl] = useState(homeVideo)
+  const [videoUrl, setVideoUrl] = useState(fallbackHomeVideo)
 
   useEffect(() => {
     captureInviteFromParams(getCurrentInstance()?.router?.params || {})

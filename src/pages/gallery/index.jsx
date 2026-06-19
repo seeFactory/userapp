@@ -4,35 +4,34 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { galleryWorks, toolCategories } from '../../data/mock'
-import { fetchGalleryWorks } from '../../services/api'
+import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
 
 export default function Gallery() {
   const [category, setCategory] = useState('all')
-  const [works, setWorks] = useState(galleryWorks)
+  const [works, setWorks] = useState([])
+  const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    fetchGalleryWorks({ pageSize: 24 })
-      .then((data) => {
+    Promise.all([fetchGalleryWorks({ pageSize: 24 }), fetchToolCategories()])
+      .then(([data, categoryList]) => {
         if (!mounted) return
-        if (data.list?.length) setWorks(data.list)
+        setWorks(data.list || [])
+        if (categoryList?.length) setCategories(categoryList)
         setError('')
       })
       .catch(() => {
         if (!mounted) return
-        setError('当前展示本地精选，后端连接后自动同步。')
+        setError('广场作品暂未同步，请稍后刷新。')
       })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
     }
   }, [])
-
-  const categories = toolCategories.filter((item) => ['all', 'image', 'video', 'fusion', 'comic', 'quick'].includes(item.key))
 
   const filtered = useMemo(() => {
     if (category === 'all') return works

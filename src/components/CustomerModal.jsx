@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { Image, View, Text } from '@tarojs/components'
-import { customer } from '../data/mock'
 import AppIcon from './AppIcon'
 import { fetchCustomerService } from '../services/api'
 
+const defaultCustomer = {
+  wechat: 'seeFactory-service',
+  telegram: '@seeFactorySupport',
+  email: 'support@seefactory.ai',
+  qrCodeUrl: '',
+  note: '添加客服获取创作建议和充值说明'
+}
+
 export default function CustomerModal({ open, onClose }) {
-  const [service, setService] = useState(customer)
+  const [service, setService] = useState(defaultCustomer)
 
   useEffect(() => {
     if (!open) return undefined
     let mounted = true
     fetchCustomerService()
       .then((data) => {
-        if (mounted) setService({ ...customer, ...data })
+        if (mounted) setService({ ...defaultCustomer, ...data })
       })
       .catch(() => {})
     return () => {

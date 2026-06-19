@@ -4,15 +4,16 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { cases, tools } from '../../data/mock'
-import { fetchPromptCase, fetchTools } from '../../services/api'
+import { copyPromptCase, fetchPromptCase, fetchTools, usePromptCase } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
 
 export default function PromptDetail() {
   const { id } = getCurrentInstance().router.params
-  const [item, setItem] = useState(cases.find((entry) => entry.id === id) || cases[0])
-  const [toolList, setToolList] = useState(tools)
-  const tool = toolList.find((entry) => entry.id === item.toolId)
+  const [item, setItem] = useState(null)
+  const [toolList, setToolList] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const tool = toolList.find((entry) => entry.id === item?.toolId)
 
   useEffect(() => {
     let mounted = true
@@ -20,9 +21,13 @@ export default function PromptDetail() {
       .then(([detail, apiTools]) => {
         if (!mounted) return
         if (detail) setItem(detail)
-        if (apiTools?.length) setToolList(apiTools)
+        setToolList(apiTools || [])
+        setError('')
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (mounted) setError(err.message || '案例不存在或已下架')
+      })
+      .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
     }
@@ -30,13 +35,33 @@ export default function PromptDetail() {
   const copyPrompt = () => {
     Taro.setClipboardData({
       data: item.prompt,
-      success: () => Taro.showToast({ title: '提示词已复制', icon: 'success' })
+      success: () => {
+        copyPromptCase(item.id).catch(() => {})
+        Taro.showToast({ title: '提示词已复制', icon: 'success' })
+      }
     })
   }
 
-  const sameCreation = () => {
+  const sameCreation = async () => {
     if (!requireLogin(`/pages/prompt-detail/index?id=${item.id}`)) return
-    Taro.navigateTo({ url: `/pages/tool/index?id=${item.toolId}&prompt=${encodeURIComponent(item.prompt)}` })
+    try {
+      const payload = await usePromptCase(item.id)
+      Taro.navigateTo({ url: `/pages/tool/index?id=${payload.toolKey || item.toolId}&prompt=${encodeURIComponent(payload.prompt || item.prompt)}` })
+    } catch (err) {
+      Taro.showToast({ title: err.message || '同款生成失败', icon: 'none' })
+    }
+  }
+
+  if (!item) {
+    return (
+      <Shell title='提示词详情' showTab={false}>
+        <View className='empty'>{loading ? '正在同步案例' : error || '案例不存在'}</View>
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
   }
 
   return (
@@ -54,7 +79,7 @@ export default function PromptDetail() {
       </View>
 
       <View className='filter-row'>
-        {item.tags.map((tag) => <View key={tag} className='filter-chip active'>{tag}</View>)}
+        {(item.tags || []).map((tag) => <View key={tag} className='filter-chip active'>{tag}</View>)}
       </View>
 
       <View className='prompt-box'>{item.prompt}</View>

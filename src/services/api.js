@@ -233,6 +233,14 @@ export async function fetchPromptCase(id) {
   }
 }
 
+export async function copyPromptCase(id) {
+  return request(`/prompt-cases/${id}/copy`, { method: 'POST' })
+}
+
+export async function usePromptCase(id) {
+  return request(`/prompt-cases/${id}/use`, { method: 'POST' })
+}
+
 export async function fetchWorks(params = {}) {
   const query = new URLSearchParams({
     page: String(params.page || 1),

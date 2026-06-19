@@ -4,15 +4,14 @@ import { View, Text, Input, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { cases as mockCases, toolCategories as mockCategories, tools as mockTools } from '../../data/mock'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 
 export default function CreateCenter() {
   const [category, setCategory] = useState('all')
   const [keyword, setKeyword] = useState('')
-  const [cases, setCases] = useState(mockCases)
-  const [toolCategories, setToolCategories] = useState(mockCategories)
-  const [tools, setTools] = useState(mockTools)
+  const [cases, setCases] = useState([])
+  const [toolCategories, setToolCategories] = useState([{ key: 'all', label: '全部产品' }])
+  const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,9 +19,9 @@ export default function CreateCenter() {
     Promise.all([fetchPromptCases({ pageSize: 30 }), fetchToolCategories(), fetchTools()])
       .then(([caseData, categories, toolList]) => {
         if (!mounted) return
-        if (caseData.list?.length) setCases(caseData.list)
+        setCases(caseData.list || [])
         if (categories?.length) setToolCategories(categories)
-        if (toolList?.length) setTools(toolList)
+        setTools(toolList || [])
       })
       .catch(() => {})
       .finally(() => mounted && setLoading(false))
@@ -35,10 +34,12 @@ export default function CreateCenter() {
     const word = keyword.trim().toLowerCase()
     return cases.filter((item) => {
       const matchCategory = category === 'all' || item.category === category
-      const matchWord = !word || item.title.toLowerCase().includes(word) || item.tags.join('').toLowerCase().includes(word)
+      const title = item.title || ''
+      const tags = item.tags || []
+      const matchWord = !word || title.toLowerCase().includes(word) || tags.join('').toLowerCase().includes(word)
       return matchCategory && matchWord
     })
-  }, [category, keyword])
+  }, [cases, category, keyword])
 
   const toolName = (id) => tools.find((tool) => tool.id === id)?.name || 'AI 工具'
 
