@@ -18,6 +18,8 @@ function makeError(response, body) {
   error.code = body.code
   error.action = body.action
   error.fieldErrors = body.fieldErrors
+  error.retryable = body.retryable
+  error.requestId = body.requestId
   error.response = body
   error.statusCode = response.statusCode
   return error
