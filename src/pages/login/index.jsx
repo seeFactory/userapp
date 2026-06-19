@@ -4,9 +4,10 @@ import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { captureInviteFromParams } from '../../platform/invite'
-import { saveAuth } from '../../utils/storage'
+import { acceptAgreement, saveAuth } from '../../utils/storage'
 import {
   createXAuthorizeUrl,
+  fetchAgreement,
   getClientRuntime,
   getFrontendLoginConfig,
   loginDev,
@@ -16,6 +17,12 @@ import {
 const X_CODE_VERIFIER_KEY = 'seeFactoryXCodeVerifier'
 const X_REDIRECT_URI_KEY = 'seeFactoryXRedirectUri'
 const X_RETURN_TO_KEY = 'seeFactoryXReturnTo'
+const X_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryXAcceptedAgreements'
+const REQUIRED_AGREEMENTS = [
+  { type: 'user', label: '用户协议' },
+  { type: 'privacy', label: '隐私政策' },
+  { type: 'creator', label: '创作与生成服务条款' }
+]
 
 const runtimeMeta = {
   'telegram-tma': {
@@ -121,6 +128,7 @@ export default function Login() {
   const [account, setAccount] = useState('demo@seefactory.ai')
   const [loading, setLoading] = useState(false)
   const [googleReady, setGoogleReady] = useState(false)
+  const [agreementCache, setAgreementCache] = useState({})
   const googleHostId = useRef(`google-login-${Date.now()}`)
   const runtime = getClientRuntime()
   const loginConfig = getFrontendLoginConfig()
@@ -140,16 +148,57 @@ export default function Login() {
     captureInviteFromParams(params || {})
   }, [params])
 
+  const loadAgreement = async (type) => {
+    const cached = agreementCache[type]
+    const agreement = cached || await fetchAgreement(type)
+    if (!cached) {
+      setAgreementCache((current) => ({ ...current, [type]: agreement }))
+    }
+    return agreement
+  }
+
+  const showAgreement = async (type) => {
+    Taro.showLoading({ title: '加载协议' })
+    try {
+      const agreement = await loadAgreement(type)
+      Taro.hideLoading()
+      const meta = REQUIRED_AGREEMENTS.find((item) => item.type === type)
+      Taro.showModal({
+        title: agreement.title || meta?.label || '协议',
+        content: agreement.contentMarkdown || '协议正文待后台发布',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+    } catch (error) {
+      Taro.hideLoading()
+      Taro.showToast({ title: error.message || '协议暂未发布', icon: 'none' })
+    }
+  }
+
+  const ensureLoginAgreements = async () => {
+    const agreements = []
+    for (const item of REQUIRED_AGREEMENTS) {
+      agreements.push(await loadAgreement(item.type))
+    }
+    return agreements
+  }
+
   const completeLogin = async (runner, successTarget = target, options = {}) => {
     if (!options.skipAgreement && !agreed) {
-      Taro.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作与生成服务条款', icon: 'none' })
       return
     }
     setLoading(true)
     Taro.showLoading({ title: '登录中' })
     try {
+      const acceptedAgreements = options.skipAgreement ? [] : await ensureLoginAgreements()
       const data = await runner()
       saveAuth(data)
+      const agreementsToStore = options.acceptedAgreements || acceptedAgreements
+      agreementsToStore.forEach((agreement) => {
+        const version = agreement?.version || agreement?.id || agreement?.updatedAt
+        acceptAgreement(agreement?.type, version)
+      })
       Taro.showToast({ title: '登录成功', icon: 'success' })
       Taro.redirectTo({ url: successTarget })
     } catch (error) {
@@ -170,6 +219,7 @@ export default function Login() {
     const codeVerifier = Taro.getStorageSync(X_CODE_VERIFIER_KEY)
     const redirectUri = Taro.getStorageSync(X_REDIRECT_URI_KEY) || xRedirectUri
     const returnTo = Taro.getStorageSync(X_RETURN_TO_KEY) || target
+    const acceptedAgreements = Taro.getStorageSync(X_ACCEPTED_AGREEMENTS_KEY) || []
     if (!codeVerifier) {
       Taro.showToast({ title: 'X 登录状态已过期，请重新授权', icon: 'none' })
       return
@@ -177,6 +227,7 @@ export default function Login() {
     Taro.removeStorageSync(X_CODE_VERIFIER_KEY)
     Taro.removeStorageSync(X_REDIRECT_URI_KEY)
     Taro.removeStorageSync(X_RETURN_TO_KEY)
+    Taro.removeStorageSync(X_ACCEPTED_AGREEMENTS_KEY)
     setAgreed(true)
     completeLogin(() => loginRuntime({
       clientRuntime: 'h5-x',
@@ -184,7 +235,7 @@ export default function Login() {
       state: callback.state,
       codeVerifier,
       redirectUri
-    }), returnTo, { skipAgreement: true })
+    }), returnTo, { skipAgreement: true, acceptedAgreements })
   }, [])
 
   useEffect(() => {
@@ -246,7 +297,7 @@ export default function Login() {
 
   const handleXLogin = async () => {
     if (!agreed) {
-      Taro.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
+      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作与生成服务条款', icon: 'none' })
       return
     }
     if (!xRedirectUri) {
@@ -256,12 +307,17 @@ export default function Login() {
     setLoading(true)
     Taro.showLoading({ title: '准备授权' })
     try {
+      const acceptedAgreements = await ensureLoginAgreements()
       const codeVerifier = randomBase64Url()
       const codeChallenge = await sha256Base64Url(codeVerifier)
       const result = await createXAuthorizeUrl({ codeChallenge, redirectUri: xRedirectUri })
       Taro.setStorageSync(X_CODE_VERIFIER_KEY, codeVerifier)
       Taro.setStorageSync(X_REDIRECT_URI_KEY, xRedirectUri)
       Taro.setStorageSync(X_RETURN_TO_KEY, target)
+      Taro.setStorageSync(X_ACCEPTED_AGREEMENTS_KEY, acceptedAgreements.map((agreement) => ({
+        type: agreement.type,
+        version: agreement.version || agreement.id || agreement.updatedAt
+      })))
       if (typeof window !== 'undefined') {
         window.location.href = result.authorizeUrl
       }
@@ -328,9 +384,14 @@ export default function Login() {
           </View>
         )}
 
-        <View className='checkbox-row' onClick={() => setAgreed(!agreed)}>
-          <View className={agreed ? 'fake-check checked' : 'fake-check'}>{agreed ? '✓' : ''}</View>
-          <Text>我已阅读并同意《用户协议》和《隐私政策》</Text>
+        <View className='checkbox-row'>
+          <View className={agreed ? 'fake-check checked' : 'fake-check'} onClick={() => setAgreed(!agreed)}>{agreed ? '✓' : ''}</View>
+          <View className='agreement-copy'>
+            <Text onClick={() => setAgreed(!agreed)}>我已阅读并同意</Text>
+            {REQUIRED_AGREEMENTS.map((item) => (
+              <Text key={item.type} className='agreement-link' onClick={() => showAgreement(item.type)}>《{item.label}》</Text>
+            ))}
+          </View>
         </View>
 
         <View className='ghost-button glass-button block-gap' onClick={() => Taro.redirectTo({ url: '/pages/index/index' })}>
