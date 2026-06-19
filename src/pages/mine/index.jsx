@@ -153,7 +153,7 @@ export default function Mine() {
   const beginRecharge = async () => {
     if (!requireLogin('/pages/mine/index')) return
     if (rechargePolicy.allowCustomAmount === false) {
-      Taro.showToast({ title: '点数充值暂未开放', icon: 'none' })
+      Taro.showToast({ title: '当前点数充值已由后台关闭', icon: 'none' })
       return
     }
     const amount = Number(rechargeAmount)
@@ -226,6 +226,7 @@ export default function Mine() {
     }
   }
 
+  const rechargeDisabled = rechargePolicy.allowCustomAmount === false
   const estimatedPoints = Math.max(0, Math.floor((Number(rechargeAmount || 0)) * rechargePolicy.pointRate))
   const minRecharge = money(rechargePolicy.minAmountCents / 100)
   const maxRecharge = money(rechargePolicy.maxAmountCents / 100)
@@ -252,7 +253,7 @@ export default function Mine() {
                 <AppIcon name='wallet' size={16} />
                 <Text>钱包</Text>
               </View>
-              <View className='ghost-button glass-button' onClick={beginRecharge}>
+              <View className={rechargeDisabled ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={rechargeDisabled ? undefined : beginRecharge}>
                 <AppIcon name='coin' size={16} />
                 <Text>点数充值</Text>
               </View>
@@ -277,8 +278,8 @@ export default function Mine() {
               <Text className='section-kicker'>点数充值</Text>
               <Text className='section-title'>自填金额充值</Text>
             </View>
-            <Text className={rechargePolicy.allowCustomAmount === false ? 'status failed' : 'status success'}>
-              {rechargePolicy.allowCustomAmount === false ? '未开放' : `1 元 = ${rechargePolicy.pointRate} 点`}
+            <Text className={rechargeDisabled ? 'status failed' : 'status success'}>
+              {rechargeDisabled ? '后台已关闭' : `1 元 = ${rechargePolicy.pointRate} 点`}
             </Text>
           </View>
 
@@ -288,6 +289,7 @@ export default function Mine() {
             <Input
               type='digit'
               value={rechargeAmount}
+              disabled={rechargeDisabled}
               placeholder={`最低 ${minRecharge}`}
               placeholderClass='muted'
               onInput={(event) => setRechargeAmount(event.detail.value)}
@@ -297,9 +299,9 @@ export default function Mine() {
             <Text>预计到账 {estimatedPoints} 点</Text>
             <Text>范围 ¥{minRecharge} - ¥{maxRecharge}</Text>
           </View>
-          <View className='primary-button full-width-button' onClick={creatingRecharge ? undefined : beginRecharge}>
+          <View className={creatingRecharge || rechargeDisabled ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'} onClick={creatingRecharge || rechargeDisabled ? undefined : beginRecharge}>
             <AppIcon name='coin' size={16} />
-            <Text>{creatingRecharge ? '创建中...' : '创建充值订单'}</Text>
+            <Text>{rechargeDisabled ? '充值已关闭' : creatingRecharge ? '创建中...' : '创建充值订单'}</Text>
           </View>
         </View>
       )}
