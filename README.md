@@ -164,6 +164,7 @@ app/
 - 支持提示词输入、素材选择、风格、比例、模型、时长等配置。
 - 通过 `/generation-tasks` 创建生成任务，并使用轮询展示排队、处理中、成功和失败状态。
 - 需要付费时唤起 `PaymentSheet`，按平台拉起微信/支付宝/抖音/QQ/Telegram Stars/Crypto 支付。
+- TMA 内 Telegram Stars 使用 `Telegram.WebApp.openInvoice` 拉起，完成或处理中后刷新订单状态。
 
 ### 我的作品 `pages/works/index`
 

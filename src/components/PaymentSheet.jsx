@@ -69,6 +69,40 @@ function invokePlatformPayment(platformPayment) {
   })
 }
 
+function invokeTelegramStarsPayment(stars, onRefresh) {
+  if (!stars?.invoiceLink) {
+    Taro.showToast({ title: 'Stars Invoice 暂未生成', icon: 'none' })
+    return
+  }
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
+  if (!webApp?.openInvoice) {
+    copy(stars.invoiceLink, 'Invoice 链接')
+    Taro.showToast({ title: '请在 Telegram 内打开并完成支付', icon: 'none' })
+    return
+  }
+  try {
+    webApp.openInvoice(stars.invoiceLink, (status) => {
+      if (status === 'paid') {
+        Taro.showToast({ title: '支付完成，正在刷新', icon: 'success' })
+        onRefresh?.()
+        return
+      }
+      if (status === 'pending') {
+        Taro.showToast({ title: '支付处理中，请稍后刷新', icon: 'none' })
+        onRefresh?.()
+        return
+      }
+      if (status === 'failed') {
+        Taro.showToast({ title: '支付失败，请重试', icon: 'none' })
+        return
+      }
+      Taro.showToast({ title: '支付未完成', icon: 'none' })
+    })
+  } catch (error) {
+    Taro.showToast({ title: error.message || 'Stars 支付拉起失败', icon: 'none' })
+  }
+}
+
 export default function PaymentSheet({ open, title = '支付订单', payment, onClose, onRefresh }) {
   if (!open || !payment) return null
   const order = payment.order || {}
@@ -77,6 +111,13 @@ export default function PaymentSheet({ open, title = '支付订单', payment, on
   const platformPayment = payment.platformPayment
   const status = order.status || crypto?.status || stars?.status
   const cryptoAddress = crypto?.depositAddress || crypto?.bridgeDepositAddress || crypto?.bridgeReceiveAddress
+  const primaryAction = platformPayment
+    ? () => invokePlatformPayment(platformPayment)
+    : stars
+      ? () => invokeTelegramStarsPayment(stars, onRefresh)
+      : onRefresh
+  const primaryIcon = platformPayment || stars ? 'agent' : 'refresh'
+  const primaryText = platformPayment ? '立即支付' : stars ? '打开 Stars 支付' : '刷新状态'
 
   return (
     <View className='modal-mask'>
@@ -142,11 +183,11 @@ export default function PaymentSheet({ open, title = '支付订单', payment, on
         )}
 
         <View className='hero-actions'>
-          <View className='primary-button' onClick={platformPayment ? () => invokePlatformPayment(platformPayment) : onRefresh}>
-            <AppIcon name={platformPayment ? 'agent' : 'refresh'} size={16} />
-            <Text>{platformPayment ? '立即支付' : '刷新状态'}</Text>
+          <View className='primary-button' onClick={primaryAction}>
+            <AppIcon name={primaryIcon} size={16} />
+            <Text>{primaryText}</Text>
           </View>
-          {platformPayment && (
+          {(platformPayment || stars) && (
             <View className='ghost-button glass-button' onClick={onRefresh}>
               <AppIcon name='refresh' size={16} />
               <Text>刷新状态</Text>
