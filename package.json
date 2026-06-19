@@ -7,8 +7,16 @@
   "scripts": {
     "dev:h5": "taro build --type h5 --watch",
     "build:h5": "taro build --type h5",
+    "dev:tma": "taro build --type h5 --watch",
+    "build:tma": "taro build --type h5",
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",
+    "dev:alipay": "taro build --type alipay --watch",
+    "build:alipay": "taro build --type alipay",
+    "dev:tt": "taro build --type tt --watch",
+    "build:tt": "taro build --type tt",
+    "dev:qq": "taro build --type qq --watch",
+    "build:qq": "taro build --type qq",
     "preview:h5": "node scripts/preview-static.mjs"
   },
   "dependencies": {
@@ -30,6 +38,9 @@
     "@babel/preset-react": "^7.28.5",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.17",
     "@tarojs/cli": "4.2.0",
+    "@tarojs/plugin-platform-alipay": "4.2.0",
+    "@tarojs/plugin-platform-qq": "4.2.0",
+    "@tarojs/plugin-platform-tt": "4.2.0",
     "@tarojs/webpack5-runner": "4.2.0",
     "babel-preset-taro": "4.2.0",
     "webpack": "5.91.0"

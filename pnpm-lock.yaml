@@ -57,6 +57,15 @@ importers:
       '@tarojs/cli':
         specifier: 4.2.0
         version: 4.2.0(@types/node@26.0.0)
+      '@tarojs/plugin-platform-alipay':
+        specifier: 4.2.0
+        version: 4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)
+      '@tarojs/plugin-platform-qq':
+        specifier: 4.2.0
+        version: 4.2.0(@tarojs/plugin-platform-weapp@4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0))(@tarojs/shared@4.2.0)
+      '@tarojs/plugin-platform-tt':
+        specifier: 4.2.0
+        version: 4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)
       '@tarojs/webpack5-runner':
         specifier: 4.2.0
         version: 4.2.0(@babel/core@7.29.7)(@swc/core@1.3.96)(@tarojs/runtime@4.2.0)(less@3.13.1)(postcss@8.5.15)(sass@1.101.0)(stylus@0.64.0)(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15))
@@ -1486,8 +1495,29 @@ packages:
       webpack:
         optional: true
 
+  '@tarojs/plugin-platform-alipay@4.2.0':
+    resolution: {integrity: sha512-T0m86RqWgLmGO/pEMWPEBas4VHlmgFIgeW2OKFWakYtBzNfAmjqblQCFvWyrIlsVEz8+rIy/THT4chHG8OOm6A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@tarojs/service': 4.2.0
+      '@tarojs/shared': 4.2.0
+
   '@tarojs/plugin-platform-h5@4.2.0':
     resolution: {integrity: sha512-HoyGHYaBrxJtaIRT1Y81LK7re0pLfF9DOGQ77bNmQwtuJS9JpiFMI47Q27+2anldwJodQdQP9d3KSPRqGnRLCw==}
+
+  '@tarojs/plugin-platform-qq@4.2.0':
+    resolution: {integrity: sha512-VFwxPHUVZe0pmonh6et1YZow5IC7hlBqN4qv9APKQC/ahAQRC5TbjA89i7FL7EWPtfdL0g4/+aZqySMd0LuCqA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@tarojs/plugin-platform-weapp': 4.2.0
+      '@tarojs/shared': 4.2.0
+
+  '@tarojs/plugin-platform-tt@4.2.0':
+    resolution: {integrity: sha512-45pAXkcFEB/s4V993ROHtgReCcrFN88IhwKxKDRdCbN67qivUNlGEmuPmd/5gd6DDD74+RuklwoHeI7VuTTfJQ==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@tarojs/service': 4.2.0
+      '@tarojs/shared': 4.2.0
 
   '@tarojs/plugin-platform-weapp@4.2.0':
     resolution: {integrity: sha512-0meY33+KYITF9uUav4JdKn2PY1xRnVQBVurPv3wm891pRBqPbfipcUsRjF7B1CeeWYqQK9/jy7gQlnzApmbakA==}
@@ -6795,6 +6825,11 @@ snapshots:
       react: 18.3.1
       webpack: 5.91.0(@swc/core@1.3.96)(postcss@8.5.15)
 
+  '@tarojs/plugin-platform-alipay@4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)':
+    dependencies:
+      '@tarojs/service': 4.2.0
+      '@tarojs/shared': 4.2.0
+
   '@tarojs/plugin-platform-h5@4.2.0(@tarojs/taro@4.2.0(@tarojs/components@4.2.0(@tarojs/helper@4.2.0)(html-webpack-plugin@5.6.7(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(postcss@8.5.15)(rollup@3.30.0)(webpack-chain@6.5.1)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(@tarojs/helper@4.2.0)(@tarojs/shared@4.2.0)(html-webpack-plugin@5.6.7(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(postcss@8.5.15)(rollup@3.30.0)(webpack-chain@6.5.1)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(html-webpack-plugin@5.6.7(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(postcss@8.5.15)(react@18.3.1)(rollup@3.30.0)(solid-js@1.9.13)(webpack-chain@6.5.1)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15)))(webpack@5.91.0(@swc/core@1.3.96)(postcss@8.5.15))':
     dependencies:
       '@babel/core': 7.29.7
@@ -6823,6 +6858,17 @@ snapshots:
       - webpack
       - webpack-chain
       - webpack-dev-server
+
+  '@tarojs/plugin-platform-qq@4.2.0(@tarojs/plugin-platform-weapp@4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0))(@tarojs/shared@4.2.0)':
+    dependencies:
+      '@tarojs/plugin-platform-weapp': 4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)
+      '@tarojs/shared': 4.2.0
+
+  '@tarojs/plugin-platform-tt@4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)':
+    dependencies:
+      '@tarojs/service': 4.2.0
+      '@tarojs/shared': 4.2.0
+      webpack-sources: 3.5.0
 
   '@tarojs/plugin-platform-weapp@4.2.0(@tarojs/service@4.2.0)(@tarojs/shared@4.2.0)':
     dependencies:

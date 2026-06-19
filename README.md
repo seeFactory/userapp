@@ -19,6 +19,10 @@ seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5
 - React `18`
 - Webpack 5
 - 微信小程序构建目标 `weapp`
+- 支付宝小程序构建目标 `alipay`
+- 抖音小程序构建目标 `tt`
+- QQ 小程序构建目标 `qq`
+- Telegram Mini App 使用 H5 构建目标 `h5`
 - H5 预览目标 `h5`
 
 ## 快速开始
@@ -49,6 +53,15 @@ pnpm build:h5
 
 ```bash
 pnpm build:weapp
+```
+
+构建其他平台：
+
+```bash
+pnpm build:alipay
+pnpm build:tt
+pnpm build:qq
+pnpm build:tma
 ```
 
 构建产物输出到 `dist/`，该目录不纳入 git 版本管理。
@@ -208,8 +221,16 @@ app/
 | --- | --- |
 | `pnpm dev:h5` | 启动 H5 watch 预览 |
 | `pnpm build:h5` | 构建 H5 产物 |
+| `pnpm dev:tma` | 启动 Telegram Mini App H5 watch 预览 |
+| `pnpm build:tma` | 构建 Telegram Mini App H5 产物 |
 | `pnpm dev:weapp` | 启动微信小程序 watch 构建 |
 | `pnpm build:weapp` | 构建微信小程序产物 |
+| `pnpm dev:alipay` | 启动支付宝小程序 watch 构建 |
+| `pnpm build:alipay` | 构建支付宝小程序产物 |
+| `pnpm dev:tt` | 启动抖音小程序 watch 构建 |
+| `pnpm build:tt` | 构建抖音小程序产物 |
+| `pnpm dev:qq` | 启动 QQ 小程序 watch 构建 |
+| `pnpm build:qq` | 构建 QQ 小程序产物 |
 | `pnpm preview:h5` | 预览 H5 静态构建产物 |
 
 ## 验收建议
@@ -219,6 +240,9 @@ app/
 ```bash
 pnpm build:h5
 pnpm build:weapp
+pnpm build:alipay
+pnpm build:tt
+pnpm build:qq
 ```
 
 移动端视觉建议使用 iPhone 14 尺寸检查：
