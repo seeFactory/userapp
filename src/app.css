@@ -2727,6 +2727,58 @@ taro-video-core {
   color: #d8f6ff;
 }
 
+.credit-recharge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compact-head {
+  margin-bottom: 0;
+}
+
+.recharge-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.money-prefix {
+  flex: 0 0 auto;
+  color: #d8f6ff;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.recharge-input input,
+.recharge-input .weui-input {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.recharge-meta {
+  display: flex;
+  min-height: 22px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--sf-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.recharge-meta text:first-child {
+  color: #d8f6ff;
+  font-weight: 750;
+}
+
+.full-width-button {
+  width: 100%;
+  justify-content: center;
+}
+
 .copy-box {
   display: flex;
   min-height: 46px;

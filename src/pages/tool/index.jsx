@@ -454,14 +454,15 @@ export default function ToolPage() {
     if (!payment?.order?.id) return
     Taro.showLoading({ title: '刷新状态' })
     try {
-      const order = await fetchPaymentOrder(payment.order.id)
-      const nextPayment = { ...payment, order }
+      const nextPayment = { ...payment }
       if (payment.cryptoOrder?.id) {
         nextPayment.cryptoOrder = await fetchCryptoOrder(payment.cryptoOrder.id)
       }
       if (payment.starsOrder?.id) {
         nextPayment.starsOrder = await fetchTelegramStarsOrder(payment.starsOrder.id)
       }
+      const order = await fetchPaymentOrder(payment.order.id)
+      nextPayment.order = order
       setPayment(nextPayment)
       if (order.status === 'paid') {
         setPayment(null)
