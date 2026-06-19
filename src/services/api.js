@@ -59,6 +59,7 @@ export function toApiWork(item) {
     downloadEnabled: item.downloadEnabled !== false,
     galleryVisible: item.galleryVisible,
     galleryStatus: item.galleryStatus,
+    shareTicket: item.shareTicket,
     author: item.author
   }
 }
@@ -306,6 +307,14 @@ export async function deleteWorkRemote(id) {
 
 export async function clearFailedWorksRemote() {
   return request('/works/clear-failed', { method: 'POST' })
+}
+
+export async function createWorkShareTicket(id) {
+  return request(`/works/${id}/share-ticket`, { method: 'POST' })
+}
+
+export async function fetchSharedWork(ticket) {
+  return toApiWork(await request(`/works/share/${encodeURIComponent(ticket)}`, { noAuth: true }))
 }
 
 const AUTH_ENDPOINTS = {
@@ -579,6 +588,7 @@ export async function unpublishGalleryWork(id) {
   return request(`/works/${id}/unpublish-gallery`, { method: 'POST' })
 }
 
-export async function getDownloadUrl(id) {
-  return request(`/works/${id}/download-url`)
+export async function getDownloadUrl(id, shareTicket = '') {
+  const query = shareTicket ? `?shareTicket=${encodeURIComponent(shareTicket)}` : ''
+  return request(`/works/${id}/download-url${query}`)
 }

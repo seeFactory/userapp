@@ -7,9 +7,11 @@ import BrandLogo from '../../components/BrandLogo'
 import { ErrorState, PageLoading } from '../../components/PageState'
 import {
   cancelGenerationTask,
+  createWorkShareTicket,
   deleteWorkRemote,
   fetchGenerationTask,
   fetchGalleryWork,
+  fetchSharedWork,
   fetchWork,
   getDownloadUrl,
   publishGalleryWork,
@@ -84,6 +86,16 @@ function openH5Download(url, title) {
   link.remove()
 }
 
+function buildShareLink({ ticket, id, source = 'gallery' }) {
+  const path = ticket
+    ? `/pages/work-detail/index?ticket=${encodeURIComponent(ticket)}&source=share`
+    : `/pages/work-detail/index?id=${encodeURIComponent(id)}&source=${encodeURIComponent(source)}`
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${window.location.pathname}#${path}`
+  }
+  return path
+}
+
 function downloadTempFile(url) {
   return new Promise((resolve, reject) => {
     Taro.downloadFile({
@@ -116,22 +128,25 @@ function saveFileToAlbum(filePath, mediaKind) {
 }
 
 export default function WorkDetail() {
-  const { id, source } = getCurrentInstance().router?.params || {}
+  const { id, source, ticket } = getCurrentInstance().router?.params || {}
   const [work, setWork] = useState(null)
-  const [detailMode, setDetailMode] = useState(source === 'gallery' ? 'gallery' : 'owner')
+  const [detailMode, setDetailMode] = useState(ticket ? 'share' : source === 'gallery' ? 'gallery' : 'owner')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshingTask, setRefreshingTask] = useState(false)
   const [cancelingTask, setCancelingTask] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   const loadWorkDetail = () => {
     let mounted = true
     setLoading(true)
-    const loadDetail = source === 'gallery' || !isLoggedIn()
-      ? fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' }))
-      : fetchWork(id)
-        .then((data) => ({ data, mode: 'owner' }))
-        .catch(() => fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' })))
+    const loadDetail = ticket
+      ? fetchSharedWork(ticket).then((data) => ({ data, mode: 'share' }))
+      : (source === 'gallery' || !isLoggedIn())
+        ? fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' }))
+        : fetchWork(id)
+          .then((data) => ({ data, mode: 'owner' }))
+          .catch(() => fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' })))
     loadDetail
       .then(({ data, mode }) => {
         if (!mounted) return
@@ -151,7 +166,7 @@ export default function WorkDetail() {
   useEffect(() => {
     const cleanup = loadWorkDetail()
     return cleanup
-  }, [id, source])
+  }, [id, source, ticket])
 
   useEffect(() => {
     if (!work?.generationTaskId || !isActiveStatus(work.status)) return undefined
@@ -250,14 +265,14 @@ export default function WorkDetail() {
   }
 
   const saveWork = async () => {
-    if (detailMode === 'gallery' && work.downloadEnabled === false) {
+    if (['gallery', 'share'].includes(detailMode) && work.downloadEnabled === false) {
       Taro.showToast({ title: '该作品暂不支持保存', icon: 'none' })
       return
     }
     let url = ''
     Taro.showLoading({ title: process.env.TARO_ENV === 'h5' ? '准备下载' : '保存中' })
     try {
-      const data = await getDownloadUrl(work.id)
+      const data = await getDownloadUrl(work.id, detailMode === 'share' ? (work.shareTicket || ticket) : '')
       url = data?.url || work.image
       if (!url) throw new Error('下载地址为空')
       const mediaKind = inferMediaKind(work, url)
@@ -288,6 +303,41 @@ export default function WorkDetail() {
         content: error.message || '请确认已允许保存到相册，或稍后重试。',
         showCancel: false
       })
+    }
+  }
+
+  const shareWork = async () => {
+    if (work.status !== 'success') {
+      Taro.showToast({ title: '成功作品才可以分享', icon: 'none' })
+      return
+    }
+    if (sharing) return
+    setSharing(true)
+    Taro.showLoading({ title: '生成分享' })
+    try {
+      let shareTicket = work.shareTicket || ticket || ''
+      if (detailMode === 'owner') {
+        const result = await createWorkShareTicket(work.id)
+        shareTicket = result.shareTicket
+        setWork((prev) => ({ ...prev, shareTicket }))
+      }
+      const shareLink = detailMode === 'gallery' && !shareTicket
+        ? buildShareLink({ id: work.id, source: 'gallery' })
+        : buildShareLink({ ticket: shareTicket, id: work.id, source: 'share' })
+      Taro.hideLoading()
+      try {
+        Taro.showShareMenu({ withShareTicket: true })
+      } catch (_) {}
+      Taro.setClipboardData({
+        data: shareLink,
+        success: () => Taro.showToast({ title: '分享链接已复制', icon: 'success' }),
+        fail: () => Taro.showToast({ title: '分享链接生成成功，请手动复制', icon: 'none' })
+      })
+    } catch (error) {
+      Taro.hideLoading()
+      Taro.showToast({ title: error.message || '分享失败', icon: 'none' })
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -332,8 +382,11 @@ export default function WorkDetail() {
   const mediaKind = inferMediaKind(work, media || preview)
   const pending = isActiveStatus(work?.status)
   const failed = ['failed', 'canceled'].includes(work?.status)
-  const canSave = work.status === 'success' && (detailMode !== 'gallery' || work.downloadEnabled !== false)
+  const isSharedDetail = detailMode === 'share'
   const isGalleryDetail = detailMode === 'gallery'
+  const publicLikeDetail = isGalleryDetail || isSharedDetail
+  const canSave = work.status === 'success' && (!publicLikeDetail || work.downloadEnabled !== false)
+  const canShare = work.status === 'success'
 
   return (
     <Shell title='作品详情' showTab={false}>
@@ -365,7 +418,7 @@ export default function WorkDetail() {
               <Text className='task-state-note'>{refreshingTask ? '正在同步最新状态...' : '每 3 秒自动刷新一次，也可以手动刷新。'}</Text>
             </View>
           </View>
-          {!isGalleryDetail && (
+          {!publicLikeDetail && (
             <View className='task-actions'>
               <View className={refreshingTask ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={() => refreshTaskStatus(false)}>
                 <AppIcon name='refresh' size={14} />
@@ -388,14 +441,14 @@ export default function WorkDetail() {
       <View className='hero-actions'>
         <View className={canSave ? 'primary-button' : 'primary-button disabled'} onClick={canSave ? saveWork : undefined}>
           <AppIcon name='download' size={16} />
-          <Text>{work.downloadEnabled === false && isGalleryDetail ? '不可保存' : '保存'}</Text>
+          <Text>{work.downloadEnabled === false && publicLikeDetail ? '不可保存' : '保存'}</Text>
         </View>
-        <View className='ghost-button glass-button' onClick={() => Taro.showShareMenu({})}>
+        <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
           <AppIcon name='share' size={16} />
-          <Text>分享</Text>
+          <Text>{sharing ? '生成中' : '分享'}</Text>
         </View>
       </View>
-      {isGalleryDetail ? (
+      {publicLikeDetail ? (
         <View className='hero-actions'>
           <View className='primary-button' onClick={retry}>
             <AppIcon name='wand' size={16} />
@@ -403,7 +456,7 @@ export default function WorkDetail() {
           </View>
           <View className='ghost-button glass-button' onClick={() => Taro.navigateBack()}>
             <AppIcon name='back' size={16} />
-            <Text>返回广场</Text>
+            <Text>{isGalleryDetail ? '返回广场' : '返回'}</Text>
           </View>
         </View>
       ) : (
@@ -421,9 +474,9 @@ export default function WorkDetail() {
       <View className='hero-actions'>
         <View className='ghost-button glass-button' onClick={retry}>
           <AppIcon name='refresh' size={16} />
-          <Text>{isGalleryDetail ? '带入提示词' : '重新生成'}</Text>
+          <Text>{publicLikeDetail ? '带入提示词' : '重新生成'}</Text>
         </View>
-        {!isGalleryDetail && (
+        {!publicLikeDetail && (
           <View className='danger-button transparent-button' onClick={remove}>
             <AppIcon name='delete' size={16} />
             <Text>删除</Text>
