@@ -87,7 +87,8 @@ export default function Mine() {
   const showAgreement = async (type) => {
     const titleMap = {
       user: '用户协议',
-      privacy: '隐私政策'
+      privacy: '隐私政策',
+      creator: '创作与生成服务条款'
     }
     Taro.showLoading({ title: '加载中' })
     try {
@@ -340,6 +341,11 @@ export default function Mine() {
           <View className='profile-icon'><AppIcon name='lock' size={22} /></View>
           <Text className='profile-name'>隐私政策</Text>
           <Text className='tool-desc'>查看数据说明</Text>
+        </View>
+        <View className='profile-card' onClick={() => showAgreement('creator')}>
+          <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
+          <Text className='profile-name'>创作条款</Text>
+          <Text className='tool-desc'>生成服务说明</Text>
         </View>
       </View>
 
