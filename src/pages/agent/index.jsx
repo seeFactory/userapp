@@ -4,6 +4,7 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats } from '../../services/api'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 
@@ -33,11 +34,12 @@ export default function Agent() {
   const [stats, setStats] = useState(defaultStats)
   const [commissions, setCommissions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const loggedIn = isLoggedIn()
 
-  useEffect(() => {
-    if (!loggedIn) return undefined
+  const loadAgent = () => {
     let mounted = true
+    setLoading(true)
     Promise.all([
       fetchAgentProfile(),
       fetchAgentInviteCode(),
@@ -50,9 +52,10 @@ export default function Agent() {
         setInviteCode(inviteData?.inviteCode || null)
         setStats({ ...defaultStats, ...statsData })
         setCommissions(commissionData?.list || [])
+        setError('')
       })
       .catch((error) => {
-        Taro.showToast({ title: error.message || '代理数据加载失败', icon: 'none' })
+        if (mounted) setError(error.message || '代理数据加载失败')
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -60,11 +63,26 @@ export default function Agent() {
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    if (!loggedIn) return undefined
+    const cleanup = loadAgent()
+    return cleanup
   }, [loggedIn])
 
   if (!loggedIn) {
-    requireLogin('/pages/agent/index')
-    return <Shell title='代理中心' showTab={false}><View className='empty'>正在前往登录</View></Shell>
+    return (
+      <Shell title='代理中心' showTab={false}>
+        <EmptyState
+          title='请先登录'
+          description='登录后可查看代理身份、邀请码和佣金统计。'
+          icon='lock'
+          actionText='前往登录'
+          onAction={() => requireLogin('/pages/agent/index')}
+        />
+      </Shell>
+    )
   }
 
   const copyCode = () => {
@@ -95,12 +113,12 @@ export default function Agent() {
       </View>
 
       {loading ? (
-        <View className='loading-state'>
-          <AppIcon name='sparkles' size={16} />
-          <Text>正在同步代理数据</Text>
-        </View>
+        <PageLoading title='正在同步代理数据' description='正在读取代理身份、邀请码和佣金统计。' />
+      ) : error && !profile ? (
+        <ErrorState title='代理数据加载失败' description={error} onRetry={loadAgent} />
       ) : (
         <>
+          {error ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
           <View className='profile-grid spaced'>
             <View className='profile-card'>
               <View className='profile-icon'><AppIcon name='badge' size={22} /></View>
@@ -168,7 +186,7 @@ export default function Agent() {
                 ))}
               </View>
             ) : (
-              <View className='empty compact-empty'>暂无佣金流水</View>
+              <EmptyState compact title='暂无佣金流水' description='产生有效推广付费后，佣金记录会显示在这里。' icon='agent' />
             )}
           </View>
         </>

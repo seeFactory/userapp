@@ -1708,7 +1708,6 @@ taro-video-core {
   min-width: 0;
 }
 
-.loading-state,
 .inline-note {
   display: flex;
   min-height: 88px;

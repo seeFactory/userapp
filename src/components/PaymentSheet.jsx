@@ -165,7 +165,7 @@ export default function PaymentSheet({
           <View className='payment-info'>
             <View className='payment-row'>
               <Text>网络</Text>
-              <Text>{crypto.chainName || 'TRON'} / {crypto.token || crypto.payCurrency || 'USDT'}</Text>
+              <Text>{crypto.chainName || crypto.payChain || '待返回'} / {crypto.token || crypto.payToken || crypto.payCurrency || '--'}</Text>
             </View>
             <View className='payment-row'>
               <Text>应付数量</Text>

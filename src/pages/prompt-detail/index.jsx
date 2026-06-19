@@ -4,6 +4,7 @@ import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { ErrorState, PageLoading } from '../../components/PageState'
 import { copyPromptCase, fetchPromptCase, fetchTools, usePromptCase } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
 
@@ -15,22 +16,31 @@ export default function PromptDetail() {
   const [error, setError] = useState('')
   const tool = toolList.find((entry) => entry.id === item?.toolId)
 
-  useEffect(() => {
+  const loadPromptDetail = () => {
     let mounted = true
+    setLoading(true)
+    setItem(null)
     Promise.all([fetchPromptCase(id), fetchTools()])
       .then(([detail, apiTools]) => {
         if (!mounted) return
-        if (detail) setItem(detail)
+        setItem(detail || null)
         setToolList(apiTools || [])
         setError('')
       })
       .catch((err) => {
-        if (mounted) setError(err.message || '案例不存在或已下架')
+        if (!mounted) return
+        setItem(null)
+        setError(err.message || '案例不存在或已下架')
       })
       .finally(() => mounted && setLoading(false))
     return () => {
       mounted = false
     }
+  }
+
+  useEffect(() => {
+    const cleanup = loadPromptDetail()
+    return cleanup
   }, [id])
   const copyPrompt = () => {
     Taro.setClipboardData({
@@ -55,7 +65,11 @@ export default function PromptDetail() {
   if (!item) {
     return (
       <Shell title='提示词详情' showTab={false}>
-        <View className='empty'>{loading ? '正在同步案例' : error || '案例不存在'}</View>
+        {loading ? (
+          <PageLoading title='正在同步案例详情' description='正在读取完整提示词、封面和同款创作入口。' />
+        ) : (
+          <ErrorState title='案例不可访问' description={error || '案例不存在、已删除或暂未公开。'} onRetry={loadPromptDetail} />
+        )}
         <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
           <AppIcon name='back' size={16} />
           <Text>返回</Text>
