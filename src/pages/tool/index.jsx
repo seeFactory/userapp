@@ -10,6 +10,7 @@ import {
   createCryptoOrder,
   createGenerationPaymentOrder,
   createGenerationTask,
+  createPlatformPaymentOrder,
   createTelegramStarsOrder,
   fetchCryptoOrder,
   fetchPaymentOrder,
@@ -19,6 +20,8 @@ import {
   getUploadToken
 } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
+
+const PLATFORM_PAY_RUNTIMES = ['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp']
 
 const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
@@ -148,6 +151,8 @@ export default function ToolPage() {
       const nextPayment = { order, runtime: clientRuntime, afterPaid: 'generate' }
       if (clientRuntime === 'telegram-tma') {
         nextPayment.starsOrder = await createTelegramStarsOrder({ paymentOrderId: order.id })
+      } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
+        nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
         nextPayment.cryptoOrder = await createCryptoOrder({
           paymentOrderId: order.id,

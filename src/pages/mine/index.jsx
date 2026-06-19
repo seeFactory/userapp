@@ -8,6 +8,7 @@ import CustomerModal from '../../components/CustomerModal'
 import PaymentSheet from '../../components/PaymentSheet'
 import {
   createCryptoOrder,
+  createPlatformPaymentOrder,
   createRechargeOrder,
   createTelegramStarsOrder,
   fetchAgreement,
@@ -19,6 +20,8 @@ import {
   logoutRemote
 } from '../../services/api'
 import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
+
+const PLATFORM_PAY_RUNTIMES = ['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp']
 
 export default function Mine() {
   const [customerOpen, setCustomerOpen] = useState(false)
@@ -98,6 +101,8 @@ export default function Mine() {
       const nextPayment = { order, runtime: clientRuntime }
       if (clientRuntime === 'telegram-tma') {
         nextPayment.starsOrder = await createTelegramStarsOrder({ paymentOrderId: order.id })
+      } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
+        nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
         nextPayment.cryptoOrder = await createCryptoOrder({
           paymentOrderId: order.id,

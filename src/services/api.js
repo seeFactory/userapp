@@ -435,6 +435,13 @@ export async function createCryptoOrder(payload) {
   })
 }
 
+export async function createPlatformPaymentOrder(payload) {
+  return request('/payments/platform-orders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
 export async function fetchCryptoOrder(id) {
   return request(`/payments/crypto-orders/${id}`)
 }
