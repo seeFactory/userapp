@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro'
 import { getAuthToken, saveAuth } from '../utils/storage'
+import { withInvitePayload } from '../platform/invite'
 
 const API_BASE = 'http://127.0.0.1:10087/api/v1'
 
@@ -212,19 +213,38 @@ export async function clearFailedWorksRemote() {
   return request('/works/clear-failed', { method: 'POST' })
 }
 
+const AUTH_ENDPOINTS = {
+  'telegram-tma': '/auth/tma-login',
+  'wechat-miniapp': '/auth/wechat-miniapp-login',
+  'alipay-miniapp': '/auth/alipay-miniapp-login',
+  'douyin-miniapp': '/auth/douyin-miniapp-login',
+  'qq-miniapp': '/auth/qq-miniapp-login',
+  'h5-google': '/auth/h5/google-login',
+  'h5-x': '/auth/h5/x-login',
+  dev: '/auth/dev-account-login'
+}
+
 export async function loginDev(account = 'demo@seefactory.ai') {
   const data = await request('/auth/dev-account-login', {
     method: 'POST',
-    data: { account, nickname: 'seeFactory 创作者' }
+    data: withInvitePayload({ account, nickname: 'seeFactory 创作者' })
   })
   saveAuth(data)
   return data
 }
 
-export async function loginRuntime(providerUserId = 'demo-user') {
-  const data = await request('/auth/wechat-miniapp-login', {
+export async function loginRuntime(providerUserId = 'demo-user', options = {}) {
+  const runtime = options.clientRuntime || getClientRuntime()
+  const endpoint = AUTH_ENDPOINTS[runtime] || AUTH_ENDPOINTS['h5-google']
+  const data = await request(endpoint, {
     method: 'POST',
-    data: { providerUserId, nickname: 'seeFactory 创作者' }
+    data: withInvitePayload({
+      providerUserId,
+      nickname: 'seeFactory 创作者',
+      appId: options.appId,
+      source: options.source,
+      channel: options.channel
+    })
   })
   saveAuth(data)
   return data

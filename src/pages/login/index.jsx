@@ -1,17 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import { captureInviteFromParams } from '../../platform/invite'
 import { login, saveAuth } from '../../utils/storage'
 import { loginDev, loginRuntime } from '../../services/api'
 
 export default function Login() {
-  const { redirect } = getCurrentInstance().router.params
+  const params = getCurrentInstance().router.params
+  const { redirect } = params
   const [agreed, setAgreed] = useState(false)
   const [mode, setMode] = useState('wechat')
   const [account, setAccount] = useState('demo@seefactory.ai')
   const [password, setPassword] = useState('123456')
+
+  useEffect(() => {
+    captureInviteFromParams(params || {})
+  }, [params])
 
   const finishLogin = () => {
     if (!agreed) {

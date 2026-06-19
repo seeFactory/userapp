@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
-import Taro from '@tarojs/taro'
+import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
 import { homeVideo, tabs } from '../data/mock'
 import { fetchAppConfig } from '../services/api'
+import { captureInviteFromParams } from '../platform/invite'
 import AppIcon from './AppIcon'
 import BrandLogo from './BrandLogo'
 
 export default function Shell({ active, children, showTab = true }) {
   const [videoUrl, setVideoUrl] = useState(homeVideo)
+
+  useEffect(() => {
+    captureInviteFromParams(getCurrentInstance()?.router?.params || {})
+  }, [])
 
   useEffect(() => {
     if (active !== 'home') return undefined
