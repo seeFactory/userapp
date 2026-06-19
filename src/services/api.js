@@ -305,17 +305,67 @@ export async function loginDev(account = 'demo@seefactory.ai') {
   return data
 }
 
-export async function loginRuntime(providerUserId = 'demo-user', options = {}) {
-  const runtime = options.clientRuntime || getClientRuntime()
+function readTelegramLoginPayload() {
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
+  const initData = webApp?.initData
+  if (!initData) {
+    throw new Error('请在 Telegram Mini App 内打开后登录')
+  }
+  const user = webApp?.initDataUnsafe?.user || {}
+  return {
+    initData,
+    nickname: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
+    avatarUrl: user.photo_url
+  }
+}
+
+async function readMiniappLoginPayload(runtime) {
+  const result = await Taro.login()
+  if (!result?.code) {
+    throw new Error('平台登录 code 获取失败，请重试')
+  }
+  const payload = { code: result.code }
+  if (runtime === 'alipay-miniapp') {
+    payload.authCode = result.authCode || result.code
+  }
+  return payload
+}
+
+async function buildRuntimeLoginPayload(runtime, options = {}) {
+  if (runtime === 'telegram-tma') return readTelegramLoginPayload()
+  if (['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp'].includes(runtime)) {
+    return readMiniappLoginPayload(runtime)
+  }
+  if (runtime === 'h5-google') {
+    const idToken = options.idToken || (typeof window !== 'undefined' ? window.__SEEFACTORY_GOOGLE_ID_TOKEN__ : '')
+    if (!idToken) throw new Error('请先完成 Google 授权')
+    return { idToken }
+  }
+  if (runtime === 'h5-x') {
+    const { code, codeVerifier, redirectUri, state } = options
+    if (!code || !codeVerifier || !state) throw new Error('请先完成 X OAuth 授权')
+    return { code, codeVerifier, redirectUri, state }
+  }
+  return {}
+}
+
+export async function loginRuntime(providerUserIdOrOptions = {}, options = {}) {
+  const normalizedOptions = typeof providerUserIdOrOptions === 'object'
+    ? providerUserIdOrOptions
+    : { ...options, devProviderUserId: providerUserIdOrOptions }
+  const runtime = normalizedOptions.clientRuntime || getClientRuntime()
   const endpoint = AUTH_ENDPOINTS[runtime] || AUTH_ENDPOINTS['h5-google']
+  const platformPayload = await buildRuntimeLoginPayload(runtime, normalizedOptions)
   const data = await request(endpoint, {
     method: 'POST',
     data: withInvitePayload({
-      providerUserId,
-      nickname: 'seeFactory 创作者',
-      appId: options.appId,
-      source: options.source,
-      channel: options.channel
+      ...platformPayload,
+      ...(normalizedOptions.allowDevProviderUserId ? { providerUserId: normalizedOptions.devProviderUserId } : {}),
+      nickname: normalizedOptions.nickname || platformPayload.nickname || 'seeFactory 创作者',
+      avatarUrl: normalizedOptions.avatarUrl || platformPayload.avatarUrl,
+      appId: normalizedOptions.appId,
+      source: normalizedOptions.source,
+      channel: normalizedOptions.channel
     })
   })
   saveAuth(data)

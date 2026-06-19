@@ -4,7 +4,7 @@ import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { captureInviteFromParams } from '../../platform/invite'
-import { login, saveAuth } from '../../utils/storage'
+import { saveAuth } from '../../utils/storage'
 import { loginDev, loginRuntime } from '../../services/api'
 
 export default function Login() {
@@ -19,7 +19,7 @@ export default function Login() {
     captureInviteFromParams(params || {})
   }, [params])
 
-  const finishLogin = () => {
+  const finishLogin = async () => {
     if (!agreed) {
       Taro.showToast({ title: '请先同意用户协议和隐私政策', icon: 'none' })
       return
@@ -29,14 +29,17 @@ export default function Login() {
       return
     }
     const target = redirect ? decodeURIComponent(redirect) : '/pages/index/index'
-    const remoteLogin = mode === 'account' ? loginDev(account) : loginRuntime(`wechat-${Date.now()}`)
-    remoteLogin
-      .then((data) => saveAuth(data))
-      .catch(() => login())
-      .finally(() => {
-        Taro.showToast({ title: '登录成功', icon: 'success' })
-        Taro.redirectTo({ url: target })
-      })
+    Taro.showLoading({ title: '登录中' })
+    try {
+      const data = mode === 'account' ? await loginDev(account) : await loginRuntime()
+      saveAuth(data)
+      Taro.showToast({ title: '登录成功', icon: 'success' })
+      Taro.redirectTo({ url: target })
+    } catch (error) {
+      Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+    }
   }
 
   return (
