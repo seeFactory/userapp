@@ -1,5 +1,7 @@
 const { defineConfig } = require('@tarojs/cli')
 
+const apiBase = process.env.SEEFACTORY_API_BASE || 'http://127.0.0.1:10087/api/v1'
+
 module.exports = defineConfig({
   projectName: 'seeFactory',
   date: '2026-06-18',
@@ -23,7 +25,9 @@ module.exports = defineConfig({
     enable: false
   },
   alias: {},
-  defineConstants: {},
+  defineConstants: {
+    'process.env.SEEFACTORY_API_BASE': JSON.stringify(apiBase)
+  },
   copy: {
     patterns: [
       { from: 'src/assets/logo.png', to: 'dist/static/logo.png' }

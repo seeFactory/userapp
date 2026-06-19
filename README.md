@@ -8,7 +8,7 @@ seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5
 
 - 产品形态：Taro 多端用户端，优先小程序移动端体验，同时保留 H5 预览。
 - 数据来源：真实后端接口，不再保留 `src/data/mock.js` 作为业务数据源。
-- 默认接口：`http://127.0.0.1:10087/api/v1`。
+- 默认接口：`http://127.0.0.1:10087/api/v1`，可通过 `SEEFACTORY_API_BASE` 覆盖。
 - 设计基准：iPhone 14 逻辑视口 `390 x 844`，H5 内容最大宽度按移动端处理。
 - 品牌资源：`src/assets/logo.png` 来自 `docs/logo.png`，通过 `BrandLogo` 统一使用。
 - 状态体系：页面级 loading、骨架屏、toast、modal、confirm、empty、error 与支付/生成轮询状态。
@@ -53,12 +53,29 @@ pnpm build:weapp
 
 构建产物输出到 `dist/`，该目录不纳入 git 版本管理。
 
+## 环境配置
+
+用户端 API 地址通过 Taro 编译期常量注入：
+
+```bash
+SEEFACTORY_API_BASE=https://api.example.com/api/v1 pnpm build:h5
+```
+
+Windows PowerShell 示例：
+
+```powershell
+$env:SEEFACTORY_API_BASE="https://api.example.com/api/v1"; pnpm build:h5
+```
+
+未设置时默认使用本地后端地址 `http://127.0.0.1:10087/api/v1`。本地可复制 `.env.example` 作为部署配置参考，但当前构建以进程环境变量为准。
+
 ## 目录结构
 
 ```text
 app/
 |-- config/
 |   `-- index.js              # Taro 构建配置、H5 端口、资源复制配置
+|-- .env.example              # 用户端构建环境变量示例
 |-- scripts/
 |   `-- preview-static.mjs    # H5 静态产物预览脚本
 |-- src/
@@ -160,7 +177,7 @@ app/
 - 成功响应读取 `data` 字段；失败响应使用后端结构化错误中的 `message`、`userMessage`、`code`、`action` 和 `fieldErrors`。
 - H5/TMA token 默认存储在 `localStorage`；小程序端使用平台 storage。
 - 登录、支付、生成任务、作品广场和客服配置均不得依赖本地 mock。
-- 生产环境 API 地址后续应通过构建环境变量或配置注入替换 `src/services/api.js` 中的本地地址。
+- 生产环境 API 地址通过 `SEEFACTORY_API_BASE` 在构建时注入，不在业务代码中写死。
 
 ## 视觉规范
 

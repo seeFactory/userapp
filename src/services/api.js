@@ -2,7 +2,8 @@ import Taro from '@tarojs/taro'
 import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
 
-const API_BASE = 'http://127.0.0.1:10087/api/v1'
+const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
+const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
 let refreshPromise = null
 
 function token() {
