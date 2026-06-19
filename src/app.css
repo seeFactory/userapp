@@ -2563,3 +2563,30 @@ taro-video-core {
   gap: 12px;
   padding: 12px;
 }
+
+.section-head.slim {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.commission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.commission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.compact-empty {
+  min-height: 58px;
+  padding: 14px;
+}

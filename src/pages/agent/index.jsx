@@ -4,7 +4,7 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats } from '../../services/api'
+import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats } from '../../services/api'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 
 const defaultStats = {
@@ -12,6 +12,15 @@ const defaultStats = {
   activatedUsers: 0,
   commissionTotal: 0,
   withdrawEnabled: false
+}
+
+function commissionStatusText(status) {
+  const map = {
+    pending: '待统计',
+    settled: '已统计',
+    void: '已作废'
+  }
+  return map[status] || '待统计'
 }
 
 function formatMoney(cents = 0) {
@@ -22,6 +31,7 @@ export default function Agent() {
   const [profile, setProfile] = useState(null)
   const [inviteCode, setInviteCode] = useState(null)
   const [stats, setStats] = useState(defaultStats)
+  const [commissions, setCommissions] = useState([])
   const [loading, setLoading] = useState(true)
   const loggedIn = isLoggedIn()
 
@@ -31,13 +41,15 @@ export default function Agent() {
     Promise.all([
       fetchAgentProfile(),
       fetchAgentInviteCode(),
-      fetchAgentStats()
+      fetchAgentStats(),
+      fetchAgentCommissions({ pageSize: 5 })
     ])
-      .then(([profileData, inviteData, statsData]) => {
+      .then(([profileData, inviteData, statsData, commissionData]) => {
         if (!mounted) return
         setProfile(profileData)
         setInviteCode(inviteData?.inviteCode || null)
         setStats({ ...defaultStats, ...statsData })
+        setCommissions(commissionData?.list || [])
       })
       .catch((error) => {
         Taro.showToast({ title: error.message || '代理数据加载失败', icon: 'none' })
@@ -110,6 +122,16 @@ export default function Agent() {
               <Text className='profile-name'>累计佣金</Text>
               <Text className='tool-desc'>{formatMoney(stats.commissionTotal)}</Text>
             </View>
+            <View className='profile-card'>
+              <View className='profile-icon'><AppIcon name='scan' size={22} /></View>
+              <Text className='profile-name'>待统计</Text>
+              <Text className='tool-desc'>{formatMoney(stats.pendingCommission)}</Text>
+            </View>
+            <View className='profile-card'>
+              <View className='profile-icon'><AppIcon name='badge' size={22} /></View>
+              <Text className='profile-name'>已统计</Text>
+              <Text className='tool-desc'>{formatMoney(stats.settledCommission)}</Text>
+            </View>
           </View>
 
           <View className='qr-card qr-card-dark'>
@@ -124,6 +146,30 @@ export default function Agent() {
           <View className='primary-button' onClick={copyCode}>
             <AppIcon name='copy' size={16} />
             <Text>{inviteCode ? '复制邀请码' : '等待后台开通'}</Text>
+          </View>
+
+          <View className='panel'>
+            <View className='section-head slim'>
+              <View>
+                <Text className='section-kicker'>Commission records</Text>
+                <Text className='section-title'>佣金流水</Text>
+              </View>
+            </View>
+            {commissions.length ? (
+              <View className='commission-list'>
+                {commissions.map((item) => (
+                  <View key={item.id} className='commission-row'>
+                    <View>
+                      <Text className='profile-name'>{formatMoney(item.commissionAmountCents)}</Text>
+                      <Text className='tool-desc'>第 {item.level || 1} 级 · {commissionStatusText(item.status)}</Text>
+                    </View>
+                    <Text className='section-kicker'>{item.commissionRate ? `${Math.round(item.commissionRate * 100)}%` : ''}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View className='empty compact-empty'>暂无佣金流水</View>
+            )}
           </View>
         </>
       )}

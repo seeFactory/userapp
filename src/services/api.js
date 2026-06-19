@@ -329,6 +329,14 @@ export async function fetchAgentStats() {
   return request('/agent/stats')
 }
 
+export async function fetchAgentCommissions(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 10)
+  })
+  return request(`/agent/commissions?${query.toString()}`)
+}
+
 export async function publishGalleryWork(id) {
   return request(`/works/${id}/publish-gallery`, { method: 'POST' })
 }
