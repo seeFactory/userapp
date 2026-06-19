@@ -421,6 +421,55 @@ export async function fetchCreditTransactions(params = {}) {
   return request(`/credits/transactions?${query.toString()}`)
 }
 
+export async function fetchWalletAccount() {
+  return request('/wallet/account')
+}
+
+export async function fetchWalletRechargeOptions() {
+  return request('/wallet/recharge-options')
+}
+
+export async function createWalletCryptoOrder(payload) {
+  return request('/wallet/recharge/crypto/order', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchWalletCryptoOrder(id) {
+  return request(`/wallet/recharge/crypto/orders/${id}`)
+}
+
+export async function fetchWithdrawalAddress() {
+  return request('/wallet/withdrawal-address')
+}
+
+export async function saveWithdrawalAddress(payload) {
+  return request('/wallet/withdrawal-address', {
+    method: 'PUT',
+    data: payload
+  })
+}
+
+export async function fetchWalletWithdrawals(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 10)
+  })
+  return request(`/wallet/withdrawals?${query.toString()}`)
+}
+
+export async function createWalletWithdrawal(payload) {
+  return request('/wallet/withdrawals', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function cancelWalletWithdrawal(id) {
+  return request(`/wallet/withdrawals/${id}/cancel`, { method: 'POST' })
+}
+
 export async function fetchRechargeSettings() {
   return request('/credits/recharge-settings')
 }

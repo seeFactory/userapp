@@ -9,7 +9,8 @@ export default defineAppConfig({
     'pages/tool/index',
     'pages/prompt-detail/index',
     'pages/work-detail/index',
-    'pages/agent/index'
+    'pages/agent/index',
+    'pages/wallet/index'
   ],
   window: {
     backgroundTextStyle: 'light',

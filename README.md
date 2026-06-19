@@ -1,6 +1,6 @@
 # seeFactory Mini App
 
-seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5 前端。当前版本已从早期本地 mock 原型升级为后端接口驱动：工具、案例、作品、广场、用户、客服、生成任务和支付流程均通过 `src/services/api.js` 接入 `backend/` 提供的 `/api/v1` 接口。
+seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5 前端。当前版本已从早期本地 mock 原型升级为后端接口驱动：工具、案例、作品、广场、用户、客服、生成任务、平台钱包和支付流程均通过 `src/services/api.js` 接入 `backend/` 提供的 `/api/v1` 接口。
 
 视觉基准为 iPhone 14 逻辑视口 `390 x 844`。首页使用固定视口的动态视频背景，页面内容采用深色玻璃质感、透明渐变主卡片、统一 logo、统一图标系统、底部 tab 与小程序默认顶部导航栏。
 
@@ -120,7 +120,8 @@ app/
 |   |   |-- tool/             # 生成工具页
 |   |   |-- prompt-detail/    # 提示词详情
 |   |   |-- work-detail/      # 作品详情
-|   |   `-- agent/            # 代理中心展示
+|   |   |-- agent/            # 代理中心展示
+|   |   `-- wallet/           # 平台钱包、crypto 充值、提现申请
 |   |-- platform/
 |   |   `-- invite.js         # 邀请码、渠道参数处理
 |   |-- services/
@@ -183,9 +184,18 @@ app/
 
 ### 我的 `pages/mine/index`
 
-- 展示登录状态、点数余额、服务入口、客服入口、协议入口和代理中心入口。
-- 用户资料与点数余额由后端接口返回。
+- 展示登录状态、点数余额、钱包余额、服务入口、客服入口、协议入口和代理中心入口。
+- 用户资料、点数余额与钱包余额由后端接口返回。
+- 钱包充值入口跳转到 `pages/wallet/index`，不再直接创建旧点数充值支付单。
 - 客服信息由 `/app/config` 提供，前端不写死运营联系方式。
+
+### 平台钱包 `pages/wallet/index`
+
+- 通过 `/wallet/account` 展示可用余额、冻结余额和累计充值。
+- 通过 `/wallet/recharge-options` 展示可用支付链和代币。
+- 通过 `/wallet/recharge/crypto/order` 创建真实 crypto bridge 充值订单。
+- 展示打币地址、需支付金额、支付币种、过期时间和订单状态，支持复制地址和轮询刷新。
+- 支持保存提现地址、填写 Memo / Tag、提交提现申请、取消待审核提现和查看提现记录。
 
 ### 登录 `pages/login/index`
 

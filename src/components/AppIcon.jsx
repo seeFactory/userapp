@@ -30,8 +30,10 @@ const iconParts = {
   scan: ['scan-a', 'scan-b', 'scan-c', 'scan-d', 'scan-dot'],
   search: ['search-ring', 'search-handle'],
   share: ['share-node-a', 'share-node-b', 'share-node-c', 'share-line-a', 'share-line-b'],
+  sparkles: ['wand-spark', 'spark', 'wand-dot'],
   user: ['user-head', 'user-body', 'spark'],
   video: ['video-body', 'video-lens'],
+  wallet: ['coin', 'coin-mark', 'spark'],
   wand: ['wand-stick', 'wand-spark', 'wand-dot']
 }
 
