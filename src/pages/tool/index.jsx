@@ -260,6 +260,20 @@ function uploadToOss(policy, file, onProgress) {
   })
 }
 
+function fieldError(errors, field) {
+  if (!errors) return ''
+  if (errors[field]) return errors[field]
+  const nestedKey = Object.keys(errors).find((key) => key === field || key.startsWith(`${field}.`))
+  return nestedKey ? errors[nestedKey] : ''
+}
+
+function mergeFieldError(errors, field, message) {
+  return {
+    ...(errors || {}),
+    [field]: message
+  }
+}
+
 export default function ToolPage() {
   const params = getCurrentInstance().router?.params || {}
   const [tool, setTool] = useState(fallbackTool(params.id))
@@ -272,6 +286,7 @@ export default function ToolPage() {
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [payment, setPayment] = useState(null)
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     let mounted = true
@@ -303,8 +318,20 @@ export default function ToolPage() {
     setUploadItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)))
   }
 
+  const clearFieldError = (field) => {
+    setFormErrors((current) => {
+      if (!current || !Object.keys(current).length) return current
+      const next = { ...current }
+      Object.keys(next).forEach((key) => {
+        if (key === field || key.startsWith(`${field}.`)) delete next[key]
+      })
+      return next
+    })
+  }
+
   const removeUploadItem = (key) => {
     if (uploading) return
+    clearFieldError('inputAssetIds')
     setUploadItems((prev) => prev.filter((item) => item.key !== key))
   }
 
@@ -320,6 +347,7 @@ export default function ToolPage() {
     setUploading(true)
     try {
       const files = await chooseTypedFiles({ ...uploadConfig, maxCount: remaining })
+      clearFieldError('inputAssetIds')
       const validFiles = []
       const invalidMessages = []
       files.forEach((file) => {
@@ -452,22 +480,32 @@ export default function ToolPage() {
   const submit = async () => {
     if (busy) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
+    let nextErrors = {}
     if (!prompt.trim()) {
+      nextErrors = mergeFieldError(nextErrors, 'prompt', '请输入提示词')
+      setFormErrors(nextErrors)
       Taro.showToast({ title: '请输入提示词', icon: 'none' })
       return
     }
     if ((needs('upload') || needs('multiUpload')) && !uploaded) {
+      nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', '请先添加参考素材')
+      setFormErrors(nextErrors)
       Taro.showToast({ title: '请先添加参考素材', icon: 'none' })
       return
     }
     if (needs('multiUpload') && assetIds.length < uploadConfig.minCount) {
+      nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', `请至少添加 ${uploadConfig.minCount} 张参考素材`)
+      setFormErrors(nextErrors)
       Taro.showToast({ title: `请至少添加 ${uploadConfig.minCount} 张参考素材`, icon: 'none' })
       return
     }
     if (uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')) {
+      nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', '素材仍在上传中')
+      setFormErrors(nextErrors)
       Taro.showToast({ title: '素材仍在上传中', icon: 'none' })
       return
     }
+    setFormErrors({})
     setBusy(true)
     try {
       const result = await createGenerationTask({
@@ -482,6 +520,12 @@ export default function ToolPage() {
     } catch (error) {
       if (error.code === 'INSUFFICIENT_CREDITS' || error.action === 'refresh_payment') {
         await beginGenerationPayment()
+        return
+      }
+      if (error.fieldErrors && Object.keys(error.fieldErrors).length) {
+        setFormErrors(error.fieldErrors)
+        const firstMessage = Object.values(error.fieldErrors)[0]
+        Taro.showToast({ title: firstMessage || error.message || '请检查表单内容', icon: 'none' })
         return
       }
       Taro.showToast({ title: error.message || '提交生成失败', icon: 'none' })
@@ -507,13 +551,14 @@ export default function ToolPage() {
         {(needs('upload') || needs('multiUpload')) && (
           <>
             <Text className='input-label'>{uploadConfig.label}</Text>
-            <View className={uploading ? 'upload-box uploading' : 'upload-box'} onClick={chooseUpload}>
+            <View className={`${uploading ? 'upload-box uploading' : 'upload-box'}${fieldError(formErrors, 'inputAssetIds') ? ' has-error' : ''}`} onClick={chooseUpload}>
               <AppIcon name={uploaded ? 'badge' : uploadLimits[uploadConfig.acceptTypes[0]]?.icon || 'image'} size={18} />
               <View className='upload-copy'>
                 <Text>{uploaded ? `已添加 ${assetIds.length} 个参考素材` : uploading ? '素材上传中...' : uploadConfig.actionText}</Text>
                 <Text className='upload-hint'>{uploadConfig.tip}</Text>
               </View>
             </View>
+            {fieldError(formErrors, 'inputAssetIds') ? <Text className='field-error'>{fieldError(formErrors, 'inputAssetIds')}</Text> : null}
             {uploadItems.length > 0 && (
               <View className='upload-preview-grid'>
                 {uploadItems.map((item) => (
@@ -558,63 +603,83 @@ export default function ToolPage() {
 
         <Text className='input-label'>提示词</Text>
         <Textarea
-          className='text-area'
+          className={fieldError(formErrors, 'prompt') ? 'text-area has-error' : 'text-area'}
           value={prompt}
           maxlength={500}
           placeholder='描述你想生成的画面、镜头、风格或营销场景'
           placeholderClass='muted'
-          onInput={(event) => setPrompt(event.detail.value)}
+          onInput={(event) => {
+            clearFieldError('prompt')
+            setPrompt(event.detail.value)
+          }}
         />
+        {fieldError(formErrors, 'prompt') ? <Text className='field-error'>{fieldError(formErrors, 'prompt')}</Text> : null}
 
         {needs('style') && (
           <>
             <Text className='input-label'>风格</Text>
-            <View className='option-row'>
+            <View className={fieldError(formErrors, 'style') ? 'option-row has-error' : 'option-row'}>
               {styleOptions.map((item) => (
-                <View key={item} className={style === item ? 'option-chip active' : 'option-chip'} onClick={() => setStyle(item)}>
+                <View key={item} className={style === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                  clearFieldError('style')
+                  setStyle(item)
+                }}>
                   {item}
                 </View>
               ))}
             </View>
+            {fieldError(formErrors, 'style') ? <Text className='field-error'>{fieldError(formErrors, 'style')}</Text> : null}
           </>
         )}
 
         {needs('ratio') && (
           <>
             <Text className='input-label'>画面比例</Text>
-            <View className='option-row'>
+            <View className={fieldError(formErrors, 'ratio') ? 'option-row has-error' : 'option-row'}>
               {ratioOptions.map((item) => (
-                <View key={item} className={ratio === item ? 'option-chip active' : 'option-chip'} onClick={() => setRatio(item)}>
+                <View key={item} className={ratio === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                  clearFieldError('ratio')
+                  setRatio(item)
+                }}>
                   {item}
                 </View>
               ))}
             </View>
+            {fieldError(formErrors, 'ratio') ? <Text className='field-error'>{fieldError(formErrors, 'ratio')}</Text> : null}
           </>
         )}
 
         {needs('duration') && (
           <>
             <Text className='input-label'>视频时长</Text>
-            <View className='option-row'>
+            <View className={fieldError(formErrors, 'duration') ? 'option-row has-error' : 'option-row'}>
               {durationOptions.map((item) => (
-                <View key={item} className={duration === item ? 'option-chip active' : 'option-chip'} onClick={() => setDuration(item)}>
+                <View key={item} className={duration === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                  clearFieldError('duration')
+                  setDuration(item)
+                }}>
                   {item}
                 </View>
               ))}
             </View>
+            {fieldError(formErrors, 'duration') ? <Text className='field-error'>{fieldError(formErrors, 'duration')}</Text> : null}
           </>
         )}
 
         {needs('model') && (
           <>
             <Text className='input-label'>模型</Text>
-            <View className='option-row'>
+            <View className={fieldError(formErrors, 'model') ? 'option-row has-error' : 'option-row'}>
               {modelOptions.map((item) => (
-                <View key={item} className={model === item ? 'option-chip active' : 'option-chip'} onClick={() => setModel(item)}>
+                <View key={item} className={model === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                  clearFieldError('model')
+                  setModel(item)
+                }}>
                   {item}
                 </View>
               ))}
             </View>
+            {fieldError(formErrors, 'model') ? <Text className='field-error'>{fieldError(formErrors, 'model')}</Text> : null}
           </>
         )}
 
