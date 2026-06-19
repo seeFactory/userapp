@@ -1,5 +1,6 @@
 import { Image, View } from '@tarojs/components'
-import logo from '../assets/logo.png'
+
+const logo = '/static/logo.png'
 
 export default function BrandLogo({ size = 42, className = '' }) {
   return (

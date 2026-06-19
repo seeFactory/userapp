@@ -6,7 +6,7 @@
   "description": "seeFactory mini program prototype built with React and Taro.",
   "scripts": {
     "dev:h5": "taro build --type h5 --watch",
-    "build:h5": "pnpm prepare:h5-dist && taro build --type h5",
+    "build:h5": "pnpm prepare:h5-dist && taro build --type h5 && pnpm verify:h5-size",
     "dev:tma": "taro build --type h5 --watch",
     "build:tma": "pnpm build:h5",
     "dev:weapp": "taro build --type weapp --watch",
@@ -21,7 +21,8 @@
     "verify": "pnpm build:all",
     "clean:dist": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "prepare:h5-dist": "node scripts/prepare-h5-dist.mjs",
-    "preview:h5": "node scripts/preview-static.mjs"
+    "preview:h5": "node scripts/preview-static.mjs",
+    "verify:h5-size": "node scripts/verify-h5-size.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.4",
