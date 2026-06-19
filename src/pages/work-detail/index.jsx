@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import {
   deleteWorkRemote,
   fetchGenerationTask,
+  fetchGalleryWork,
   fetchWork,
   getDownloadUrl,
   publishGalleryWork,
   retryGenerationTask,
   unpublishGalleryWork
 } from '../../services/api'
+import { isLoggedIn } from '../../utils/storage'
 
 function statusLabel(status) {
   const map = {
@@ -43,17 +45,77 @@ function mergeTask(work, task) {
   }
 }
 
+function inferMediaKind(work, url = '') {
+  const text = `${work?.category || ''} ${work?.type || ''} ${work?.toolKey || ''} ${url}`.toLowerCase()
+  if (/\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(text) || text.includes('video')) return 'video'
+  if (/\.(jpg|jpeg|png|webp|gif|bmp)(\?|#|$)/i.test(text) || text.includes('image')) return 'image'
+  return 'file'
+}
+
+function openH5Download(url, title) {
+  if (typeof document === 'undefined') {
+    if (typeof window !== 'undefined') window.open(url, '_blank')
+    return
+  }
+  const link = document.createElement('a')
+  link.href = url
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  link.download = `${title || 'seefactory-work'}`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+function downloadTempFile(url) {
+  return new Promise((resolve, reject) => {
+    Taro.downloadFile({
+      url,
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
+          resolve(res.tempFilePath)
+          return
+        }
+        reject(new Error('文件下载失败，请稍后重试'))
+      },
+      fail: () => reject(new Error('文件下载失败，请检查网络或下载域名配置'))
+    })
+  })
+}
+
+function saveFileToAlbum(filePath, mediaKind) {
+  return new Promise((resolve, reject) => {
+    const api = mediaKind === 'video' ? Taro.saveVideoToPhotosAlbum : Taro.saveImageToPhotosAlbum
+    if (!api) {
+      reject(new Error(mediaKind === 'video' ? '当前平台暂不支持保存视频' : '当前平台暂不支持保存图片'))
+      return
+    }
+    api({
+      filePath,
+      success: resolve,
+      fail: () => reject(new Error('请确认已允许保存到相册，或稍后重试'))
+    })
+  })
+}
+
 export default function WorkDetail() {
-  const { id } = getCurrentInstance().router.params
+  const { id, source } = getCurrentInstance().router?.params || {}
   const [work, setWork] = useState(null)
+  const [detailMode, setDetailMode] = useState(source === 'gallery' ? 'gallery' : 'owner')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let mounted = true
-    fetchWork(id)
-      .then((data) => {
+    const loadDetail = source === 'gallery' || !isLoggedIn()
+      ? fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' }))
+      : fetchWork(id)
+        .then((data) => ({ data, mode: 'owner' }))
+        .catch(() => fetchGalleryWork(id).then((data) => ({ data, mode: 'gallery' })))
+    loadDetail
+      .then(({ data, mode }) => {
         if (!mounted) return
+        setDetailMode(mode)
         setWork(data || null)
         setError('')
       })
@@ -64,7 +126,7 @@ export default function WorkDetail() {
     return () => {
       mounted = false
     }
-  }, [id])
+  }, [id, source])
 
   useEffect(() => {
     if (!work?.generationTaskId || !['queued', 'processing'].includes(work.status)) return undefined
@@ -114,20 +176,44 @@ export default function WorkDetail() {
   }
 
   const saveWork = async () => {
+    if (detailMode === 'gallery' && work.downloadEnabled === false) {
+      Taro.showToast({ title: '该作品暂不支持保存', icon: 'none' })
+      return
+    }
+    let url = ''
+    Taro.showLoading({ title: process.env.TARO_ENV === 'h5' ? '准备下载' : '保存中' })
     try {
       const data = await getDownloadUrl(work.id)
-      const url = data?.url || work.image
+      url = data?.url || work.image
+      if (!url) throw new Error('下载地址为空')
+      const mediaKind = inferMediaKind(work, url)
       if (process.env.TARO_ENV === 'h5') {
-        Taro.showToast({ title: '已获取下载地址', icon: 'success' })
+        openH5Download(url, work.title)
+        Taro.hideLoading()
+        Taro.showToast({ title: '已打开下载地址', icon: 'success' })
         return
       }
-      Taro.saveImageToPhotosAlbum({
-        filePath: url,
-        success: () => Taro.showToast({ title: '已保存', icon: 'success' }),
-        fail: () => Taro.showModal({ title: '保存失败', content: '请确认已允许保存到相册。', showCancel: false })
-      })
+
+      if (!['image', 'video'].includes(mediaKind)) {
+        Taro.hideLoading()
+        Taro.setClipboardData({
+          data: url,
+          success: () => Taro.showToast({ title: '下载地址已复制', icon: 'success' })
+        })
+        return
+      }
+
+      const filePath = /^https?:\/\//i.test(url) ? await downloadTempFile(url) : url
+      await saveFileToAlbum(filePath, mediaKind)
+      Taro.hideLoading()
+      Taro.showToast({ title: mediaKind === 'video' ? '视频已保存' : '图片已保存', icon: 'success' })
     } catch (error) {
-      Taro.showToast({ title: '已使用本地预览保存', icon: 'none' })
+      Taro.hideLoading()
+      Taro.showModal({
+        title: '保存失败',
+        content: error.message || '请确认已允许保存到相册，或稍后重试。',
+        showCancel: false
+      })
     }
   }
 
@@ -163,13 +249,21 @@ export default function WorkDetail() {
     )
   }
 
-  const image = work.image || work.coverUrl || work.resultUrls?.[0] || ''
+  const media = work.resultUrls?.[0] || work.image || work.coverUrl || ''
+  const preview = work.coverUrl || work.image || media
+  const mediaKind = inferMediaKind(work, media || preview)
   const pending = ['queued', 'processing'].includes(work?.status)
   const failed = ['failed', 'canceled'].includes(work?.status)
+  const canSave = work.status === 'success' && (detailMode !== 'gallery' || work.downloadEnabled !== false)
+  const isGalleryDetail = detailMode === 'gallery'
 
   return (
     <Shell title='作品详情' showTab={false}>
-      <Image className='detail-image' src={image} mode='aspectFill' />
+      {media && mediaKind === 'video' ? (
+        <Video className='detail-image' src={media} poster={preview} controls />
+      ) : (
+        <Image className='detail-image' src={preview} mode='aspectFill' />
+      )}
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
@@ -197,34 +291,49 @@ export default function WorkDetail() {
       </View>
 
       <View className='hero-actions'>
-        <View className={work.status === 'success' ? 'primary-button' : 'primary-button disabled'} onClick={work.status === 'success' ? saveWork : undefined}>
+        <View className={canSave ? 'primary-button' : 'primary-button disabled'} onClick={canSave ? saveWork : undefined}>
           <AppIcon name='download' size={16} />
-          <Text>保存</Text>
+          <Text>{work.downloadEnabled === false && isGalleryDetail ? '不可保存' : '保存'}</Text>
         </View>
         <View className='ghost-button glass-button' onClick={() => Taro.showShareMenu({})}>
           <AppIcon name='share' size={16} />
           <Text>分享</Text>
         </View>
       </View>
-      <View className='hero-actions'>
-        <View className={work.status === 'success' ? 'primary-button' : 'primary-button disabled'} onClick={work.status === 'success' ? publish : undefined}>
-          <AppIcon name='gallery' size={16} />
-          <Text>发布广场</Text>
+      {isGalleryDetail ? (
+        <View className='hero-actions'>
+          <View className='primary-button' onClick={retry}>
+            <AppIcon name='wand' size={16} />
+            <Text>同款创作</Text>
+          </View>
+          <View className='ghost-button glass-button' onClick={() => Taro.navigateBack()}>
+            <AppIcon name='back' size={16} />
+            <Text>返回广场</Text>
+          </View>
         </View>
-        <View className='ghost-button glass-button' onClick={unpublish}>
-          <AppIcon name='close' size={16} />
-          <Text>取消发布</Text>
+      ) : (
+        <View className='hero-actions'>
+          <View className={work.status === 'success' ? 'primary-button' : 'primary-button disabled'} onClick={work.status === 'success' ? publish : undefined}>
+            <AppIcon name='gallery' size={16} />
+            <Text>发布广场</Text>
+          </View>
+          <View className='ghost-button glass-button' onClick={unpublish}>
+            <AppIcon name='close' size={16} />
+            <Text>取消发布</Text>
+          </View>
         </View>
-      </View>
+      )}
       <View className='hero-actions'>
         <View className='ghost-button glass-button' onClick={retry}>
           <AppIcon name='refresh' size={16} />
-          <Text>重新生成</Text>
+          <Text>{isGalleryDetail ? '带入提示词' : '重新生成'}</Text>
         </View>
-        <View className='danger-button transparent-button' onClick={remove}>
-          <AppIcon name='delete' size={16} />
-          <Text>删除</Text>
-        </View>
+        {!isGalleryDetail && (
+          <View className='danger-button transparent-button' onClick={remove}>
+            <AppIcon name='delete' size={16} />
+            <Text>删除</Text>
+          </View>
+        )}
       </View>
     </Shell>
   )
