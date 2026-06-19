@@ -105,8 +105,10 @@ export default function ToolPage() {
       for (const file of files) {
         const filePath = file.path || file.tempFilePath || ''
         const filename = filePath.split('/').pop() || 'reference.png'
-        const policy = await getUploadToken({ type: 'image', filename })
-        if (policy.configured && process.env.TARO_ENV !== 'h5') {
+        const mimeType = file.type || file.mimeType || file.originalFileObj?.type || ''
+        const size = file.size || file.originalFileObj?.size
+        const policy = await getUploadToken({ type: 'image', filename, mimeType, size })
+        if (policy.configured) {
           await Taro.uploadFile({
             url: policy.uploadUrl,
             filePath,
@@ -118,7 +120,8 @@ export default function ToolPage() {
           type: 'image',
           url: policy.publicUrl,
           ossKey: policy.ossKey,
-          size: file.size
+          mimeType,
+          size
         })
         created.push(asset.id)
       }
