@@ -103,12 +103,12 @@ function invokePlatformPayment(platformPayment, onRefresh) {
 
 function invokeTelegramStarsPayment(stars, onRefresh) {
   if (!stars?.invoiceLink) {
-    Taro.showToast({ title: 'Stars Invoice 暂未生成', icon: 'none' })
+    Taro.showToast({ title: 'Stars 支付链接暂未生成', icon: 'none' })
     return Promise.resolve(false)
   }
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
   if (!webApp?.openInvoice) {
-    copy(stars.invoiceLink, 'Invoice 链接')
+    copy(stars.invoiceLink, 'Stars 支付链接')
     Taro.showToast({ title: '请在 Telegram 内打开并完成支付', icon: 'none' })
     return Promise.resolve(false)
   }
@@ -257,8 +257,8 @@ export default function PaymentSheet({
               <Text>支付单位</Text>
               <Text>{stars.starsAmount} Stars</Text>
             </View>
-            <View className='copy-box' onClick={() => copy(stars.invoiceLink, 'Invoice 链接')}>
-              <Text>{stars.invoiceLink || 'Invoice 链接生成中'}</Text>
+            <View className='copy-box' onClick={() => copy(stars.invoiceLink, 'Stars 支付链接')}>
+              <Text>{stars.invoiceLink || 'Stars 支付链接生成中'}</Text>
               <AppIcon name='copy' size={14} />
             </View>
           </View>

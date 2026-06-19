@@ -434,7 +434,7 @@ export default function Wallet() {
             <Input
               className='text-input'
               value={addressForm.memo}
-              placeholder='无 memo 可留空'
+              placeholder='没有备注可留空'
               onInput={(event) => setAddressForm({ ...addressForm, memo: event.detail.value })}
             />
             <View className='ghost-button glass-button block-gap' onClick={saveAddress}>
