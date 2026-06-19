@@ -26,6 +26,10 @@ export function getAuthToken() {
   return Taro.getStorageSync(TOKEN_KEY)
 }
 
+export function getRefreshToken() {
+  return Taro.getStorageSync(REFRESH_TOKEN_KEY)
+}
+
 export function getCurrentUser() {
   return Taro.getStorageSync(USER_KEY) || null
 }

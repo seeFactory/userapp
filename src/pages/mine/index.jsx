@@ -15,9 +15,10 @@ import {
   fetchCryptoOrder,
   fetchPaymentOrder,
   fetchTelegramStarsOrder,
-  getClientRuntime
+  getClientRuntime,
+  logoutRemote
 } from '../../services/api'
-import { getCurrentUser, isLoggedIn, logout, requireLogin } from '../../utils/storage'
+import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
 
 export default function Mine() {
   const [customerOpen, setCustomerOpen] = useState(false)
@@ -44,8 +45,8 @@ export default function Mine() {
     }
   }, [loggedIn])
 
-  const signOut = () => {
-    logout()
+  const signOut = async () => {
+    await logoutRemote().catch(() => {})
     setLoggedIn(false)
     setBalance(null)
     Taro.showToast({ title: '已退出登录', icon: 'success' })

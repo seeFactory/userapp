@@ -1,11 +1,36 @@
 import Taro from '@tarojs/taro'
-import { getAuthToken, saveAuth } from '../utils/storage'
+import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
 
 const API_BASE = 'http://127.0.0.1:10087/api/v1'
+let refreshPromise = null
 
 function token() {
   return getAuthToken()
+}
+
+function makeError(response, body) {
+  const error = new Error(body.userMessage || body.message || '请求失败')
+  error.code = body.code
+  error.action = body.action
+  error.fieldErrors = body.fieldErrors
+  error.response = body
+  error.statusCode = response.statusCode
+  return error
+}
+
+function shouldRefresh(response, body) {
+  return response.statusCode === 401 && ['TOKEN_INVALID', 'AUTH_REQUIRED'].includes(body.code)
+}
+
+function redirectLogin() {
+  try {
+    Taro.navigateTo({ url: '/pages/login/index' })
+  } catch (error) {
+    try {
+      Taro.redirectTo({ url: '/pages/login/index' })
+    } catch (_) {}
+  }
 }
 
 export function toApiWork(item) {
@@ -41,26 +66,65 @@ export function getClientRuntime() {
   return 'h5-google'
 }
 
-export async function request(path, options = {}) {
+async function send(path, options = {}) {
   const header = {
     'content-type': 'application/json',
-    ...(token() ? { authorization: `Bearer ${token()}` } : {}),
+    ...(!options.noAuth && token() ? { authorization: `Bearer ${token()}` } : {}),
     ...(options.header || {})
   }
-  const response = await Taro.request({
+  return Taro.request({
     url: `${API_BASE}${path}`,
     method: options.method || 'GET',
     data: options.data,
     header
   })
+}
+
+async function refreshAuth() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+  if (!refreshPromise) {
+    refreshPromise = send('/auth/refresh', {
+      method: 'POST',
+      data: { refreshToken },
+      noAuth: true
+    })
+      .then((response) => {
+        const body = response.data || {}
+        if (response.statusCode >= 400 || body.success === false) {
+          throw makeError(response, body)
+        }
+        saveAuth(body.data)
+        return true
+      })
+      .catch(() => {
+        logout()
+        return false
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+export async function request(path, options = {}) {
+  let response = await send(path, options)
   const body = response.data || {}
   if (response.statusCode >= 400 || body.success === false) {
-    const error = new Error(body.userMessage || body.message || '请求失败')
-    error.code = body.code
-    error.action = body.action
-    error.fieldErrors = body.fieldErrors
-    error.response = body
-    throw error
+    if (!options.skipRefresh && shouldRefresh(response, body)) {
+      const refreshed = await refreshAuth()
+      if (refreshed) {
+        response = await send(path, { ...options, skipRefresh: true })
+        const retryBody = response.data || {}
+        if (response.statusCode < 400 && retryBody.success !== false) {
+          return retryBody.data
+        }
+        throw makeError(response, retryBody)
+      }
+      redirectLogin()
+    }
+    throw makeError(response, body)
   }
   return body.data
 }
@@ -248,6 +312,19 @@ export async function loginRuntime(providerUserId = 'demo-user', options = {}) {
   })
   saveAuth(data)
   return data
+}
+
+export async function logoutRemote() {
+  const refreshToken = getRefreshToken()
+  try {
+    await request('/auth/logout', {
+      method: 'POST',
+      data: { refreshToken },
+      skipRefresh: true
+    })
+  } finally {
+    logout()
+  }
 }
 
 export async function fetchMe() {
