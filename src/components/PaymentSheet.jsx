@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text } from '@tarojs/components'
 import AppIcon from './AppIcon'
@@ -32,76 +33,111 @@ function copy(value, label) {
   })
 }
 
-function invokePlatformPayment(platformPayment) {
+function invokePlatformPayment(platformPayment, onRefresh) {
   if (!platformPayment?.payParams) {
     Taro.showToast({ title: '支付参数暂未生成', icon: 'none' })
-    return
+    return Promise.resolve(false)
   }
   const params = platformPayment.payParams || {}
-  if (platformPayment.invokeType === 'alipay-trade-pay') {
-    const alipay = typeof my !== 'undefined' ? my : null
-    if (!alipay?.tradePay) {
-      Taro.showToast({ title: '请在支付宝小程序内完成支付', icon: 'none' })
-      return
-    }
-    alipay.tradePay({
-      tradeNO: params.tradeNO || params.tradeNo,
-      orderStr: params.orderStr,
-      success: () => Taro.showToast({ title: '支付完成后请刷新状态', icon: 'none' }),
-      fail: () => Taro.showToast({ title: '支付未完成', icon: 'none' })
-    })
-    return
+  if (platformPayment.invokeType === 'dev-preview') {
+    copy(JSON.stringify(params), '支付参数')
+    Taro.showToast({ title: '开发环境支付预览，请刷新状态', icon: 'none' })
+    return Promise.resolve(false)
   }
-  if (platformPayment.invokeType === 'douyin-pay') {
-    const ttPay = typeof tt !== 'undefined' ? tt.pay : null
-    if (ttPay) {
-      ttPay({
+  return new Promise((resolve) => {
+    const finish = (paid) => {
+      if (!paid) {
+        Taro.showToast({ title: '支付未完成', icon: 'none' })
+        resolve(false)
+        return
+      }
+      Taro.showToast({ title: '支付完成，正在刷新', icon: 'success' })
+      Promise.resolve(onRefresh?.()).finally(() => resolve(true))
+    }
+    const success = () => finish(true)
+    const fail = () => finish(false)
+    const invokeTaroPayment = () => {
+      Taro.requestPayment({
         ...params,
-        success: () => Taro.showToast({ title: '支付完成后请刷新状态', icon: 'none' }),
-        fail: () => Taro.showToast({ title: '支付未完成', icon: 'none' })
+        success,
+        fail
       })
-      return
     }
-  }
-  Taro.requestPayment({
-    ...params,
-    success: () => Taro.showToast({ title: '支付完成后请刷新状态', icon: 'none' }),
-    fail: () => Taro.showToast({ title: '支付未完成', icon: 'none' })
+
+    try {
+      if (platformPayment.invokeType === 'alipay-trade-pay') {
+        const alipay = typeof my !== 'undefined' ? my : null
+        if (!alipay?.tradePay) {
+          Taro.showToast({ title: '请在支付宝小程序内完成支付', icon: 'none' })
+          resolve(false)
+          return
+        }
+        alipay.tradePay({
+          tradeNO: params.tradeNO || params.tradeNo,
+          orderStr: params.orderStr,
+          success,
+          fail
+        })
+        return
+      }
+
+      if (platformPayment.invokeType === 'douyin-pay') {
+        const ttPay = typeof tt !== 'undefined' ? tt.pay : null
+        if (ttPay) {
+          ttPay({
+            ...params,
+            success,
+            fail
+          })
+          return
+        }
+      }
+
+      invokeTaroPayment()
+    } catch (error) {
+      Taro.showToast({ title: error.message || '支付拉起失败', icon: 'none' })
+      resolve(false)
+    }
   })
 }
 
 function invokeTelegramStarsPayment(stars, onRefresh) {
   if (!stars?.invoiceLink) {
     Taro.showToast({ title: 'Stars Invoice 暂未生成', icon: 'none' })
-    return
+    return Promise.resolve(false)
   }
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
   if (!webApp?.openInvoice) {
     copy(stars.invoiceLink, 'Invoice 链接')
     Taro.showToast({ title: '请在 Telegram 内打开并完成支付', icon: 'none' })
-    return
+    return Promise.resolve(false)
   }
-  try {
-    webApp.openInvoice(stars.invoiceLink, (status) => {
-      if (status === 'paid') {
-        Taro.showToast({ title: '支付完成，正在刷新', icon: 'success' })
-        onRefresh?.()
-        return
-      }
-      if (status === 'pending') {
-        Taro.showToast({ title: '支付处理中，请稍后刷新', icon: 'none' })
-        onRefresh?.()
-        return
-      }
-      if (status === 'failed') {
-        Taro.showToast({ title: '支付失败，请重试', icon: 'none' })
-        return
-      }
-      Taro.showToast({ title: '支付未完成', icon: 'none' })
-    })
-  } catch (error) {
-    Taro.showToast({ title: error.message || 'Stars 支付拉起失败', icon: 'none' })
-  }
+  return new Promise((resolve) => {
+    try {
+      webApp.openInvoice(stars.invoiceLink, (status) => {
+        if (status === 'paid') {
+          Taro.showToast({ title: '支付完成，正在刷新', icon: 'success' })
+          Promise.resolve(onRefresh?.()).finally(() => resolve(true))
+          return
+        }
+        if (status === 'pending') {
+          Taro.showToast({ title: '支付处理中，正在刷新', icon: 'none' })
+          Promise.resolve(onRefresh?.()).finally(() => resolve(true))
+          return
+        }
+        if (status === 'failed') {
+          Taro.showToast({ title: '支付失败，请重试', icon: 'none' })
+          resolve(false)
+          return
+        }
+        Taro.showToast({ title: '支付未完成', icon: 'none' })
+        resolve(false)
+      })
+    } catch (error) {
+      Taro.showToast({ title: error.message || 'Stars 支付拉起失败', icon: 'none' })
+      resolve(false)
+    }
+  })
 }
 
 export default function PaymentSheet({
@@ -113,6 +149,7 @@ export default function PaymentSheet({
   onCryptoRouteChange,
   onCreateCryptoOrder
 }) {
+  const [invoking, setInvoking] = useState(false)
   if (!open || !payment) return null
   const order = payment.order || {}
   const crypto = payment.cryptoOrder
@@ -122,28 +159,47 @@ export default function PaymentSheet({
   const status = order.status || crypto?.status || stars?.status
   const cryptoAddress = crypto?.depositAddress || crypto?.bridgeDepositAddress || crypto?.bridgeReceiveAddress
   const cryptoOptions = payment.cryptoOptions || {}
-  const primaryAction = needsCryptoOrder
-    ? () => {
-        if (payment.cryptoCreating) return
-        if (!cryptoOptions.acquiringConfigured) {
-          Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 收单暂未配置', icon: 'none' })
-          return
-        }
-        if (!payment.cryptoRoute?.chain || !payment.cryptoRoute?.token) {
-          Taro.showToast({ title: '请选择支付链和支付代币', icon: 'none' })
-          return
-        }
-        onCreateCryptoOrder?.(payment.cryptoRoute)
+  const primaryBusy = invoking || Boolean(payment.cryptoCreating)
+  const primaryAction = async () => {
+    if (primaryBusy) return
+    if (needsCryptoOrder) {
+      if (!cryptoOptions.acquiringConfigured) {
+        Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 收单暂未配置', icon: 'none' })
+        return
       }
-    : platformPayment
-    ? () => invokePlatformPayment(platformPayment)
-    : stars
-      ? () => invokeTelegramStarsPayment(stars, onRefresh)
-      : onRefresh
+      if (!payment.cryptoRoute?.chain || !payment.cryptoRoute?.token) {
+        Taro.showToast({ title: '请选择支付链和支付代币', icon: 'none' })
+        return
+      }
+      onCreateCryptoOrder?.(payment.cryptoRoute)
+      return
+    }
+    setInvoking(true)
+    try {
+      if (platformPayment) {
+        await invokePlatformPayment(platformPayment, onRefresh)
+        return
+      }
+      if (stars) {
+        await invokeTelegramStarsPayment(stars, onRefresh)
+        return
+      }
+      await Promise.resolve(onRefresh?.())
+    } finally {
+      setInvoking(false)
+    }
+  }
   const primaryIcon = needsCryptoOrder ? 'wallet' : platformPayment || stars ? 'agent' : 'refresh'
-  const primaryText = needsCryptoOrder
-    ? payment.cryptoCreating ? '创建中...' : '创建 Crypto 订单'
-    : platformPayment ? '立即支付' : stars ? '打开 Stars 支付' : '刷新状态'
+  let primaryText = '刷新状态'
+  if (needsCryptoOrder) {
+    primaryText = payment.cryptoCreating ? '创建中...' : '创建 Crypto 订单'
+  } else if (invoking) {
+    primaryText = platformPayment || stars ? '拉起中...' : '刷新中...'
+  } else if (platformPayment) {
+    primaryText = platformPayment.invokeType === 'dev-preview' ? '查看支付参数' : '立即支付'
+  } else if (stars) {
+    primaryText = '打开 Stars 支付'
+  }
 
   return (
     <View className='modal-mask'>
@@ -226,7 +282,7 @@ export default function PaymentSheet({
         )}
 
         <View className='hero-actions'>
-          <View className='primary-button' onClick={primaryAction}>
+          <View className={primaryBusy ? 'primary-button disabled' : 'primary-button'} onClick={primaryAction}>
             <AppIcon name={primaryIcon} size={16} />
             <Text>{primaryText}</Text>
           </View>
