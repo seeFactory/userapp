@@ -14,15 +14,24 @@ const defaultCustomer = {
 
 export default function CustomerModal({ open, onClose }) {
   const [service, setService] = useState(defaultCustomer)
+  const [loading, setLoading] = useState(false)
+  const [qrError, setQrError] = useState(false)
 
   useEffect(() => {
     if (!open) return undefined
     let mounted = true
+    setLoading(true)
+    setQrError(false)
     fetchCustomerService()
       .then((data) => {
         if (mounted) setService({ ...defaultCustomer, ...data })
       })
-      .catch(() => {})
+      .catch(() => {
+        Taro.showToast({ title: '客服信息加载失败，已使用默认联系方式', icon: 'none' })
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
     return () => {
       mounted = false
     }
@@ -41,6 +50,24 @@ export default function CustomerModal({ open, onClose }) {
     })
   }
 
+  const openQrCode = () => {
+    if (!service.qrCodeUrl || qrError) {
+      Taro.showToast({ title: service.qrCodeUrl ? '二维码加载失败，请复制客服微信号' : '请在后台配置客服二维码', icon: 'none' })
+      return
+    }
+    Taro.previewImage({
+      current: service.qrCodeUrl,
+      urls: [service.qrCodeUrl],
+      fail: () => {
+        if (typeof window !== 'undefined') {
+          window.open(service.qrCodeUrl, '_blank', 'noopener,noreferrer')
+          return
+        }
+        Taro.showToast({ title: '请长按或截图保存二维码', icon: 'none' })
+      }
+    })
+  }
+
   return (
     <View className='modal-mask'>
       <View className='modal-panel'>
@@ -50,10 +77,15 @@ export default function CustomerModal({ open, onClose }) {
             <AppIcon name='close' size={20} />
           </View>
         </View>
-        <View className='modal-note'>{service.note}</View>
-        <View className='qr-card' onClick={() => Taro.showToast({ title: service.qrCodeUrl ? '请扫码添加客服' : '请在后台配置客服二维码', icon: 'none' })}>
-          {service.qrCodeUrl ? (
-            <Image className='qr-image' src={service.qrCodeUrl} mode='aspectFill' />
+        <View className='modal-note'>{loading ? '正在加载客服信息...' : service.note}</View>
+        <View className={loading ? 'qr-card loading' : 'qr-card'} onClick={openQrCode}>
+          {service.qrCodeUrl && !qrError ? (
+            <Image
+              className='qr-image'
+              src={service.qrCodeUrl}
+              mode='aspectFit'
+              onError={() => setQrError(true)}
+            />
           ) : (
             <View className='qr-grid'>
               {Array.from({ length: 49 }).map((_, index) => (
@@ -61,7 +93,7 @@ export default function CustomerModal({ open, onClose }) {
               ))}
             </View>
           )}
-          <Text>{service.qrCodeUrl ? '微信客服二维码' : '二维码待后台配置'}</Text>
+          <Text>{loading ? '加载客服二维码' : service.qrCodeUrl && !qrError ? '点击放大客服二维码' : '二维码待后台配置'}</Text>
         </View>
         <View className='copy-row'>
           <View>
