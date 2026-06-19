@@ -64,6 +64,14 @@ pnpm build:qq
 pnpm build:tma
 ```
 
+顺序构建并验收全部用户端目标：
+
+```bash
+pnpm verify
+```
+
+Taro 多平台构建默认共用 `dist/` 输出目录，请不要并发执行多个 `build:*` 命令；并发构建可能互相清理产物并造成假失败。正式小程序 `build:*` 脚本会先清理 `dist/`，H5 会通过 `prepare:h5-dist` 预建必要 CSS 路径，避免平台切换时复用旧产物目录。
+
 构建产物输出到 `dist/`，该目录不纳入 git 版本管理。
 
 ## 环境配置
@@ -258,6 +266,10 @@ app/
 | `pnpm build:tt` | 构建抖音小程序产物 |
 | `pnpm dev:qq` | 启动 QQ 小程序 watch 构建 |
 | `pnpm build:qq` | 构建 QQ 小程序产物 |
+| `pnpm build:all` | 顺序构建 H5、微信、支付宝、抖音、QQ 产物 |
+| `pnpm verify` | 用户端多端构建验收入口 |
+| `pnpm clean:dist` | 清理 Taro 构建产物目录 |
+| `pnpm prepare:h5-dist` | 清理并预建 H5 构建所需的 CSS 产物路径 |
 | `pnpm preview:h5` | 预览 H5 静态构建产物 |
 
 ## 验收建议
@@ -265,11 +277,7 @@ app/
 提交前建议至少执行：
 
 ```bash
-pnpm build:h5
-pnpm build:weapp
-pnpm build:alipay
-pnpm build:tt
-pnpm build:qq
+pnpm verify
 ```
 
 移动端视觉建议使用 iPhone 14 尺寸检查：
