@@ -5,6 +5,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import {
+  cancelGenerationTask,
   deleteWorkRemote,
   fetchGenerationTask,
   fetchGalleryWork,
@@ -33,7 +34,20 @@ function statusIcon(status) {
   return 'badge'
 }
 
+function isActiveStatus(status) {
+  return ['queued', 'processing'].includes(status)
+}
+
+function taskStatusCopy(status) {
+  if (status === 'queued') return '任务已进入队列，正在等待 seeFactory 生成工厂领取。'
+  if (status === 'processing') return '生成服务正在处理素材和提示词，完成后会自动刷新结果。'
+  if (status === 'canceled') return '任务已取消，本次扣点会按后端规则回退。'
+  if (status === 'failed') return '任务生成失败，可以查看原因后重新生成。'
+  return '任务已完成，可以保存、分享或发布到广场。'
+}
+
 function mergeTask(work, task) {
+  if (!work) return work
   return {
     ...work,
     status: task.status,
@@ -41,7 +55,9 @@ function mergeTask(work, task) {
     coverUrl: task.coverUrl || work.coverUrl,
     image: task.coverUrl || task.resultUrls?.[0] || work.image,
     failureReason: task.failureReason || work.failureReason,
-    failReason: task.failureReason || work.failReason
+    failReason: task.failureReason || work.failReason,
+    providerAttempts: task.providerAttempts || work.providerAttempts,
+    finishedAt: task.finishedAt || work.finishedAt
   }
 }
 
@@ -104,6 +120,8 @@ export default function WorkDetail() {
   const [detailMode, setDetailMode] = useState(source === 'gallery' ? 'gallery' : 'owner')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshingTask, setRefreshingTask] = useState(false)
+  const [cancelingTask, setCancelingTask] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -129,12 +147,12 @@ export default function WorkDetail() {
   }, [id, source])
 
   useEffect(() => {
-    if (!work?.generationTaskId || !['queued', 'processing'].includes(work.status)) return undefined
+    if (!work?.generationTaskId || !isActiveStatus(work.status)) return undefined
     const timer = setInterval(async () => {
       try {
         const task = await fetchGenerationTask(work.generationTaskId)
         setWork((prev) => mergeTask(prev, task))
-        if (!['queued', 'processing'].includes(task.status)) {
+        if (!isActiveStatus(task.status)) {
           fetchWork(id).then((data) => data && setWork(data)).catch(() => {})
         }
       } catch (error) {
@@ -156,6 +174,55 @@ export default function WorkDetail() {
           }
           Taro.showToast({ title: '已删除', icon: 'success' })
           Taro.redirectTo({ url: '/pages/works/index' })
+        }
+      }
+    })
+  }
+
+  const refreshTaskStatus = async (silent = false) => {
+    if (!work.generationTaskId) {
+      if (!silent) Taro.showToast({ title: '暂无任务状态可刷新', icon: 'none' })
+      return
+    }
+    if (!silent) Taro.showLoading({ title: '刷新任务' })
+    setRefreshingTask(true)
+    try {
+      const task = await fetchGenerationTask(work.generationTaskId)
+      setWork((prev) => mergeTask(prev, task))
+      if (!isActiveStatus(task.status) && detailMode !== 'gallery') {
+        const latest = await fetchWork(id)
+        if (latest) setWork(latest)
+      }
+      if (!silent) Taro.showToast({ title: `当前状态：${statusLabel(task.status)}`, icon: 'none' })
+    } catch (error) {
+      if (!silent) Taro.showToast({ title: error.message || '任务刷新失败', icon: 'none' })
+    } finally {
+      if (!silent) Taro.hideLoading()
+      setRefreshingTask(false)
+    }
+  }
+
+  const cancelTask = () => {
+    if (!work.generationTaskId || !isActiveStatus(work.status)) return
+    Taro.showModal({
+      title: '取消生成任务',
+      content: '确认取消当前生成任务吗？取消后本次扣点会按后端规则回退，已进入供应商处理的任务可能仍需要等待状态同步。',
+      success: async (res) => {
+        if (!res.confirm) return
+        setCancelingTask(true)
+        Taro.showLoading({ title: '取消任务' })
+        try {
+          const task = await cancelGenerationTask(work.generationTaskId)
+          setWork((prev) => mergeTask(prev, task))
+          const latest = await fetchWork(id).catch(() => null)
+          if (latest) setWork(latest)
+          Taro.showToast({ title: '任务已取消', icon: 'success' })
+        } catch (error) {
+          Taro.showToast({ title: error.message || '取消失败', icon: 'none' })
+          refreshTaskStatus(true)
+        } finally {
+          Taro.hideLoading()
+          setCancelingTask(false)
         }
       }
     })
@@ -252,7 +319,7 @@ export default function WorkDetail() {
   const media = work.resultUrls?.[0] || work.image || work.coverUrl || ''
   const preview = work.coverUrl || work.image || media
   const mediaKind = inferMediaKind(work, media || preview)
-  const pending = ['queued', 'processing'].includes(work?.status)
+  const pending = isActiveStatus(work?.status)
   const failed = ['failed', 'canceled'].includes(work?.status)
   const canSave = work.status === 'success' && (detailMode !== 'gallery' || work.downloadEnabled !== false)
   const isGalleryDetail = detailMode === 'gallery'
@@ -279,9 +346,26 @@ export default function WorkDetail() {
       </View>
 
       {pending && (
-        <View className='panel compact-panel'>
-          <View className='loading-ring' />
-          <Text className='tool-desc'>任务正在生成中，页面会自动刷新状态。</Text>
+        <View className='panel task-state-panel'>
+          <View className='task-state-main'>
+            <View className='loading-ring' />
+            <View className='task-state-copy'>
+              <Text className='tool-desc'>{taskStatusCopy(work.status)}</Text>
+              <Text className='task-state-note'>{refreshingTask ? '正在同步最新状态...' : '每 3 秒自动刷新一次，也可以手动刷新。'}</Text>
+            </View>
+          </View>
+          {!isGalleryDetail && (
+            <View className='task-actions'>
+              <View className={refreshingTask ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={() => refreshTaskStatus(false)}>
+                <AppIcon name='refresh' size={14} />
+                <Text>{refreshingTask ? '刷新中' : '立即刷新'}</Text>
+              </View>
+              <View className={cancelingTask ? 'danger-button transparent-button disabled' : 'danger-button transparent-button'} onClick={cancelTask}>
+                <AppIcon name='close' size={14} />
+                <Text>{cancelingTask ? '取消中' : '取消任务'}</Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
 

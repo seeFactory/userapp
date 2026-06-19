@@ -2748,6 +2748,47 @@ taro-video-core {
   padding: 12px;
 }
 
+.task-state-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+}
+
+.task-state-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-state-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-state-note {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.task-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.task-actions > .ghost-button,
+.task-actions > .danger-button {
+  min-height: 42px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .section-head.slim {
   margin-bottom: 8px;
   padding: 0;
