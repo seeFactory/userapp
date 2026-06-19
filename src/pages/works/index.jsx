@@ -8,6 +8,23 @@ import { toolCategories } from '../../data/mock'
 import { clearFailedWorks, getWorks, isLoggedIn, requireLogin } from '../../utils/storage'
 import { clearFailedWorksRemote, fetchWorks } from '../../services/api'
 
+function statusLabel(status) {
+  const map = {
+    queued: '排队中',
+    processing: '生成中',
+    success: '成功',
+    failed: '失败',
+    canceled: '已取消'
+  }
+  return map[status] || '成功'
+}
+
+function statusIcon(status) {
+  if (status === 'failed' || status === 'canceled') return 'alert'
+  if (status === 'queued' || status === 'processing') return 'refresh'
+  return 'badge'
+}
+
 export default function Works() {
   const loggedIn = isLoggedIn()
   const [category, setCategory] = useState('all')
@@ -64,7 +81,7 @@ export default function Works() {
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
-          <Text className='section-kicker'>{loading ? 'Loading records' : 'Usage records'}</Text>
+          <Text className='section-kicker'>{loading ? '同步作品中' : '生成记录'}</Text>
           <Text className='section-title'>使用记录</Text>
           </View>
         </View>
@@ -92,7 +109,7 @@ export default function Works() {
         <View className='case-grid'>
           {filtered.map((item) => (
             <View key={item.id} className='work-card' onClick={() => Taro.navigateTo({ url: `/pages/work-detail/index?id=${item.id}` })}>
-              <Image className='work-image' src={item.image} mode='aspectFill' />
+              <Image className='work-image' src={item.image || 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'} mode='aspectFill' />
               <View className='work-body'>
                 <Text className='work-title'>{item.title}</Text>
                 <View className='meta-row'>
@@ -100,9 +117,9 @@ export default function Works() {
                     <AppIcon name={item.category === 'video' ? 'video' : item.category === 'fusion' ? 'fusion' : 'image'} size={12} />
                     <Text>{item.toolName}</Text>
                   </View>
-                  <View className={item.status === 'failed' ? 'status failed' : 'status'}>
-                    <AppIcon name={item.status === 'failed' ? 'alert' : 'badge'} size={11} />
-                    <Text>{item.status === 'failed' ? '失败' : '成功'}</Text>
+                  <View className={['failed', 'canceled'].includes(item.status) ? 'status failed' : 'status'}>
+                    <AppIcon name={statusIcon(item.status)} size={11} />
+                    <Text>{statusLabel(item.status)}</Text>
                   </View>
                 </View>
               </View>

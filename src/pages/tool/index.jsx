@@ -4,9 +4,22 @@ import { View, Text, Textarea, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import PaymentSheet from '../../components/PaymentSheet'
 import { durations, models, ratios, styles, tools } from '../../data/mock'
-import { createGenerationTask, fetchTool } from '../../services/api'
-import { addWork, requireLogin } from '../../utils/storage'
+import {
+  createAsset,
+  createCryptoOrder,
+  createGenerationPaymentOrder,
+  createGenerationTask,
+  createTelegramStarsOrder,
+  fetchCryptoOrder,
+  fetchPaymentOrder,
+  fetchTelegramStarsOrder,
+  fetchTool,
+  getClientRuntime,
+  getUploadToken
+} from '../../services/api'
+import { requireLogin } from '../../utils/storage'
 
 function firstValue(list) {
   return list[0]
@@ -21,7 +34,10 @@ export default function ToolPage() {
   const [duration, setDuration] = useState(firstValue(durations))
   const [model, setModel] = useState(firstValue(models))
   const [uploaded, setUploaded] = useState(false)
+  const [assetIds, setAssetIds] = useState([])
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [payment, setPayment] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -37,7 +53,107 @@ export default function ToolPage() {
 
   const needs = (field) => tool.fields.includes(field)
 
-  const submit = () => {
+  const chooseUpload = async () => {
+    if (uploading) return
+    if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
+    setUploading(true)
+    try {
+      const result = await Taro.chooseImage({
+        count: needs('multiUpload') ? 6 : 1,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera']
+      })
+      const files = result.tempFiles || []
+      if (!files.length) return
+      Taro.showLoading({ title: '上传素材' })
+      const created = []
+      for (const file of files) {
+        const filePath = file.path || file.tempFilePath || ''
+        const filename = filePath.split('/').pop() || 'reference.png'
+        const policy = await getUploadToken({ type: 'image', filename })
+        if (policy.configured && process.env.TARO_ENV !== 'h5') {
+          await Taro.uploadFile({
+            url: policy.uploadUrl,
+            filePath,
+            name: 'file',
+            formData: policy.fields
+          })
+        }
+        const asset = await createAsset({
+          type: 'image',
+          url: policy.publicUrl,
+          ossKey: policy.ossKey,
+          size: file.size
+        })
+        created.push(asset.id)
+      }
+      setAssetIds((prev) => prev.concat(created))
+      setUploaded(true)
+      Taro.showToast({ title: '素材已添加', icon: 'success' })
+    } catch (error) {
+      Taro.showToast({ title: error.message || '素材添加失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+      setUploading(false)
+    }
+  }
+
+  const beginGenerationPayment = async () => {
+    const clientRuntime = getClientRuntime()
+    Taro.showLoading({ title: '创建支付' })
+    try {
+      const paymentPayload = await createGenerationPaymentOrder({
+        toolKey: tool.id,
+        clientRuntime
+      })
+      const order = paymentPayload.order
+      const nextPayment = { order, runtime: clientRuntime, afterPaid: 'generate' }
+      if (clientRuntime === 'telegram-tma') {
+        nextPayment.starsOrder = await createTelegramStarsOrder({ paymentOrderId: order.id })
+      } else {
+        nextPayment.cryptoOrder = await createCryptoOrder({
+          paymentOrderId: order.id,
+          chainName: 'TRON',
+          token: 'USDT'
+        })
+      }
+      setPayment(nextPayment)
+      Taro.showToast({ title: '请完成支付后刷新状态', icon: 'none' })
+    } catch (error) {
+      Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+    }
+  }
+
+  const refreshPayment = async () => {
+    if (!payment?.order?.id) return
+    Taro.showLoading({ title: '刷新状态' })
+    try {
+      const order = await fetchPaymentOrder(payment.order.id)
+      const nextPayment = { ...payment, order }
+      if (payment.cryptoOrder?.id) {
+        nextPayment.cryptoOrder = await fetchCryptoOrder(payment.cryptoOrder.id)
+      }
+      if (payment.starsOrder?.id) {
+        nextPayment.starsOrder = await fetchTelegramStarsOrder(payment.starsOrder.id)
+      }
+      setPayment(nextPayment)
+      if (order.status === 'paid') {
+        setPayment(null)
+        Taro.showToast({ title: '支付完成，继续生成', icon: 'success' })
+        setTimeout(() => submit(), 300)
+      } else {
+        Taro.showToast({ title: '订单仍在处理中', icon: 'none' })
+      }
+    } catch (error) {
+      Taro.showToast({ title: error.message || '状态刷新失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+    }
+  }
+
+  const submit = async () => {
     if (busy) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
     if (!prompt.trim()) {
@@ -49,38 +165,25 @@ export default function ToolPage() {
       return
     }
     setBusy(true)
-    createGenerationTask({
-      toolKey: tool.id,
-      prompt,
-      params: { style, ratio, duration, model, count: 1 }
-    })
-      .then((result) => {
-        const work = result.work
-        Taro.showToast({ title: '任务已提交', icon: 'success' })
-        Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
-      })
-      .catch(() => {
-      const work = {
-        id: `work-${Date.now()}`,
-        title: `${tool.name}生成结果`,
-        category: tool.category,
-        toolName: tool.name,
-        status: 'success',
-        date: '2026/6/18 13:40',
-        image: tool.category === 'video'
-          ? 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=900&q=80'
-          : 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80',
+    try {
+      const result = await createGenerationTask({
+        toolKey: tool.id,
         prompt,
-        style,
-        ratio,
-        duration,
-        model
-      }
-      addWork(work)
-      Taro.showToast({ title: '预览结果已生成', icon: 'success' })
-      Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
+        params: { style, ratio, duration, model, count: 1 },
+        inputAssetIds: assetIds
       })
-      .finally(() => setBusy(false))
+      const work = result.work
+      Taro.showToast({ title: '任务已提交', icon: 'success' })
+      Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
+    } catch (error) {
+      if (error.code === 'INSUFFICIENT_CREDITS' || error.action === 'refresh_payment') {
+        await beginGenerationPayment()
+        return
+      }
+      Taro.showToast({ title: error.message || '提交生成失败', icon: 'none' })
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -100,9 +203,9 @@ export default function ToolPage() {
         {(needs('upload') || needs('multiUpload')) && (
           <>
             <Text className='input-label'>{needs('multiUpload') ? '参考素材，多图融合' : '参考素材'}</Text>
-            <View className='upload-box' onClick={() => setUploaded(true)}>
+            <View className='upload-box' onClick={chooseUpload}>
               <AppIcon name={uploaded ? 'badge' : 'image'} size={18} />
-              <Text>{uploaded ? '已添加参考素材，可继续生成' : '点击添加图片素材'}</Text>
+              <Text>{uploaded ? `已添加 ${assetIds.length || 1} 个参考素材` : uploading ? '素材上传中...' : '点击添加图片素材'}</Text>
             </View>
           </>
         )}
@@ -188,6 +291,14 @@ export default function ToolPage() {
           mode='aspectFill'
         />
       )}
+
+      <PaymentSheet
+        open={Boolean(payment)}
+        title='本次生成支付'
+        payment={payment}
+        onClose={() => setPayment(null)}
+        onRefresh={refreshPayment}
+      />
     </Shell>
   )
 }

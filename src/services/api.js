@@ -13,13 +13,31 @@ export function toApiWork(item) {
     title: item.galleryTitle || item.title || item.prompt?.slice(0, 18) || 'seeFactory 作品',
     category: item.type || item.category || 'image',
     toolName: item.toolName || item.toolKey || 'AI 工具',
+    toolKey: item.toolKey,
     status: item.status || 'success',
     date: item.galleryPublishedAt || item.createdAt || '',
     image: item.coverUrl || item.resultUrls?.[0] || item.image,
+    coverUrl: item.coverUrl,
+    resultUrls: item.resultUrls || [],
+    generationTaskId: item.generationTaskId,
     prompt: item.prompt,
+    params: item.params || {},
+    failureReason: item.failureReason || item.failReason,
+    failReason: item.failureReason || item.failReason,
     downloadEnabled: item.downloadEnabled !== false,
+    galleryVisible: item.galleryVisible,
+    galleryStatus: item.galleryStatus,
     author: item.author
   }
+}
+
+export function getClientRuntime() {
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp) return 'telegram-tma'
+  if (process.env.TARO_ENV === 'weapp') return 'wechat-miniapp'
+  if (process.env.TARO_ENV === 'alipay') return 'alipay-miniapp'
+  if (process.env.TARO_ENV === 'tt') return 'douyin-miniapp'
+  if (process.env.TARO_ENV === 'qq') return 'qq-miniapp'
+  return 'h5-google'
 }
 
 export async function request(path, options = {}) {
@@ -36,7 +54,12 @@ export async function request(path, options = {}) {
   })
   const body = response.data || {}
   if (response.statusCode >= 400 || body.success === false) {
-    throw new Error(body.userMessage || body.message || '请求失败')
+    const error = new Error(body.userMessage || body.message || '请求失败')
+    error.code = body.code
+    error.action = body.action
+    error.fieldErrors = body.fieldErrors
+    error.response = body
+    throw error
   }
   return body.data
 }
@@ -158,11 +181,31 @@ export async function fetchWorks(params = {}) {
   }
 }
 
+export async function fetchWork(id) {
+  return toApiWork(await request(`/works/${id}`))
+}
+
 export async function createGenerationTask(payload) {
   return request('/generation-tasks', {
     method: 'POST',
     data: payload
   })
+}
+
+export async function fetchGenerationTask(id) {
+  return request(`/generation-tasks/${id}`)
+}
+
+export async function cancelGenerationTask(id) {
+  return request(`/generation-tasks/${id}/cancel`, { method: 'POST' })
+}
+
+export async function retryGenerationTask(id) {
+  return request(`/generation-tasks/${id}/retry`, { method: 'POST' })
+}
+
+export async function deleteWorkRemote(id) {
+  return request(`/works/${id}`, { method: 'DELETE' })
 }
 
 export async function clearFailedWorksRemote() {
@@ -193,6 +236,77 @@ export async function fetchMe() {
 
 export async function fetchCreditBalance() {
   return request('/credits/balance')
+}
+
+export async function fetchCreditTransactions(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  return request(`/credits/transactions?${query.toString()}`)
+}
+
+export async function fetchRechargeSettings() {
+  return request('/credits/recharge-settings')
+}
+
+export async function fetchPaymentProviders(clientRuntime = getClientRuntime()) {
+  const query = new URLSearchParams({ clientRuntime })
+  return request(`/payments/providers?${query.toString()}`)
+}
+
+export async function createRechargeOrder(payload) {
+  return request('/credits/recharge-orders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function createGenerationPaymentOrder(payload) {
+  return request('/credits/generation-payment-orders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchPaymentOrder(orderId) {
+  return request(`/payments/orders/${orderId}`)
+}
+
+export async function createCryptoOrder(payload) {
+  return request('/payments/crypto-orders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchCryptoOrder(id) {
+  return request(`/payments/crypto-orders/${id}`)
+}
+
+export async function createTelegramStarsOrder(payload) {
+  return request('/payments/telegram-stars-orders', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchTelegramStarsOrder(id) {
+  return request(`/payments/telegram-stars-orders/${id}`)
+}
+
+export async function getUploadToken(payload) {
+  return request('/assets/upload-token', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function createAsset(payload) {
+  return request('/assets', {
+    method: 'POST',
+    data: payload
+  })
 }
 
 export async function fetchCustomerService() {

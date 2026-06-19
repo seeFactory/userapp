@@ -2461,3 +2461,105 @@ taro-video-core {
     max-width: 348px;
   }
 }
+
+.icon-button {
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fbff;
+}
+
+.payment-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.payment-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(92, 231, 255, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(92, 231, 255, 0.11), rgba(255, 53, 181, 0.08)),
+    rgba(6, 10, 20, 0.82);
+}
+
+.payment-amount {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--sf-muted);
+  font-size: 13px;
+}
+
+.payment-row text:last-child {
+  color: #f8fbff;
+  font-weight: 700;
+  text-align: right;
+}
+
+.payment-row.strong {
+  padding: 12px 0 2px;
+  color: #d8f6ff;
+}
+
+.copy-box {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fbff;
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.amount-input {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.primary-button.disabled,
+.ghost-button.disabled,
+.danger-button.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.compact-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
