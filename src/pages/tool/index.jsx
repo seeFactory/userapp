@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Textarea, Image } from '@tarojs/components'
+import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
@@ -27,6 +27,29 @@ const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', 
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
 const defaultDurations = ['5 秒', '8 秒', '12 秒']
 const defaultModels = ['seeFactory Core', 'Sora 风格', 'Veo 风格']
+const uploadLimits = {
+  image: {
+    label: '图片',
+    maxSize: 20 * 1024 * 1024,
+    extensions: ['jpg', 'jpeg', 'png', 'webp'],
+    icon: 'image',
+    tip: '支持 JPG / PNG / WebP，单张最大 20 MB'
+  },
+  video: {
+    label: '视频',
+    maxSize: 500 * 1024 * 1024,
+    extensions: ['mp4', 'mov', 'webm'],
+    icon: 'video',
+    tip: '支持 MP4 / MOV / WebM，单个最大 500 MB'
+  },
+  audio: {
+    label: '音频',
+    maxSize: 100 * 1024 * 1024,
+    extensions: ['mp3', 'wav', 'm4a', 'aac'],
+    icon: 'music',
+    tip: '支持 MP3 / WAV / M4A / AAC，单个最大 100 MB'
+  }
+}
 
 function firstValue(list) {
   return list[0]
@@ -54,16 +77,198 @@ function nextSelected(tool, key, fallback, current) {
   return list.includes(current) ? current : firstValue(list)
 }
 
+function formatFileSize(size = 0) {
+  if (!size) return '未知大小'
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(size > 10 * 1024 * 1024 ? 0 : 1)} MB`
+  return `${Math.max(1, Math.round(size / 1024))} KB`
+}
+
+function getExt(input = '') {
+  const clean = String(input).split('?')[0].split('#')[0]
+  const name = clean.split(/[\\/]/).pop() || ''
+  const parts = name.split('.')
+  return parts.length > 1 ? parts.pop().toLowerCase() : ''
+}
+
+function inferUploadConfig(tool) {
+  const fields = tool?.fields || []
+  const text = `${tool?.id || ''} ${tool?.category || ''} ${tool?.name || ''}`.toLowerCase()
+  if (fields.includes('multiUpload')) {
+    return {
+      acceptTypes: ['image'],
+      maxCount: 6,
+      minCount: 2,
+      label: '参考素材，多图融合',
+      actionText: '点击添加图片素材',
+      tip: '支持 JPG / PNG / WebP，单张最大 20 MB，至少 2 张，最多 6 张'
+    }
+  }
+  if (text.includes('audio') || text.includes('音')) {
+    return {
+      acceptTypes: ['audio', 'video', 'image'],
+      maxCount: 1,
+      minCount: 1,
+      label: '音视频素材',
+      actionText: '点击添加音频 / 视频 / 图片素材',
+      tip: '支持音频、视频或图片素材；音频最大 100 MB，视频最大 500 MB，图片最大 20 MB'
+    }
+  }
+  if (text.includes('image-to-video') || text.includes('图生') || text.includes('portrait') || text.includes('头像') || text.includes('写真')) {
+    return {
+      acceptTypes: ['image'],
+      maxCount: 1,
+      minCount: 1,
+      label: '参考图片',
+      actionText: '点击添加图片素材',
+      tip: uploadLimits.image.tip
+    }
+  }
+  if (text.includes('video') || text.includes('视频')) {
+    return {
+      acceptTypes: ['video', 'image'],
+      maxCount: 1,
+      minCount: 1,
+      label: '参考素材',
+      actionText: '点击添加视频 / 图片素材',
+      tip: '支持视频或图片素材；视频最大 500 MB，图片最大 20 MB'
+    }
+  }
+  return {
+    acceptTypes: ['image'],
+    maxCount: 1,
+    minCount: 1,
+    label: '参考素材',
+    actionText: '点击添加图片素材',
+    tip: uploadLimits.image.tip
+  }
+}
+
+function inferFileType(file, fallbackType = 'image') {
+  const fileType = file.fileType || file.kind || ''
+  const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
+  const mimeType = String(rawMimeType).includes('/') ? rawMimeType : ''
+  const filePath = file.tempFilePath || file.path || ''
+  const name = file.name || filePath
+  const ext = getExt(name || filePath)
+  if (fileType === 'image' || mimeType.startsWith('image/') || uploadLimits.image.extensions.includes(ext)) return 'image'
+  if (fileType === 'video' || mimeType.startsWith('video/') || uploadLimits.video.extensions.includes(ext)) return 'video'
+  if (fileType === 'audio' || mimeType.startsWith('audio/') || uploadLimits.audio.extensions.includes(ext)) return 'audio'
+  return fallbackType
+}
+
+function normalizeFile(file, fallbackType, index) {
+  const filePath = file.tempFilePath || file.path || file.url || ''
+  const name = file.name || file.originalFileObj?.name || filePath.split(/[\\/]/).pop() || `${fallbackType}-${Date.now()}-${index}`
+  const type = inferFileType(file, fallbackType)
+  const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
+  return {
+    key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    name,
+    filePath,
+    previewPath: file.thumbTempFilePath || filePath,
+    size: Number(file.size || file.originalFileObj?.size || 0),
+    mimeType: String(rawMimeType).includes('/') ? rawMimeType : ''
+  }
+}
+
+function validateFile(file, config) {
+  if (!file.filePath) return '素材文件读取失败，请重新选择'
+  if (!config.acceptTypes.includes(file.type)) return `当前工具不支持上传${uploadLimits[file.type]?.label || '该类型'}素材`
+  const limit = uploadLimits[file.type]
+  const ext = getExt(file.name || file.filePath)
+  if (ext && !limit.extensions.includes(ext)) return `${limit.label}格式不支持，请上传 ${limit.extensions.join(' / ')}`
+  if (file.size && file.size > limit.maxSize) return `${limit.label}超过大小限制，最大 ${formatFileSize(limit.maxSize)}`
+  return ''
+}
+
+async function chooseTypedFiles(config) {
+  let acceptTypes = config.acceptTypes
+  if (acceptTypes.length > 1) {
+    const itemList = acceptTypes.map((type) => uploadLimits[type].label)
+    const action = await Taro.showActionSheet({ itemList })
+    acceptTypes = [acceptTypes[action.tapIndex]]
+  }
+  const chosenType = acceptTypes[0]
+  if (chosenType === 'image') {
+    if (typeof Taro.chooseMedia === 'function') {
+      const result = await Taro.chooseMedia({
+        count: config.maxCount,
+        mediaType: ['image'],
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera']
+      })
+      return (result.tempFiles || []).map((file, index) => normalizeFile({ ...file, fileType: 'image' }, 'image', index))
+    }
+    const result = await Taro.chooseImage({
+      count: config.maxCount,
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera']
+    })
+    return (result.tempFiles || []).map((file, index) => normalizeFile(file, 'image', index))
+  }
+  if (chosenType === 'video') {
+    if (typeof Taro.chooseMedia === 'function') {
+      const result = await Taro.chooseMedia({
+        count: config.maxCount,
+        mediaType: ['video'],
+        sourceType: ['album', 'camera'],
+        maxDuration: 60,
+        camera: 'back'
+      })
+      return (result.tempFiles || []).map((file, index) => normalizeFile({ ...file, fileType: 'video' }, 'video', index))
+    }
+    if (typeof Taro.chooseVideo === 'function') {
+      const result = await Taro.chooseVideo({
+        sourceType: ['album', 'camera'],
+        maxDuration: 60,
+        camera: 'back'
+      })
+      return [normalizeFile({ ...result, fileType: 'video' }, 'video', 0)]
+    }
+  }
+  if (chosenType === 'audio' && typeof Taro.chooseMessageFile === 'function') {
+    const result = await Taro.chooseMessageFile({
+      count: config.maxCount,
+      type: 'file',
+      extension: uploadLimits.audio.extensions
+    })
+    return (result.tempFiles || []).map((file, index) => normalizeFile(file, 'audio', index))
+  }
+  throw new Error('当前平台暂不支持选择该类型素材')
+}
+
+function uploadToOss(policy, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const task = Taro.uploadFile({
+      url: policy.uploadUrl,
+      filePath: file.filePath,
+      name: 'file',
+      formData: policy.fields,
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res)
+          return
+        }
+        reject(new Error('OSS 上传失败，请稍后重试'))
+      },
+      fail: () => reject(new Error('素材上传失败，请检查网络或上传域名配置'))
+    })
+    if (task?.progress) {
+      task.progress((event) => onProgress(Math.max(1, Math.min(95, event.progress || 1))))
+    }
+  })
+}
+
 export default function ToolPage() {
-  const params = getCurrentInstance().router.params
+  const params = getCurrentInstance().router?.params || {}
   const [tool, setTool] = useState(fallbackTool(params.id))
   const [prompt, setPrompt] = useState(params.prompt ? decodeURIComponent(params.prompt) : '')
   const [style, setStyle] = useState(firstValue(defaultStyles))
   const [ratio, setRatio] = useState('9:16')
   const [duration, setDuration] = useState(firstValue(defaultDurations))
   const [model, setModel] = useState(firstValue(defaultModels))
-  const [uploaded, setUploaded] = useState(false)
-  const [assetIds, setAssetIds] = useState([])
+  const [uploadItems, setUploadItems] = useState([])
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [payment, setPayment] = useState(null)
@@ -90,47 +295,95 @@ export default function ToolPage() {
   const ratioOptions = optionList(tool, 'ratios', defaultRatios)
   const durationOptions = optionList(tool, 'durations', defaultDurations)
   const modelOptions = optionList(tool, 'models', defaultModels)
+  const uploadConfig = inferUploadConfig(tool)
+  const assetIds = uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+  const uploaded = assetIds.length > 0
+
+  const updateUploadItem = (key, patch) => {
+    setUploadItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)))
+  }
+
+  const removeUploadItem = (key) => {
+    if (uploading) return
+    setUploadItems((prev) => prev.filter((item) => item.key !== key))
+  }
 
   const chooseUpload = async () => {
     if (uploading) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
+    const existingCount = uploadConfig.maxCount === 1 ? 0 : uploadItems.filter((item) => item.status !== 'failed').length
+    const remaining = uploadConfig.maxCount - existingCount
+    if (remaining <= 0) {
+      Taro.showToast({ title: `最多上传 ${uploadConfig.maxCount} 个素材`, icon: 'none' })
+      return
+    }
     setUploading(true)
     try {
-      const result = await Taro.chooseImage({
-        count: needs('multiUpload') ? 6 : 1,
-        sizeType: ['compressed'],
-        sourceType: ['album', 'camera']
+      const files = await chooseTypedFiles({ ...uploadConfig, maxCount: remaining })
+      const validFiles = []
+      const invalidMessages = []
+      files.forEach((file) => {
+        const message = validateFile(file, uploadConfig)
+        if (message) {
+          invalidMessages.push(`${file.name}：${message}`)
+          return
+        }
+        validFiles.push(file)
       })
-      const files = result.tempFiles || []
-      if (!files.length) return
+      if (invalidMessages.length) {
+        Taro.showModal({
+          title: '素材不符合要求',
+          content: invalidMessages.slice(0, 3).join('\n'),
+          showCancel: false
+        })
+      }
+      if (!validFiles.length) return
+      const pendingItems = validFiles.map((file) => ({
+        ...file,
+        status: 'pending',
+        progress: 0,
+        message: '等待上传'
+      }))
+      setUploadItems((prev) => (uploadConfig.maxCount === 1 ? pendingItems : prev.concat(pendingItems)))
       Taro.showLoading({ title: '上传素材' })
-      const created = []
-      for (const file of files) {
-        const filePath = file.path || file.tempFilePath || ''
-        const filename = filePath.split('/').pop() || 'reference.png'
-        const mimeType = file.type || file.mimeType || file.originalFileObj?.type || ''
-        const size = file.size || file.originalFileObj?.size
-        const policy = await getUploadToken({ type: 'image', filename, mimeType, size })
-        if (policy.configured) {
-          await Taro.uploadFile({
-            url: policy.uploadUrl,
-            filePath,
-            name: 'file',
-            formData: policy.fields
+      let successCount = 0
+      for (const file of pendingItems) {
+        try {
+          updateUploadItem(file.key, { status: 'uploading', progress: 5, message: '上传中' })
+          const policy = await getUploadToken({
+            type: file.type,
+            filename: file.name,
+            mimeType: file.mimeType,
+            size: file.size
+          })
+          if (policy.configured) {
+            await uploadToOss(policy, file, (progress) => updateUploadItem(file.key, { progress }))
+          }
+          updateUploadItem(file.key, { progress: 96, message: '写入素材记录' })
+          const asset = await createAsset({
+            type: file.type,
+            url: policy.publicUrl,
+            ossKey: policy.ossKey,
+            mimeType: file.mimeType,
+            size: file.size
+          })
+          successCount += 1
+          updateUploadItem(file.key, {
+            assetId: asset.id,
+            remoteUrl: policy.publicUrl,
+            status: 'ready',
+            progress: 100,
+            message: '已上传'
+          })
+        } catch (error) {
+          updateUploadItem(file.key, {
+            status: 'failed',
+            progress: 0,
+            message: error.message || '上传失败'
           })
         }
-        const asset = await createAsset({
-          type: 'image',
-          url: policy.publicUrl,
-          ossKey: policy.ossKey,
-          mimeType,
-          size
-        })
-        created.push(asset.id)
       }
-      setAssetIds((prev) => prev.concat(created))
-      setUploaded(true)
-      Taro.showToast({ title: '素材已添加', icon: 'success' })
+      Taro.showToast({ title: successCount ? `已上传 ${successCount} 个素材` : '素材上传失败', icon: successCount ? 'success' : 'none' })
     } catch (error) {
       Taro.showToast({ title: error.message || '素材添加失败', icon: 'none' })
     } finally {
@@ -207,6 +460,14 @@ export default function ToolPage() {
       Taro.showToast({ title: '请先添加参考素材', icon: 'none' })
       return
     }
+    if (needs('multiUpload') && assetIds.length < uploadConfig.minCount) {
+      Taro.showToast({ title: `请至少添加 ${uploadConfig.minCount} 张参考素材`, icon: 'none' })
+      return
+    }
+    if (uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')) {
+      Taro.showToast({ title: '素材仍在上传中', icon: 'none' })
+      return
+    }
     setBusy(true)
     try {
       const result = await createGenerationTask({
@@ -245,11 +506,53 @@ export default function ToolPage() {
       <View className='form-panel'>
         {(needs('upload') || needs('multiUpload')) && (
           <>
-            <Text className='input-label'>{needs('multiUpload') ? '参考素材，多图融合' : '参考素材'}</Text>
-            <View className='upload-box' onClick={chooseUpload}>
-              <AppIcon name={uploaded ? 'badge' : 'image'} size={18} />
-              <Text>{uploaded ? `已添加 ${assetIds.length || 1} 个参考素材` : uploading ? '素材上传中...' : '点击添加图片素材'}</Text>
+            <Text className='input-label'>{uploadConfig.label}</Text>
+            <View className={uploading ? 'upload-box uploading' : 'upload-box'} onClick={chooseUpload}>
+              <AppIcon name={uploaded ? 'badge' : uploadLimits[uploadConfig.acceptTypes[0]]?.icon || 'image'} size={18} />
+              <View className='upload-copy'>
+                <Text>{uploaded ? `已添加 ${assetIds.length} 个参考素材` : uploading ? '素材上传中...' : uploadConfig.actionText}</Text>
+                <Text className='upload-hint'>{uploadConfig.tip}</Text>
+              </View>
             </View>
+            {uploadItems.length > 0 && (
+              <View className='upload-preview-grid'>
+                {uploadItems.map((item) => (
+                  <View key={item.key} className={item.status === 'failed' ? 'upload-preview-card failed' : 'upload-preview-card'}>
+                    {item.type === 'image' ? (
+                      <Image className='upload-preview-media' src={item.previewPath} mode='aspectFill' />
+                    ) : item.type === 'video' ? (
+                      <Video className='upload-preview-media' src={item.filePath} poster={item.previewPath} controls={false} muted />
+                    ) : (
+                      <View className='upload-file-preview'>
+                        <AppIcon name='music' size={22} />
+                        <Text>音频素材</Text>
+                      </View>
+                    )}
+                    <View className='upload-preview-meta'>
+                      <Text className='upload-preview-name'>{item.name}</Text>
+                      <Text>{formatFileSize(item.size)} · {uploadLimits[item.type]?.label || '素材'}</Text>
+                    </View>
+                    <View className='upload-status'>{item.message}</View>
+                    {item.status === 'uploading' && (
+                      <View className='upload-progress'>
+                        <View className='upload-progress-bar' style={{ width: `${item.progress || 4}%` }} />
+                      </View>
+                    )}
+                    {item.status !== 'uploading' && (
+                      <View
+                        className='upload-remove'
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          removeUploadItem(item.key)
+                        }}
+                      >
+                        <AppIcon name='close' size={12} />
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
 
@@ -326,14 +629,6 @@ export default function ToolPage() {
           </View>
         </View>
       </View>
-
-      {uploaded && (
-        <Image
-          className='detail-image preview-image'
-          src='https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=900&q=80'
-          mode='aspectFill'
-        />
-      )}
 
       <PaymentSheet
         open={Boolean(payment)}

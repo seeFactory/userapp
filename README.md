@@ -161,7 +161,8 @@ app/
 ### 生成工具页 `pages/tool/index`
 
 - 通过 `/tools/:toolKey` 获取工具配置和动态表单字段。
-- 支持提示词输入、素材选择、风格、比例、模型、时长等配置。
+- 支持提示词输入、图片/视频/音频素材选择、风格、比例、模型、时长等配置。
+- 素材上传会按工具类型校验格式、大小和数量，展示真实预览、上传进度、失败原因，并将成功素材的 `assetId` 放入 `inputAssetIds`。
 - 通过 `/generation-tasks` 创建生成任务，并使用轮询展示排队、处理中、成功和失败状态。
 - 需要付费时唤起 `PaymentSheet`，按平台拉起微信/支付宝/抖音/QQ/Telegram Stars/Crypto 支付。
 - TMA 内 Telegram Stars 使用 `Telegram.WebApp.openInvoice` 拉起，完成或处理中后刷新订单状态。
