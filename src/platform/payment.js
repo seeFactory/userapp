@@ -1,4 +1,4 @@
-export const PAYMENT_BRANCH = 'main'
+export const PAYMENT_BRANCH = 'tma'
 export const PLATFORM_PAY_RUNTIMES = []
 
 export function isTelegramStarsRuntime(clientRuntime) {
