@@ -1622,6 +1622,24 @@ taro-video-core {
   content: "";
 }
 
+.page-state-loading {
+  border-color: rgba(92, 231, 255, 0.2);
+}
+
+.page-state-empty {
+  border-color: rgba(243, 214, 166, 0.18);
+  background:
+    linear-gradient(157deg, rgba(255, 255, 255, 0.07), rgba(10, 15, 28, 0.62) 44%, rgba(4, 7, 16, 0.92) 100%),
+    rgba(8, 11, 22, 0.72);
+}
+
+.page-state-error {
+  border-color: rgba(255, 86, 137, 0.24);
+  background:
+    linear-gradient(157deg, rgba(255, 86, 137, 0.08), rgba(10, 15, 28, 0.62) 44%, rgba(4, 7, 16, 0.92) 100%),
+    rgba(8, 11, 22, 0.72);
+}
+
 .page-state.compact-state {
   min-height: 110px;
   gap: 7px;
