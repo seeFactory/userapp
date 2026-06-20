@@ -1,5 +1,5 @@
-export const LOGIN_BRANCH = 'main'
-export const BRANCH_CLIENT_RUNTIME = 'h5-google'
+export const LOGIN_BRANCH = 'wechat'
+export const BRANCH_CLIENT_RUNTIME = 'wechat-miniapp'
 export const TELEGRAM_SDK_URL = 'https://telegram.org/js/telegram-web-app.js?62'
 
 export function resolveClientRuntime({
