@@ -27,6 +27,11 @@ export function readTelegramLaunchParams() {
   if (window.__SEEFACTORY_TG_LAUNCH_PARAMS__) return window.__SEEFACTORY_TG_LAUNCH_PARAMS__
 
   const current = window.location.hash || window.location.search || ''
+  if (window.location.hash?.includes('?')) {
+    const routeParams = new URLSearchParams(window.location.hash.slice(window.location.hash.indexOf('?') + 1))
+    const tgLaunch = routeParams.get('tgLaunch')
+    if (tgLaunch) return tgLaunch
+  }
   if (/(^|[#?&])tgWebApp(Data|Version|Platform|ThemeParams)=/.test(current)) {
     return current.charAt(0) === '#' || current.charAt(0) === '?' ? current.slice(1) : current
   }

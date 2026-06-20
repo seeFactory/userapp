@@ -19,7 +19,7 @@
           window.sessionStorage.setItem(key, value)
         } catch (error) {}
         if (window.location.hash && window.location.hash.indexOf('#/') !== 0) {
-          window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/pages/index/index')
+          window.history.replaceState(null, '', window.location.pathname + window.location.search + '#/pages/index/index?tgLaunch=' + encodeURIComponent(value))
         }
       })()
     </script>
