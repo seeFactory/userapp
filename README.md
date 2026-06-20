@@ -8,6 +8,7 @@ seeFactory 用户端是基于 Taro + React 构建的深色 AI 创作小程序/H5
 
 - 产品形态：Taro 多端用户端，优先小程序移动端体验，同时保留 H5 预览。
 - 数据来源：真实后端接口，不再保留 `src/data/mock.js` 作为业务数据源。
+- 运行配置：`/app/config.feature` 控制生成、广场、充值、代理四类能力；用户端会同步隐藏或禁用入口，并阻止对应提交动作。
 - 默认接口：`http://127.0.0.1:10087/api/v1`，可通过 `SEEFACTORY_API_BASE` 覆盖。
 - 设计基准：iPhone 14 逻辑视口 `390 x 844`，H5 内容最大宽度按移动端处理。
 - 品牌资源：`src/assets/logo.png` 来自 `docs/logo.png`，通过 `BrandLogo` 统一使用。

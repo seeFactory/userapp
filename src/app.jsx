@@ -1,9 +1,38 @@
 import { useEffect } from 'react'
+import { shouldLoadTelegramSdk, TELEGRAM_SDK_URL } from './platform/login'
 import './app.css'
+
+const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
 
 function setCssVar(name, value) {
   if (typeof document === 'undefined' || value === undefined || value === null) return
   document.documentElement.style.setProperty(name, String(value))
+}
+
+function isTelegramTarget() {
+  return shouldLoadTelegramSdk(RUNTIME_TARGET)
+}
+
+function loadTelegramSdk() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(false)
+  if (window.Telegram?.WebApp) return Promise.resolve(true)
+
+  const existing = document.querySelector(`script[src="${TELEGRAM_SDK_URL}"]`)
+  if (existing) {
+    return new Promise((resolve) => {
+      existing.addEventListener('load', () => resolve(true), { once: true })
+      existing.addEventListener('error', () => resolve(false), { once: true })
+    })
+  }
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script')
+    script.src = TELEGRAM_SDK_URL
+    script.async = true
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.head.appendChild(script)
+  })
 }
 
 function syncTelegramViewport(webApp) {
@@ -17,6 +46,7 @@ function syncTelegramViewport(webApp) {
 
 function initTelegramMiniApp() {
   if (typeof window === 'undefined') return undefined
+  if (!isTelegramTarget()) return undefined
   const webApp = window.Telegram?.WebApp
   if (!webApp) return undefined
 
@@ -52,6 +82,22 @@ function initTelegramMiniApp() {
 }
 
 export default function App({ children }) {
-  useEffect(() => initTelegramMiniApp(), [])
+  useEffect(() => {
+    let cleanup
+    let disposed = false
+
+    if (!isTelegramTarget()) return undefined
+
+    loadTelegramSdk().then(() => {
+      if (disposed) return
+      cleanup = initTelegramMiniApp()
+    })
+
+    return () => {
+      disposed = true
+      cleanup?.()
+    }
+  }, [])
+
   return children
 }

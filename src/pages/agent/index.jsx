@@ -5,7 +5,9 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats, fetchAgreement } from '../../services/api'
+import { formatAgreementContent } from '../../utils/agreement'
 import { acceptAgreement, hasAcceptedAgreement, isLoggedIn, requireLogin } from '../../utils/storage'
 
 const defaultStats = {
@@ -38,6 +40,8 @@ export default function Agent() {
   const [agreementError, setAgreementError] = useState('')
   const [agreementDeclined, setAgreementDeclined] = useState(false)
   const loggedIn = isLoggedIn()
+  const { config, loading: configLoading } = useAppConfig()
+  const agentEnabled = isFeatureEnabled(config, 'agent')
 
   const ensureAgentAgreement = async () => {
     setAgreementError('')
@@ -50,7 +54,7 @@ export default function Agent() {
       if (hasAcceptedAgreement('agent', version)) return true
       const result = await Taro.showModal({
         title: agreement.title || '代理推广协议',
-        content: agreement.contentMarkdown || '代理推广协议正文待后台发布，请确认后继续访问代理中心。',
+        content: formatAgreementContent(agreement, config?.legal, '代理推广协议正文待后台发布，请确认后继续访问代理中心。'),
         cancelText: '暂不进入',
         confirmText: '同意并进入'
       })
@@ -96,7 +100,14 @@ export default function Agent() {
   }
 
   useEffect(() => {
-    if (!loggedIn) return undefined
+    if (configLoading) {
+      setLoading(true)
+      return undefined
+    }
+    if (!loggedIn || !agentEnabled) {
+      if (!agentEnabled) setLoading(false)
+      return undefined
+    }
     let cleanup
     let mounted = true
     setLoading(true)
@@ -112,7 +123,27 @@ export default function Agent() {
       mounted = false
       cleanup?.()
     }
-  }, [loggedIn])
+  }, [loggedIn, configLoading, agentEnabled])
+
+  if (configLoading) {
+    return (
+      <Shell title='代理中心' showTab={false}>
+        <PageLoading title='正在同步应用配置' description='正在确认代理中心是否开放。' />
+      </Shell>
+    )
+  }
+
+  if (!agentEnabled) {
+    return (
+      <Shell title='代理中心' showTab={false}>
+        <EmptyState title='代理中心已关闭' description='当前后台已关闭代理展示能力，请等待管理员重新开放。' icon='agent' />
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
+  }
 
   if (!loggedIn) {
     return (

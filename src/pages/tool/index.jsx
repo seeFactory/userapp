@@ -4,9 +4,11 @@ import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import { ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
+import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import PaymentSheet from '../../components/PaymentSheet'
 import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import {
   createAsset,
   createCryptoOrder,
@@ -23,8 +25,6 @@ import {
   getUploadToken
 } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
-
-const PLATFORM_PAY_RUNTIMES = ['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp']
 
 const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
@@ -292,8 +292,19 @@ export default function ToolPage() {
   const [formErrors, setFormErrors] = useState({})
   const [toolLoading, setToolLoading] = useState(true)
   const [toolError, setToolError] = useState('')
+  const { config, loading: configLoading } = useAppConfig()
+  const generationEnabled = isFeatureEnabled(config, 'generation')
 
   const loadTool = () => {
+    if (configLoading) {
+      setToolLoading(true)
+      return () => {}
+    }
+    if (!generationEnabled) {
+      setToolLoading(false)
+      setToolError('')
+      return () => {}
+    }
     let mounted = true
     setToolLoading(true)
     fetchTool(params.id)
@@ -322,7 +333,7 @@ export default function ToolPage() {
   useEffect(() => {
     const cleanup = loadTool()
     return cleanup
-  }, [params.id])
+  }, [params.id, configLoading, generationEnabled])
 
   const needs = (field) => (tool.fields || []).includes(field)
   const styleOptions = optionList(tool, 'styles', defaultStyles)
@@ -332,6 +343,18 @@ export default function ToolPage() {
   const uploadConfig = inferUploadConfig(tool)
   const assetIds = uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
   const uploaded = assetIds.length > 0
+
+  if (!generationEnabled) {
+    return (
+      <Shell title='创作工具' showTab={false}>
+        <EmptyState title='生成服务已关闭' description='当前后台已关闭生成服务，请稍后再试。' icon='wand' />
+        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
+          <AppIcon name='back' size={16} />
+          <Text>返回</Text>
+        </View>
+      </Shell>
+    )
+  }
 
   if (toolLoading) {
     return (
@@ -502,9 +525,9 @@ export default function ToolPage() {
       })
       const order = paymentPayload.order
       const nextPayment = { order, runtime: clientRuntime, afterPaid: 'generate' }
-      if (clientRuntime === 'telegram-tma') {
+      if (isTelegramStarsRuntime(clientRuntime)) {
         nextPayment.starsOrder = await createTelegramStarsOrder({ paymentOrderId: order.id })
-      } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
+      } else if (isPlatformPaymentRuntime(clientRuntime)) {
         nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
         const cryptoOptions = await fetchWalletRechargeOptions()
@@ -554,6 +577,10 @@ export default function ToolPage() {
 
   const submit = async () => {
     if (busy) return
+    if (!generationEnabled) {
+      Taro.showToast({ title: '生成服务已由后台关闭', icon: 'none' })
+      return
+    }
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
     let nextErrors = {}
     if (!prompt.trim()) {

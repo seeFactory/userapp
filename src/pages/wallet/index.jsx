@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import CryptoRoutePicker, { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import {
   cancelWalletWithdrawal,
   createWalletCryptoOrder,
@@ -86,6 +87,8 @@ export default function Wallet() {
   const [withdrawals, setWithdrawals] = useState([])
   const [savingAddress, setSavingAddress] = useState(false)
   const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false)
+  const { config, loading: configLoading } = useAppConfig()
+  const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
 
   const account = overview?.account || {}
   const currency = options.currency || account.currency || 'USD'
@@ -157,6 +160,7 @@ export default function Wallet() {
   }, [currentOrderId, currentOrderStatus])
 
   const chainCount = useMemo(() => options.chains?.length || 0, [options.chains])
+  const rechargeAvailable = !configLoading && rechargeFeatureEnabled && options.acquiringConfigured && chainCount > 0
 
   if (!loggedIn) {
     return (
@@ -173,6 +177,14 @@ export default function Wallet() {
   }
 
   const createOrder = async () => {
+    if (configLoading) {
+      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
+      return
+    }
+    if (!rechargeFeatureEnabled) {
+      Taro.showToast({ title: '充值功能已由后台关闭', icon: 'none' })
+      return
+    }
     const amount = Number(rechargeAmount)
     if (!Number.isFinite(amount) || amount < minRecharge) {
       Taro.showToast({ title: `充值金额最低 ${minRecharge} ${currency}`, icon: 'none' })
@@ -347,12 +359,15 @@ export default function Wallet() {
                 <Text className='section-kicker'>充值</Text>
                 <Text className='section-title'>钱包充值</Text>
               </View>
-              <Text className={options.acquiringConfigured ? 'status success' : 'status failed'}>
-                {options.acquiringConfigured ? '已开放' : '未配置'}
+              <Text className={rechargeAvailable ? 'status success' : 'status failed'}>
+                {configLoading ? '同步中' : !rechargeFeatureEnabled ? '后台已关闭' : options.acquiringConfigured ? '已开放' : '未配置'}
               </Text>
             </View>
             {loadError ? (
               <InlineNotice tone='danger'>{loadError}</InlineNotice>
+            ) : null}
+            {!configLoading && !rechargeFeatureEnabled ? (
+              <InlineNotice tone='danger'>充值功能已由后台关闭，余额与提现功能仍可继续查看和使用。</InlineNotice>
             ) : null}
             {!options.acquiringConfigured ? (
               <InlineNotice tone='danger'>{options.unavailableReason || '充值暂不可用，请联系管理员配置收单地址。'}</InlineNotice>
@@ -362,6 +377,7 @@ export default function Wallet() {
               className='text-input amount-input'
               type='digit'
               value={rechargeAmount}
+              disabled={configLoading || !rechargeFeatureEnabled}
               placeholder={`最低 ${minRecharge} ${currency}`}
               onInput={(event) => setRechargeAmount(event.detail.value)}
             />
@@ -371,8 +387,9 @@ export default function Wallet() {
               chains={options.chains || []}
               value={rechargeRoute}
               onChange={setRechargeRoute}
+              disabled={configLoading || !rechargeFeatureEnabled}
             />
-            <View className={chainCount ? 'primary-button block-gap' : 'primary-button block-gap disabled'} onClick={createOrder}>
+            <View className={rechargeAvailable && !creatingOrder ? 'primary-button block-gap' : 'primary-button block-gap disabled'} onClick={rechargeAvailable && !creatingOrder ? createOrder : undefined}>
               <AppIcon name='wallet' size={16} />
               <Text>{creatingOrder ? '创建中...' : '创建充值订单'}</Text>
             </View>

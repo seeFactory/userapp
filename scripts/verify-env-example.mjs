@@ -62,6 +62,7 @@ assert.equal(env.get("SEEFACTORY_X_REDIRECT_URI"), "", "X redirect URI must rema
 assert.equal(env.get("SEEFACTORY_DEV_LOGIN_ENABLED"), "false", "Development login must be disabled by default.");
 
 const api = read("src/services/api.js");
+const taroConfig = read("config/index.js");
 for (const pattern of [
   "process.env.SEEFACTORY_API_BASE",
   "process.env.SEEFACTORY_GOOGLE_CLIENT_ID",
@@ -77,6 +78,15 @@ for (const pattern of [
   "devLoginEnabled: DEV_LOGIN_ENABLED"
 ]) {
   assertIncludes(api, pattern, `src/services/api.js must include ${pattern}.`);
+}
+
+for (const pattern of [
+  "const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'",
+  "const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'",
+  "'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion)",
+  "'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)"
+]) {
+  assertIncludes(taroConfig, pattern, `config/index.js must include ${pattern}.`);
 }
 
 const packageJson = JSON.parse(read("package.json"));

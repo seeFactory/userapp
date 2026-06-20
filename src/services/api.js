@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro'
 import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
+import { resolveClientRuntime } from '../platform/login'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
@@ -8,6 +9,7 @@ const GOOGLE_CLIENT_ID = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
 const X_REDIRECT_URI = process.env.SEEFACTORY_X_REDIRECT_URI || ''
 const DEV_LOGIN_ENABLED = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 const CLIENT_VERSION = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
+const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
 let refreshPromise = null
 
 function token() {
@@ -66,12 +68,11 @@ export function toApiWork(item) {
 }
 
 export function getClientRuntime() {
-  if (typeof window !== 'undefined' && window.Telegram?.WebApp) return 'telegram-tma'
-  if (process.env.TARO_ENV === 'weapp') return 'wechat-miniapp'
-  if (process.env.TARO_ENV === 'alipay') return 'alipay-miniapp'
-  if (process.env.TARO_ENV === 'tt') return 'douyin-miniapp'
-  if (process.env.TARO_ENV === 'qq') return 'qq-miniapp'
-  return 'h5-google'
+  return resolveClientRuntime({
+    runtimeTarget: RUNTIME_TARGET,
+    taroEnv: process.env.TARO_ENV,
+    hasTelegramWebApp: typeof window !== 'undefined' && Boolean(window.Telegram?.WebApp)
+  })
 }
 
 export function getFrontendLoginConfig() {

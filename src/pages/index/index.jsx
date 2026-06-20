@@ -5,16 +5,29 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchTools } from '../../services/api'
 import { isLoggedIn } from '../../utils/storage'
 
 export default function Index() {
   const loggedIn = isLoggedIn()
+  const { config, loading: configLoading } = useAppConfig()
+  const generationEnabled = isFeatureEnabled(config, 'generation')
   const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const loadTools = () => {
+    if (configLoading) {
+      setLoading(true)
+      return () => {}
+    }
+    if (!generationEnabled) {
+      setTools([])
+      setLoading(false)
+      setError('')
+      return () => {}
+    }
     let mounted = true
     setLoading(true)
     fetchTools()
@@ -35,10 +48,22 @@ export default function Index() {
   useEffect(() => {
     const cleanup = loadTools()
     return cleanup
-  }, [])
+  }, [configLoading, generationEnabled])
 
   const openTool = (tool) => {
+    if (!generationEnabled) {
+      Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
+      return
+    }
     Taro.navigateTo({ url: `/pages/tool/index?id=${tool.id}` })
+  }
+
+  const startFirstTool = () => {
+    if (!generationEnabled) {
+      Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
+      return
+    }
+    Taro.navigateTo({ url: `/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}` })
   }
 
   return (
@@ -53,7 +78,7 @@ export default function Index() {
         <Text className='hero-title'>Hi，{loggedIn ? '创作者' : '游客'}</Text>
         <Text className='hero-subtitle'>用 AI 启动你的视觉工厂，从图片、视频到品牌漫画都在一个深色控制台里完成。</Text>
         <View className='hero-actions'>
-          <View className='primary-button' onClick={() => Taro.navigateTo({ url: `/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}` })}>
+          <View className={generationEnabled ? 'primary-button' : 'primary-button disabled'} onClick={startFirstTool}>
             <AppIcon name='wand' size={16} />
             <Text>开始创作</Text>
           </View>
@@ -72,7 +97,9 @@ export default function Index() {
         <Text className='muted small'>{loading ? '同步配置中' : 'Admin 配置驱动'}</Text>
       </View>
 
-      {loading ? (
+      {!generationEnabled ? (
+        <EmptyState title='创作功能已关闭' description='当前后台已关闭生成服务，已保留作品浏览、客服和账号能力。' icon='wand' />
+      ) : loading ? (
         <PageLoading title='正在同步工具配置' description='正在读取后台配置的创作工具。' />
       ) : error ? (
         <ErrorState title='工具配置加载失败' description={error} onRetry={loadTools} />

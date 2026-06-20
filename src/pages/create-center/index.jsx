@@ -5,6 +5,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 
 export default function CreateCenter() {
@@ -15,8 +16,21 @@ export default function CreateCenter() {
   const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { config, loading: configLoading } = useAppConfig()
+  const generationEnabled = isFeatureEnabled(config, 'generation')
 
   const loadCenter = () => {
+    if (configLoading) {
+      setLoading(true)
+      return () => {}
+    }
+    if (!generationEnabled) {
+      setCases([])
+      setTools([])
+      setLoading(false)
+      setError('')
+      return () => {}
+    }
     let mounted = true
     setLoading(true)
     Promise.all([fetchPromptCases({ pageSize: 30 }), fetchToolCategories(), fetchTools()])
@@ -39,7 +53,7 @@ export default function CreateCenter() {
   useEffect(() => {
     const cleanup = loadCenter()
     return cleanup
-  }, [])
+  }, [configLoading, generationEnabled])
 
   const filtered = useMemo(() => {
     const word = keyword.trim().toLowerCase()
@@ -92,7 +106,9 @@ export default function CreateCenter() {
         </View>
       </View>
 
-      {loading ? (
+      {!generationEnabled ? (
+        <EmptyState title='创作中心已关闭' description='当前后台已关闭生成服务，案例与提示词入口暂不开放。' icon='center' />
+      ) : loading ? (
         <PageLoading title='正在加载提示词案例' description='正在同步案例、工具分类和同款创作配置。' />
       ) : error ? (
         <ErrorState title='案例加载失败' description={error} onRetry={loadCenter} />

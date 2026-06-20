@@ -4,6 +4,8 @@ const apiBase = process.env.SEEFACTORY_API_BASE || 'http://127.0.0.1:10087/api/v
 const googleClientId = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
 const xRedirectUri = process.env.SEEFACTORY_X_REDIRECT_URI || ''
 const devLoginEnabled = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
+const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
+const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
 
 module.exports = defineConfig({
   projectName: 'seeFactory',
@@ -32,7 +34,9 @@ module.exports = defineConfig({
     'process.env.SEEFACTORY_API_BASE': JSON.stringify(apiBase),
     'process.env.SEEFACTORY_GOOGLE_CLIENT_ID': JSON.stringify(googleClientId),
     'process.env.SEEFACTORY_X_REDIRECT_URI': JSON.stringify(xRedirectUri),
-    'process.env.SEEFACTORY_DEV_LOGIN_ENABLED': JSON.stringify(devLoginEnabled ? 'true' : 'false')
+    'process.env.SEEFACTORY_DEV_LOGIN_ENABLED': JSON.stringify(devLoginEnabled ? 'true' : 'false'),
+    'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion),
+    'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)
   },
   copy: {
     patterns: [

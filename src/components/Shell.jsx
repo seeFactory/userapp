@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
-import { fetchAppConfig } from '../services/api'
 import { captureInviteFromParams } from '../platform/invite'
+import { isFeatureEnabled, useAppConfig } from '../hooks/useAppConfig'
 import AppIcon from './AppIcon'
 import BrandLogo from './BrandLogo'
 
@@ -15,25 +15,38 @@ const tabs = [
   { key: 'mine', label: '我的', icon: 'user', path: '/pages/mine/index' }
 ]
 
+function featureForTab(key) {
+  if (key === 'center') return 'generation'
+  if (key === 'gallery') return 'gallery'
+  return ''
+}
+
+function normalizeOpacity(value, fallback) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.min(Math.max(parsed, 0), 1)
+}
+
 export default function Shell({ active, children, showTab = true }) {
-  const [videoUrl, setVideoUrl] = useState(fallbackHomeVideo)
+  const { config } = useAppConfig()
+  const homeConfig = config?.home || {}
+  const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
+  const videoFixed = homeConfig.videoFixed !== false
+  const videoMuted = homeConfig.videoMuted !== false
+  const videoLoop = homeConfig.videoLoop !== false
+  const overlayOpacity = normalizeOpacity(homeConfig.overlayOpacity, 0.58)
+  const mainCardOpacity = normalizeOpacity(homeConfig.mainCardOpacity, 0.46)
+  const homeStyle = active === 'home'
+    ? `--sf-home-overlay-opacity: ${overlayOpacity}; --sf-home-card-opacity: ${mainCardOpacity};`
+    : ''
+  const visibleTabs = tabs.filter((tab) => {
+    const feature = featureForTab(tab.key)
+    return !feature || isFeatureEnabled(config, feature) || tab.key === active
+  })
 
   useEffect(() => {
     captureInviteFromParams(getCurrentInstance()?.router?.params || {})
   }, [])
-
-  useEffect(() => {
-    if (active !== 'home') return undefined
-    let mounted = true
-    fetchAppConfig()
-      .then((config) => {
-        if (mounted && config?.home?.videoUrl) setVideoUrl(config.home.videoUrl)
-      })
-      .catch(() => {})
-    return () => {
-      mounted = false
-    }
-  }, [active])
 
   useEffect(() => {
     if (active !== 'home') return undefined
@@ -45,8 +58,8 @@ export default function Shell({ active, children, showTab = true }) {
       if (process.env.TARO_ENV === 'h5' && typeof document !== 'undefined') {
         const video = document.querySelector('#home-background-video video') || document.querySelector('video')
         if (video?.play) {
-          video.muted = true
-          video.loop = true
+          video.muted = videoMuted
+          video.loop = videoLoop
           video.autoplay = true
           video.playsInline = true
           video.play().catch(() => {})
@@ -69,7 +82,7 @@ export default function Shell({ active, children, showTab = true }) {
     }, 700)
 
     return () => clearInterval(timer)
-  }, [active, videoUrl])
+  }, [active, videoUrl, videoMuted, videoLoop])
 
   const go = (tab) => {
     if (tab.key === active) return
@@ -77,16 +90,16 @@ export default function Shell({ active, children, showTab = true }) {
   }
 
   return (
-    <View className={active === 'home' ? 'app-shell home-shell' : 'app-shell'}>
+    <View className={active === 'home' ? 'app-shell home-shell' : 'app-shell'} style={homeStyle}>
       {active === 'home' && (
-        <View className='home-video-layer'>
+        <View className={videoFixed ? 'home-video-layer fixed' : 'home-video-layer scroll-bound'}>
           <Video
             id='home-background-video'
             className='home-bg-video'
             src={videoUrl}
             autoplay
-            loop
-            muted
+            loop={videoLoop}
+            muted={videoMuted}
             playsInline
             controls={false}
             showCenterPlayBtn={false}
@@ -97,6 +110,7 @@ export default function Shell({ active, children, showTab = true }) {
           />
         </View>
       )}
+      {active === 'home' && <View className='home-video-overlay' />}
       <View className='factory-grid' />
       <ScrollView
         className={showTab ? 'page-content with-tab' : 'page-content'}
@@ -109,7 +123,7 @@ export default function Shell({ active, children, showTab = true }) {
       </ScrollView>
       {showTab && (
         <View className='bottom-tabs'>
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <View
               key={tab.key}
               className={tab.key === active ? 'tab-item active' : 'tab-item'}

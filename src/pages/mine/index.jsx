@@ -7,6 +7,8 @@ import BrandLogo from '../../components/BrandLogo'
 import CustomerModal from '../../components/CustomerModal'
 import PaymentSheet from '../../components/PaymentSheet'
 import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import {
   createCryptoOrder,
   createPlatformPaymentOrder,
@@ -23,9 +25,8 @@ import {
   getClientRuntime,
   logoutRemote
 } from '../../services/api'
+import { formatAgreementContent } from '../../utils/agreement'
 import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
-
-const PLATFORM_PAY_RUNTIMES = ['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp']
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -51,6 +52,9 @@ export default function Mine() {
   const [creatingRecharge, setCreatingRecharge] = useState(false)
   const [rechargePayment, setRechargePayment] = useState(null)
   const currentUser = getCurrentUser()
+  const { config, loading: configLoading } = useAppConfig()
+  const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
+  const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
 
   const loadAccount = async () => {
     const [creditData, walletData, rechargeData] = await Promise.all([
@@ -96,7 +100,7 @@ export default function Mine() {
       Taro.hideLoading()
       Taro.showModal({
         title: agreement.title || titleMap[type],
-        content: agreement.contentMarkdown || '协议正文待后台发布',
+        content: formatAgreementContent(agreement, config?.legal),
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -112,6 +116,22 @@ export default function Mine() {
       return
     }
     requireLogin('/pages/wallet/index')
+  }
+
+  const goAgent = () => {
+    if (configLoading) {
+      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
+      return
+    }
+    if (!agentFeatureEnabled) {
+      Taro.showToast({ title: '代理中心已由后台关闭', icon: 'none' })
+      return
+    }
+    if (loggedIn) {
+      Taro.navigateTo({ url: '/pages/agent/index' })
+      return
+    }
+    requireLogin('/pages/agent/index')
   }
 
   const updateRechargeCryptoRoute = (route) => {
@@ -151,6 +171,14 @@ export default function Mine() {
   }
 
   const beginRecharge = async () => {
+    if (configLoading) {
+      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
+      return
+    }
+    if (!rechargeFeatureEnabled) {
+      Taro.showToast({ title: '充值功能已由后台关闭', icon: 'none' })
+      return
+    }
     if (!requireLogin('/pages/mine/index')) return
     if (rechargePolicy.allowCustomAmount === false) {
       Taro.showToast({ title: '当前点数充值已由后台关闭', icon: 'none' })
@@ -175,9 +203,9 @@ export default function Mine() {
     try {
       const order = await createRechargeOrder({ amountCents, clientRuntime })
       const nextPayment = { order, runtime: clientRuntime, afterPaid: 'recharge' }
-      if (clientRuntime === 'telegram-tma') {
+      if (isTelegramStarsRuntime(clientRuntime)) {
         nextPayment.starsOrder = await createTelegramStarsOrder({ paymentOrderId: order.id })
-      } else if (PLATFORM_PAY_RUNTIMES.includes(clientRuntime)) {
+      } else if (isPlatformPaymentRuntime(clientRuntime)) {
         nextPayment.platformPayment = await createPlatformPaymentOrder({ paymentOrderId: order.id })
       } else {
         const cryptoOptions = await fetchWalletRechargeOptions()
@@ -226,7 +254,7 @@ export default function Mine() {
     }
   }
 
-  const rechargeDisabled = rechargePolicy.allowCustomAmount === false
+  const rechargeDisabled = configLoading || !rechargeFeatureEnabled || rechargePolicy.allowCustomAmount === false
   const estimatedPoints = Math.max(0, Math.floor((Number(rechargeAmount || 0)) * rechargePolicy.pointRate))
   const minRecharge = money(rechargePolicy.minAmountCents / 100)
   const maxRecharge = money(rechargePolicy.maxAmountCents / 100)
@@ -319,16 +347,18 @@ export default function Mine() {
           <Text className='profile-name'>钱包充值</Text>
           <Text className='tool-desc'>充值与提现</Text>
         </View>
-        <View className='profile-card' onClick={beginRecharge}>
+        <View className={rechargeDisabled ? 'profile-card disabled' : 'profile-card'} onClick={rechargeDisabled ? undefined : beginRecharge}>
           <View className='profile-icon'><AppIcon name='coin' size={22} /></View>
           <Text className='profile-name'>点数充值</Text>
           <Text className='tool-desc'>自填金额</Text>
         </View>
-        <View className='profile-card' onClick={() => loggedIn ? Taro.navigateTo({ url: '/pages/agent/index' }) : requireLogin('/pages/agent/index')}>
+        {!configLoading && agentFeatureEnabled ? (
+        <View className='profile-card' onClick={goAgent}>
           <View className='profile-icon'><AppIcon name='agent' size={22} /></View>
           <Text className='profile-name'>代理中心</Text>
           <Text className='tool-desc'>用户和激活</Text>
         </View>
+        ) : null}
         <View className='profile-card' onClick={() => setCustomerOpen(true)}>
           <View className='profile-icon'><AppIcon name='headphones' size={22} /></View>
           <Text className='profile-name'>联系客服</Text>

@@ -4,6 +4,8 @@ import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { captureInviteFromParams } from '../../platform/invite'
+import { useAppConfig } from '../../hooks/useAppConfig'
+import { formatAgreementContent } from '../../utils/agreement'
 import { acceptAgreement, saveAuth } from '../../utils/storage'
 import {
   createXAuthorizeUrl,
@@ -130,6 +132,7 @@ export default function Login() {
   const [googleReady, setGoogleReady] = useState(false)
   const [agreementCache, setAgreementCache] = useState({})
   const googleHostId = useRef(`google-login-${Date.now()}`)
+  const { config } = useAppConfig()
   const runtime = getClientRuntime()
   const loginConfig = getFrontendLoginConfig()
   const target = redirect ? decodeURIComponent(redirect) : '/pages/index/index'
@@ -165,7 +168,7 @@ export default function Login() {
       const meta = REQUIRED_AGREEMENTS.find((item) => item.type === type)
       Taro.showModal({
         title: agreement.title || meta?.label || '协议',
-        content: agreement.contentMarkdown || '协议正文待后台发布',
+        content: formatAgreementContent(agreement, config?.legal),
         showCancel: false,
         confirmText: '我知道了'
       })

@@ -5,6 +5,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
+import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
 
 export default function Gallery() {
@@ -13,8 +14,20 @@ export default function Gallery() {
   const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { config, loading: configLoading } = useAppConfig()
+  const galleryEnabled = isFeatureEnabled(config, 'gallery')
 
   const loadGallery = () => {
+    if (configLoading) {
+      setLoading(true)
+      return () => {}
+    }
+    if (!galleryEnabled) {
+      setWorks([])
+      setLoading(false)
+      setError('')
+      return () => {}
+    }
     let mounted = true
     setLoading(true)
     Promise.all([fetchGalleryWorks({ pageSize: 24 }), fetchToolCategories()])
@@ -37,7 +50,7 @@ export default function Gallery() {
   useEffect(() => {
     const cleanup = loadGallery()
     return cleanup
-  }, [])
+  }, [configLoading, galleryEnabled])
 
   const filtered = useMemo(() => {
     if (category === 'all') return works
@@ -73,7 +86,9 @@ export default function Gallery() {
 
       {error && works.length ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
 
-      {loading ? (
+      {!galleryEnabled ? (
+        <EmptyState title='作品广场已关闭' description='当前后台已关闭公开广场，个人作品仍可在作品页查看。' icon='gallery' />
+      ) : loading ? (
         <PageLoading title='正在加载广场作品' description='正在同步公开作品、精选内容和分类。' />
       ) : error && !works.length ? (
         <ErrorState title='广场加载失败' description={error} onRetry={loadGallery} />

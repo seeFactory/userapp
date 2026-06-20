@@ -81,6 +81,27 @@ assertIncludesAll(api, "services/api.js backend contract", [
   "fetchTelegramStarsOrder"
 ]);
 
+const appConfig = source("src/hooks/useAppConfig.js");
+assertIncludesAll(appConfig, "useAppConfig app configuration contract", [
+  "DEFAULT_APP_CONFIG",
+  "generationEnabled: true",
+  "rechargeEnabled: true",
+  "galleryEnabled: true",
+  "agentEnabled: true",
+  "videoMuted: true",
+  "videoLoop: true",
+  "mainCardOpacity: 0.46",
+  "operatorName: 'seeFactory 平台运营方'",
+  "contactEmail: 'support@seefactory.ai'",
+  "contactAddress: '中国北京市海淀区 seeFactory 运营中心'",
+  "jurisdiction: '中华人民共和国法律'",
+  "legal: { ...DEFAULT_APP_CONFIG.legal, ...(config?.legal || {}) }",
+  "fetchAppConfig",
+  "loadAppConfig",
+  "isFeatureEnabled",
+  "useAppConfig"
+]);
+
 const storage = source("src/utils/storage.js");
 assertIncludesAll(storage, "utils/storage.js storage contract", [
   "Taro.getStorageSync",
@@ -94,20 +115,62 @@ assertIncludesAll(storage, "utils/storage.js storage contract", [
   "requireLogin"
 ]);
 
+const agreement = source("src/utils/agreement.js");
+assertIncludesAll(agreement, "utils/agreement.js legal agreement display contract", [
+  "normalizeLegalInfo",
+  "formatAgreementLegalBlock",
+  "formatAgreementContent",
+  "平台主体信息",
+  "运营主体：",
+  "联系邮箱：",
+  "联系地址：",
+  "适用法域：",
+  "operatorName: 'seeFactory 平台运营方'",
+  "contactEmail: 'support@seefactory.ai'",
+  "contactAddress: '中国北京市海淀区 seeFactory 运营中心'",
+  "jurisdiction: '中华人民共和国法律'"
+]);
+
 const shell = source("src/components/Shell.jsx");
 assertIncludesAll(shell, "Shell.jsx fixed home video contract", [
-  "fetchAppConfig",
-  "config?.home?.videoUrl",
+  "useAppConfig",
+  "const homeConfig = config?.home || {}",
+  "homeConfig.videoUrl || fallbackHomeVideo",
+  "homeConfig.videoFixed !== false",
+  "homeConfig.videoMuted !== false",
+  "homeConfig.videoLoop !== false",
+  "normalizeOpacity(homeConfig.overlayOpacity, 0.58)",
+  "normalizeOpacity(homeConfig.mainCardOpacity, 0.46)",
+  "--sf-home-overlay-opacity",
+  "--sf-home-card-opacity",
+  "featureForTab",
+  "visibleTabs",
+  "isFeatureEnabled(config, feature)",
+  "return 'generation'",
+  "return 'gallery'",
   "home-video-layer",
+  "home-video-overlay",
   "home-bg-video",
   "id='home-background-video'",
   "Video",
   "autoplay",
-  "loop",
-  "muted",
+  "loop={videoLoop}",
+  "muted={videoMuted}",
   "playsInline",
   "Taro.createVideoContext('home-background-video')"
 ]);
+
+for (const [relativePath, label, patterns] of [
+  ["src/pages/index/index.jsx", "home page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作功能已由后台关闭"]],
+  ["src/pages/create-center/index.jsx", "create center generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作中心已关闭"]],
+  ["src/pages/tool/index.jsx", "tool page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "生成服务已关闭"]],
+  ["src/pages/gallery/index.jsx", "gallery feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'gallery')", "galleryEnabled", "作品广场已关闭"]],
+  ["src/pages/mine/index.jsx", "mine page recharge and agent feature gates", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "isFeatureEnabled(config, 'agent')", "rechargeDisabled", "agentFeatureEnabled"]],
+  ["src/pages/wallet/index.jsx", "wallet recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeFeatureEnabled", "充值功能已由后台关闭"]],
+  ["src/pages/agent/index.jsx", "agent page feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'agent')", "agentEnabled", "代理中心已关闭"]]
+]) {
+  assertIncludesAll(source(relativePath), label, patterns);
+}
 
 const css = source("src/app.css");
 assertIncludesAll(css, "app.css mobile visual contract", [
@@ -115,8 +178,12 @@ assertIncludesAll(css, "app.css mobile visual contract", [
   "min-height: 844px",
   ".home-video-layer",
   "position: fixed",
+  ".home-video-overlay",
   ".home-bg-video",
   "object-fit: cover",
+  "--sf-home-overlay-opacity",
+  "--sf-home-card-opacity",
+  "var(--sf-home-card-opacity, 0.46)",
   "env(safe-area-inset-bottom)",
   "@media (max-width: 389px)"
 ]);
@@ -125,6 +192,9 @@ const login = source("src/pages/login/index.jsx");
 assertIncludesAll(login, "login page multi-runtime contract", [
   "REQUIRED_AGREEMENTS",
   "fetchAgreement",
+  "useAppConfig",
+  "formatAgreementContent",
+  "content: formatAgreementContent(agreement, config?.legal)",
   "window.Telegram?.WebApp?.ready?.()",
   "window.Telegram?.WebApp?.expand?.()",
   "loadScript('https://accounts.google.com/gsi/client?hl=zh-CN')",
@@ -137,6 +207,13 @@ assertIncludesAll(login, "login page multi-runtime contract", [
   "clientRuntime: 'h5-x'",
   "loginConfig.devLoginEnabled"
 ]);
+
+for (const [relativePath, label, patterns] of [
+  ["src/pages/mine/index.jsx", "mine page agreement legal display", ["formatAgreementContent", "content: formatAgreementContent(agreement, config?.legal)", "fetchAgreement"]],
+  ["src/pages/agent/index.jsx", "agent page agreement legal display", ["formatAgreementContent", "content: formatAgreementContent(agreement, config?.legal, '代理推广协议正文待后台发布，请确认后继续访问代理中心。')", "fetchAgreement('agent')"]]
+]) {
+  assertIncludesAll(source(relativePath), label, patterns);
+}
 
 const gallery = source("src/pages/gallery/index.jsx");
 assertIncludesAll(gallery, "gallery page public work contract", [
@@ -204,8 +281,10 @@ console.log(JSON.stringify({
   checked: [
     "no local mock data",
     "API base, auth refresh, runtime/version headers",
+    "AppConfig feature switches gate generation, gallery, recharge, and agent flows",
     "TMA, WeChat, Alipay, Douyin, QQ, Google, X login endpoints",
     "Taro storage based auth state",
+    "agreement modal legal operator block",
     "fixed full-screen home background video",
     "iPhone 14 height baseline and safe-area styles",
     "public gallery and share detail access",
