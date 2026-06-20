@@ -8,6 +8,18 @@
     />
     <link rel="icon" type="image/png" href="/static/logo.png" />
     <link rel="apple-touch-icon" href="/static/logo.png" />
+    <script>
+      (function () {
+        var key = 'seeFactoryTgLaunchParams'
+        var target = window.location.hash || window.location.search || ''
+        if (!/(^|[#?&])tgWebApp(Data|Version|Platform|ThemeParams)=/.test(target)) return
+        var value = target.charAt(0) === '#' || target.charAt(0) === '?' ? target.slice(1) : target
+        window.__SEEFACTORY_TG_LAUNCH_PARAMS__ = value
+        try {
+          window.sessionStorage.setItem(key, value)
+        } catch (error) {}
+      })()
+    </script>
     <title>seeFactory</title>
   </head>
   <body>

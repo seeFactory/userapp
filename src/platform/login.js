@@ -1,6 +1,7 @@
 export const LOGIN_BRANCH = 'tma'
 export const BRANCH_CLIENT_RUNTIME = 'telegram-tma'
 export const TELEGRAM_SDK_URL = 'https://telegram.org/js/telegram-web-app.js?62'
+export const TELEGRAM_LAUNCH_PARAMS_KEY = 'seeFactoryTgLaunchParams'
 
 export function resolveClientRuntime({
   runtimeTarget = 'h5',
@@ -19,4 +20,38 @@ export function resolveClientRuntime({
 
 export function shouldLoadTelegramSdk(runtimeTarget = 'h5') {
   return BRANCH_CLIENT_RUNTIME === 'telegram-tma' || runtimeTarget === 'tma'
+}
+
+export function readTelegramLaunchParams() {
+  if (typeof window === 'undefined') return ''
+  if (window.__SEEFACTORY_TG_LAUNCH_PARAMS__) return window.__SEEFACTORY_TG_LAUNCH_PARAMS__
+
+  const current = window.location.hash || window.location.search || ''
+  if (/(^|[#?&])tgWebApp(Data|Version|Platform|ThemeParams)=/.test(current)) {
+    return current.charAt(0) === '#' || current.charAt(0) === '?' ? current.slice(1) : current
+  }
+
+  try {
+    return window.sessionStorage.getItem(TELEGRAM_LAUNCH_PARAMS_KEY) || ''
+  } catch (error) {
+    return ''
+  }
+}
+
+export function getTelegramInitDataFromLaunchParams() {
+  const raw = readTelegramLaunchParams()
+  if (!raw) return ''
+  const params = new URLSearchParams(raw)
+  return params.get('tgWebAppData') || ''
+}
+
+export function getTelegramUserFromInitData(initData = getTelegramInitDataFromLaunchParams()) {
+  if (!initData) return {}
+  try {
+    const params = new URLSearchParams(initData)
+    const user = params.get('user')
+    return user ? JSON.parse(user) : {}
+  } catch (error) {
+    return {}
+  }
 }
