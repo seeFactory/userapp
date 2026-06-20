@@ -2350,7 +2350,7 @@ taro-video-core {
   flex: 0 0 76px;
   width: 76px;
   height: 46px;
-  border: 1px solid rgba(243, 214, 166, 0.18);
+  border: 1px solid rgba(243, 214, 166, 0.2);
   border-radius: 18px;
   background:
     radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.52), transparent 62%),
@@ -2365,6 +2365,9 @@ taro-video-core {
   display: block;
   width: 70px;
   height: 42px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
   filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.34));
 }
 
