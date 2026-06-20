@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { Image, View, Text } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
@@ -70,7 +70,7 @@ export default function Index() {
       <View className='hero'>
         <View className='hero-logo-line'>
           <View className='hero-orbit-icon'>
-            <Image className='hero-brand-image' src='/static/logo-hero.png' mode='aspectFit' />
+            <View className='hero-brand-image' style={{ backgroundImage: 'url(/static/logo-hero.png)' }} />
           </View>
           <Text className='hero-kicker'>seeFactory 智能创作工厂</Text>
         </View>
