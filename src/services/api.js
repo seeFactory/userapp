@@ -7,6 +7,7 @@ const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/
 const GOOGLE_CLIENT_ID = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
 const X_REDIRECT_URI = process.env.SEEFACTORY_X_REDIRECT_URI || ''
 const DEV_LOGIN_ENABLED = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
+const CLIENT_VERSION = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
 let refreshPromise = null
 
 function token() {
@@ -84,6 +85,8 @@ export function getFrontendLoginConfig() {
 async function send(path, options = {}) {
   const header = {
     'content-type': 'application/json',
+    'X-Client-Runtime': getClientRuntime(),
+    'X-Client-Version': CLIENT_VERSION,
     ...(!options.noAuth && token() ? { authorization: `Bearer ${token()}` } : {}),
     ...(options.header || {})
   }
