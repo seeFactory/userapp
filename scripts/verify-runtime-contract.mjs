@@ -187,7 +187,8 @@ assertIncludesAll(paymentSheet, "PaymentSheet payment skill frontend contract", 
 const packageSource = source("package.json");
 assertIncludesAll(packageSource, "package.json verification contract", [
   "\"verify:runtime-contract\"",
-  "pnpm verify:runtime-contract && pnpm verify:feedback-system && pnpm build:all"
+  "\"verify:env-example\"",
+  "pnpm verify:runtime-contract && pnpm verify:env-example && pnpm verify:feedback-system && pnpm build:all"
 ]);
 
 const envExample = source(".env.example");
