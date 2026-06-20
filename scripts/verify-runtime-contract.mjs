@@ -190,6 +190,15 @@ assertIncludesAll(packageSource, "package.json verification contract", [
   "pnpm verify:runtime-contract && pnpm verify:feedback-system && pnpm build:all"
 ]);
 
+const envExample = source(".env.example");
+assertIncludesAll(envExample, ".env.example runtime configuration", [
+  "SEEFACTORY_API_BASE=",
+  "SEEFACTORY_CLIENT_VERSION=",
+  "SEEFACTORY_GOOGLE_CLIENT_ID=",
+  "SEEFACTORY_X_REDIRECT_URI=",
+  "SEEFACTORY_DEV_LOGIN_ENABLED=false"
+]);
+
 console.log(JSON.stringify({
   checked: [
     "no local mock data",
@@ -201,6 +210,7 @@ console.log(JSON.stringify({
     "public gallery and share detail access",
     "download/save flow with backend signed download URL",
     "payment sheet invokes only backend-created platform, crypto, and Telegram Stars orders",
+    "runtime environment example keys",
     "verification script is wired into app verify"
   ]
 }, null, 2));
