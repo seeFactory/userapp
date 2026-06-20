@@ -1,5 +1,5 @@
-export const PAYMENT_BRANCH = 'main'
-export const PLATFORM_PAY_RUNTIMES = []
+export const PAYMENT_BRANCH = 'qq'
+export const PLATFORM_PAY_RUNTIMES = ['qq-miniapp']
 
 export function isTelegramStarsRuntime(clientRuntime) {
   return clientRuntime === 'telegram-tma'
