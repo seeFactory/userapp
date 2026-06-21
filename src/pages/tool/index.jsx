@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Textarea, Image, Video } from '@tarojs/components'
+import { View, Text, Textarea, Image, Video, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
@@ -101,6 +101,44 @@ function resolutionRatio(value = '') {
   return width / height
 }
 
+function resolutionParts(value = '') {
+  const normalized = normalizeResolution(value)
+  if (!normalized) return { width: '', height: '' }
+  const [width, height] = normalized.split('x')
+  return { width, height }
+}
+
+function customResolutionConfig(tool) {
+  const raw = tool?.options?.customResolution || {}
+  const enabled = tool?.options?.allowCustomResolution === true || raw.enabled === true
+  if (!enabled) return null
+  const numberValue = (key, fallback) => {
+    const value = Number(raw[key])
+    return Number.isFinite(value) && value > 0 ? value : fallback
+  }
+  return {
+    minWidth: numberValue('minWidth', 64),
+    maxWidth: numberValue('maxWidth', 8192),
+    minHeight: numberValue('minHeight', 64),
+    maxHeight: numberValue('maxHeight', 8192),
+    step: numberValue('step', 1),
+    ratioTolerance: numberValue('ratioTolerance', 0.04)
+  }
+}
+
+function isCustomResolutionEnabled(tool) {
+  return Boolean(customResolutionConfig(tool))
+}
+
+function resolutionMatchesRatio(tool, ratio, value) {
+  const normalized = normalizeResolution(value)
+  const expected = ratioValue(ratio)
+  const actual = resolutionRatio(normalized)
+  if (!normalized || !expected || !actual) return false
+  const tolerance = customResolutionConfig(tool)?.ratioTolerance || 0.04
+  return Math.abs(expected - actual) / expected <= tolerance
+}
+
 function resolutionOptionsForRatio(tool, ratio, fallback) {
   const all = optionList(tool, 'resolutions', fallback).map(normalizeResolution).filter(Boolean)
   const map = tool?.options?.ratioResolutionMap || tool?.options?.ratioResolutions
@@ -116,6 +154,20 @@ function resolutionOptionsForRatio(tool, ratio, fallback) {
   })
 }
 
+function defaultCustomResolutionForRatio(tool, ratio, fallback) {
+  const mapped = resolutionOptionsForRatio(tool, ratio, fallback)
+  const configuredDefault = normalizeResolution(tool?.options?.defaultResolution)
+  if (configuredDefault && resolutionMatchesRatio(tool, ratio, configuredDefault)) return configuredDefault
+  if (mapped.length) return mapped[0]
+  const config = customResolutionConfig(tool)
+  if (!config) return firstValue(fallback)
+  if (ratio === '16:9') return `${Math.min(config.maxWidth, 1280)}x${Math.min(config.maxHeight, 720)}`
+  if (ratio === '9:16') return `${Math.min(config.maxWidth, 720)}x${Math.min(config.maxHeight, 1280)}`
+  if (ratio === '3:4') return `${Math.min(config.maxWidth, 720)}x${Math.min(config.maxHeight, 960)}`
+  const side = Math.min(config.maxWidth, config.maxHeight, 1024)
+  return `${side}x${side}`
+}
+
 function nextSelected(tool, key, fallback, current) {
   const list = optionList(tool, key, fallback)
   return list.includes(current) ? current : firstValue(list)
@@ -123,7 +175,10 @@ function nextSelected(tool, key, fallback, current) {
 
 function nextResolution(tool, ratio, current) {
   const list = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
-  return list.includes(normalizeResolution(current)) ? normalizeResolution(current) : firstValue(list)
+  const normalized = normalizeResolution(current)
+  if (list.includes(normalized)) return normalized
+  if (isCustomResolutionEnabled(tool) && resolutionMatchesRatio(tool, ratio, normalized)) return normalized
+  return firstValue(list) || defaultCustomResolutionForRatio(tool, ratio, defaultResolutions)
 }
 
 function formatFileSize(size = 0) {
@@ -396,6 +451,11 @@ export default function ToolPage() {
   const resolutionOptions = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
   const durationOptions = optionList(tool, 'durations', defaultDurations)
   const modelOptions = optionList(tool, 'models', defaultModels)
+  const resolutionConfig = customResolutionConfig(tool)
+  const customResolutionSupported = Boolean(resolutionConfig)
+  const normalizedResolution = normalizeResolution(resolution)
+  const customResolutionActive = customResolutionSupported && needs('resolution') && !resolutionOptions.includes(normalizedResolution)
+  const customResolutionParts = resolutionParts(resolution)
   const uploadConfig = inferUploadConfig(tool)
   const assetIds = uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
   const uploaded = assetIds.length > 0
@@ -437,6 +497,22 @@ export default function ToolPage() {
       })
       return next
     })
+  }
+
+  const enableCustomResolution = () => {
+    clearFieldError('resolution')
+    setResolution(defaultCustomResolutionForRatio(tool, ratio, defaultResolutions))
+  }
+
+  const updateCustomResolution = (key, value) => {
+    clearFieldError('resolution')
+    const clean = String(value || '').replace(/[^\d]/g, '').slice(0, 5)
+    const current = resolutionParts(resolution)
+    const next = {
+      width: key === 'width' ? clean : current.width,
+      height: key === 'height' ? clean : current.height
+    }
+    setResolution(next.width && next.height ? `${next.width}x${next.height}` : '')
   }
 
   const removeUploadItem = (key) => {
@@ -810,7 +886,44 @@ export default function ToolPage() {
                   {item}
                 </View>
               ))}
+              {customResolutionSupported && (
+                <View className={customResolutionActive ? 'option-chip active' : 'option-chip'} onClick={enableCustomResolution}>
+                  自定义
+                </View>
+              )}
             </View>
+            {customResolutionSupported && customResolutionActive ? (
+              <View className='custom-resolution-panel'>
+                <View className='custom-resolution-inputs'>
+                  <View className='resolution-input-shell'>
+                    <Text>宽</Text>
+                    <Input
+                      className='resolution-input'
+                      type='number'
+                      value={customResolutionParts.width}
+                      maxlength={5}
+                      placeholder='1024'
+                      onInput={(event) => updateCustomResolution('width', event.detail.value)}
+                    />
+                  </View>
+                  <Text className='resolution-separator'>×</Text>
+                  <View className='resolution-input-shell'>
+                    <Text>高</Text>
+                    <Input
+                      className='resolution-input'
+                      type='number'
+                      value={customResolutionParts.height}
+                      maxlength={5}
+                      placeholder='1024'
+                      onInput={(event) => updateCustomResolution('height', event.detail.value)}
+                    />
+                  </View>
+                </View>
+                <Text className='custom-resolution-hint'>
+                  范围 {resolutionConfig.minWidth}-{resolutionConfig.maxWidth} × {resolutionConfig.minHeight}-{resolutionConfig.maxHeight}，步进 {resolutionConfig.step}
+                </Text>
+              </View>
+            ) : null}
             {fieldError(formErrors, 'resolution') ? <Text className='field-error'>{fieldError(formErrors, 'resolution')}</Text> : null}
           </>
         )}
