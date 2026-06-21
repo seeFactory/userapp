@@ -2662,65 +2662,6 @@ taro-video-core {
     0 5px 12px rgba(2, 6, 23, 0.22);
 }
 
-.custom-resolution-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  width: 100%;
-  margin-top: -6px;
-  margin-bottom: 12px;
-  padding: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(8, 13, 28, 0.62)),
-    rgba(8, 13, 28, 0.6);
-}
-
-.custom-resolution-inputs {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.resolution-input-shell {
-  display: flex;
-  min-width: 0;
-  height: 44px;
-  align-items: center;
-  gap: 7px;
-  padding: 0 11px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  color: #9fb1c8;
-  background: rgba(12, 20, 38, 0.78);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.resolution-input {
-  min-width: 0;
-  flex: 1;
-  height: 38px;
-  color: #f8fafc;
-  font-size: 15px;
-  font-weight: 800;
-  text-align: right;
-}
-
-.resolution-separator {
-  color: #e2e8f0;
-  font-size: 16px;
-  font-weight: 900;
-}
-
-.custom-resolution-hint {
-  color: #8fa3bf;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
 .input-label {
   display: flex;
   align-items: center;
