@@ -25,18 +25,18 @@ function walk(dir) {
 }
 
 const files = walk(distDir).filter((file) => /\.(html|js|css|json)$/i.test(file));
-assert.ok(files.length, "App dist must contain build artifacts before verifying production API base.");
+assert.ok(files.length, "App/TMA dist must contain build artifacts before verifying production API base.");
 
 let joined = "";
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8");
   joined += `\n${text}`;
   for (const pattern of forbiddenPatterns) {
-    assert.ok(!text.includes(pattern), `App production artifact ${file} must not include ${pattern}.`);
+    assert.ok(!text.includes(pattern), `App/TMA production artifact ${file} must not include ${pattern}.`);
   }
 }
 
-assert.ok(joined.includes(requiredApiBase), `App production artifacts must include ${requiredApiBase}.`);
+assert.ok(joined.includes(requiredApiBase), `App/TMA production artifacts must include ${requiredApiBase}.`);
 
 console.log(JSON.stringify({
   checked: [
