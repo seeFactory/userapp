@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchTools } from '../../services/api'
+import { goPage, goTab } from '../../utils/navigation'
 import { isLoggedIn } from '../../utils/storage'
 
 export default function Index() {
@@ -54,7 +55,7 @@ export default function Index() {
       Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
       return
     }
-    Taro.navigateTo({ url: `/pages/tool/index?id=${tool.id}` })
+    goPage(`/pages/tool/index?id=${tool.id}`)
   }
 
   const startFirstTool = () => {
@@ -62,7 +63,7 @@ export default function Index() {
       Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
       return
     }
-    Taro.navigateTo({ url: `/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}` })
+    goPage(`/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}`)
   }
 
   return (
@@ -81,7 +82,7 @@ export default function Index() {
             <AppIcon name='wand' size={16} />
             <Text>开始创作</Text>
           </View>
-          <View className='ghost-button glass-button' onClick={() => Taro.redirectTo({ url: '/pages/create-center/index' })}>
+          <View className='ghost-button glass-button' onClick={() => goTab('/pages/create-center/index')}>
             <AppIcon name='center' size={16} />
             <Text>看案例</Text>
           </View>

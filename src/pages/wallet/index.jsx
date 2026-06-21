@@ -164,7 +164,7 @@ export default function Wallet() {
 
   if (!loggedIn) {
     return (
-      <Shell title='钱包' showTab={false}>
+      <Shell title='钱包' showTab={false} backFallback='/pages/mine/index'>
         <EmptyState
           title='请先登录'
           description='登录后可管理钱包充值、提现地址和提现记录。'
@@ -321,7 +321,7 @@ export default function Wallet() {
   }
 
   return (
-    <Shell title='钱包' showTab={false}>
+    <Shell title='钱包' showTab={false} backFallback='/pages/mine/index'>
       <View className='panel wallet-hero'>
         <View className='panel-brand-row'>
           <BrandLogo size={52} />
@@ -510,10 +510,6 @@ export default function Wallet() {
         </>
       )}
 
-      <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-        <AppIcon name='back' size={16} />
-        <Text>返回</Text>
-      </View>
     </Shell>
   )
 }

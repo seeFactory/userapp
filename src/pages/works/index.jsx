@@ -7,6 +7,7 @@ import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 import { clearFailedWorksRemote, fetchToolCategories, fetchWorks } from '../../services/api'
+import { goPage } from '../../utils/navigation'
 
 function statusLabel(status) {
   const map = {
@@ -137,7 +138,7 @@ export default function Works() {
       ) : (
         <View className='case-grid'>
           {filtered.map((item) => (
-            <View key={item.id} className='work-card' onClick={() => Taro.navigateTo({ url: `/pages/work-detail/index?id=${item.id}` })}>
+            <View key={item.id} className='work-card' onClick={() => goPage(`/pages/work-detail/index?id=${item.id}`)}>
               <Image className='work-image' src={item.image || 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'} mode='aspectFill' />
               <View className='work-body'>
                 <Text className='work-title'>{item.title}</Text>

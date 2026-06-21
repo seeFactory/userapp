@@ -18,6 +18,7 @@ import {
   retryGenerationTask,
   unpublishGalleryWork
 } from '../../services/api'
+import { goPage, goTab } from '../../utils/navigation'
 import { isLoggedIn } from '../../utils/storage'
 
 function statusLabel(status) {
@@ -195,7 +196,7 @@ export default function WorkDetail() {
           } catch (error) {
           }
           Taro.showToast({ title: '已删除', icon: 'success' })
-          Taro.redirectTo({ url: '/pages/works/index' })
+          goTab('/pages/works/index')
         }
       }
     })
@@ -255,13 +256,13 @@ export default function WorkDetail() {
       try {
         const result = await retryGenerationTask(work.generationTaskId)
         Taro.showToast({ title: '已重新提交', icon: 'success' })
-        Taro.redirectTo({ url: `/pages/work-detail/index?id=${result.work.id}` })
+        goPage(`/pages/work-detail/index?id=${result.work.id}`, { replace: true })
         return
       } catch (error) {
         Taro.showToast({ title: error.message || '重试失败', icon: 'none' })
       }
     }
-    Taro.navigateTo({ url: `/pages/tool/index?id=${work.toolKey || 'factory-painter'}&prompt=${encodeURIComponent(work.prompt || '')}` })
+    goPage(`/pages/tool/index?id=${work.toolKey || 'factory-painter'}&prompt=${encodeURIComponent(work.prompt || '')}`)
   }
 
   const saveWork = async () => {
@@ -362,17 +363,14 @@ export default function WorkDetail() {
   }
 
   if (!work) {
+    const fallbackUrl = source === 'gallery' ? '/pages/gallery/index' : '/pages/works/index'
     return (
-      <Shell title='作品详情' showTab={false}>
+      <Shell title='作品详情' showTab={false} backFallback={fallbackUrl}>
         {loading ? (
           <PageLoading title='正在同步作品' description='正在读取作品结果、任务状态和保存权限。' />
         ) : (
           <ErrorState title='作品不可访问' description={error || '作品不存在、已删除或暂未公开。'} onRetry={loadWorkDetail} />
         )}
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-          <AppIcon name='back' size={16} />
-          <Text>返回</Text>
-        </View>
       </Shell>
     )
   }
@@ -387,9 +385,10 @@ export default function WorkDetail() {
   const publicLikeDetail = isGalleryDetail || isSharedDetail
   const canSave = work.status === 'success' && (!publicLikeDetail || work.downloadEnabled !== false)
   const canShare = work.status === 'success'
+  const backFallback = isGalleryDetail ? '/pages/gallery/index' : '/pages/works/index'
 
   return (
-    <Shell title='作品详情' showTab={false}>
+    <Shell title='作品详情' showTab={false} backFallback={backFallback}>
       {media && mediaKind === 'video' ? (
         <Video className='detail-image' src={media} poster={preview} controls />
       ) : (
@@ -453,10 +452,6 @@ export default function WorkDetail() {
           <View className='primary-button' onClick={retry}>
             <AppIcon name='wand' size={16} />
             <Text>同款创作</Text>
-          </View>
-          <View className='ghost-button glass-button' onClick={() => Taro.navigateBack()}>
-            <AppIcon name='back' size={16} />
-            <Text>{isGalleryDetail ? '返回广场' : '返回'}</Text>
           </View>
         </View>
       ) : (
