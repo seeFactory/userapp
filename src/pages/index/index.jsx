@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
@@ -9,6 +9,55 @@ import { fetchTools } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
 import { isLoggedIn } from '../../utils/storage'
 
+const HOME_TOOL_TABS = [
+  { key: 'recommended', label: '推荐' },
+  { key: 'ai_image', label: 'AI生图' },
+  { key: 'ai_video', label: 'AI生视频' }
+]
+
+function textOf(value) {
+  return String(value || '').toLowerCase()
+}
+
+function arrayOf(value) {
+  return Array.isArray(value) ? value : value ? [value] : []
+}
+
+function outputTypesOf(tool) {
+  const explicit = arrayOf(tool.outputTypes)
+  const modeTypes = arrayOf(tool.modes).map((mode) => mode.outputType).filter(Boolean)
+  const category = textOf(tool.category)
+  const fallback = category.includes('video')
+    ? ['video']
+    : category.includes('image') || category.includes('fusion') || category.includes('portrait')
+      ? ['image']
+      : []
+  return Array.from(new Set(explicit.concat(modeTypes, fallback).map((item) => textOf(item))))
+}
+
+function tabsOf(tool) {
+  const configured = arrayOf(tool.homeTabs)
+  const tabs = new Set(configured)
+  const outputTypes = outputTypesOf(tool)
+  if (tool.homeRecommended || configured.includes('recommended')) tabs.add('recommended')
+  if (configured.includes('ai_image') || outputTypes.includes('image')) tabs.add('ai_image')
+  if (configured.includes('ai_video') || outputTypes.includes('video')) tabs.add('ai_video')
+  return tabs
+}
+
+function toolSearchText(tool) {
+  return [
+    tool.name,
+    tool.desc,
+    tool.label,
+    tool.category,
+    tool.icon,
+    ...arrayOf(tool.searchKeywords),
+    ...arrayOf(tool.homeTabs),
+    ...arrayOf(tool.modes).flatMap((mode) => [mode.label, mode.name, mode.description, mode.outputType])
+  ].map(textOf).join(' ')
+}
+
 export default function Index() {
   const loggedIn = isLoggedIn()
   const { config, loading: configLoading } = useAppConfig()
@@ -16,6 +65,9 @@ export default function Index() {
   const [tools, setTools] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activeToolTab, setActiveToolTab] = useState('recommended')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
 
   const loadTools = () => {
     if (configLoading) {
@@ -63,8 +115,34 @@ export default function Index() {
       Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
       return
     }
-    goPage(`/pages/tool/index?id=${tools[0]?.id || 'factory-painter'}`)
+    goPage(`/pages/tool/index?id=${visibleTools[0]?.id || tools[0]?.id || 'factory-painter'}`)
   }
+
+  const groupedTools = useMemo(() => {
+    const groups = {
+      recommended: [],
+      ai_image: [],
+      ai_video: []
+    }
+    tools.forEach((tool) => {
+      const tabs = tabsOf(tool)
+      HOME_TOOL_TABS.forEach((tab) => {
+        if (tabs.has(tab.key)) groups[tab.key].push(tool)
+      })
+    })
+    Object.keys(groups).forEach((key) => {
+      groups[key] = groups[key].slice().sort((a, b) => Number(b.homeSort || 0) - Number(a.homeSort || 0))
+    })
+    return groups
+  }, [tools])
+
+  const visibleTools = groupedTools[activeToolTab] || []
+  const searchResults = useMemo(() => {
+    const keyword = textOf(searchKeyword).trim()
+    const sorted = tools.slice().sort((a, b) => Number(b.homeSort || 0) - Number(a.homeSort || 0))
+    if (!keyword) return groupedTools.recommended
+    return sorted.filter((tool) => toolSearchText(tool).includes(keyword))
+  }, [groupedTools, searchKeyword, tools])
 
   return (
     <Shell active='home' title='首页'>
@@ -94,7 +172,22 @@ export default function Index() {
           <Text className='section-kicker'>工厂模块</Text>
           <Text className='section-title'>创作工具</Text>
         </View>
-        <Text className='muted small'>{loading ? '同步配置中' : 'Admin 配置驱动'}</Text>
+        <View className='home-tool-actions'>
+          <View className='home-tool-tabs'>
+            {HOME_TOOL_TABS.map((tab) => (
+              <View
+                key={tab.key}
+                className={activeToolTab === tab.key ? 'home-tool-tab active' : 'home-tool-tab'}
+                onClick={() => setActiveToolTab(tab.key)}
+              >
+                <Text>{tab.label}</Text>
+              </View>
+            ))}
+          </View>
+          <View className='icon-button home-search-button' onClick={() => setSearchOpen(true)}>
+            <AppIcon name='search' size={17} />
+          </View>
+        </View>
       </View>
 
       {!generationEnabled ? (
@@ -103,9 +196,9 @@ export default function Index() {
         <PageLoading title='正在同步工具配置' description='正在读取后台配置的创作工具。' />
       ) : error ? (
         <ErrorState title='工具配置加载失败' description={error} onRetry={loadTools} />
-      ) : tools.length ? (
+      ) : visibleTools.length ? (
         <View className='tool-grid'>
-          {tools.map((tool) => (
+          {visibleTools.map((tool) => (
             <View
               key={tool.id}
               className={tool.featured ? 'tool-card featured' : 'tool-card'}
@@ -121,8 +214,68 @@ export default function Index() {
           ))}
         </View>
       ) : (
-        <EmptyState title='暂无可用工具' description='请在管理后台启用至少一个创作工具。' icon='wand' />
+        <EmptyState title='该分类暂无工具' description='请切换其他分类，或在管理后台为工具配置首页分类。' icon='wand' />
       )}
+
+      {searchOpen ? (
+        <View className='modal-mask search-modal-mask' onClick={() => setSearchOpen(false)}>
+          <View className='search-panel' onClick={(event) => event.stopPropagation()}>
+            <View className='search-panel-head'>
+              <View className='text-input search-input'>
+                <AppIcon name='search' size={16} />
+                <Input
+                  value={searchKeyword}
+                  placeholder='搜索工具、模式或关键词'
+                  placeholderClass='muted'
+                  onInput={(event) => setSearchKeyword(event.detail.value)}
+                />
+                {searchKeyword ? (
+                  <View className='icon-button tiny-icon-button' onClick={() => setSearchKeyword('')}>
+                    <AppIcon name='close' size={13} />
+                  </View>
+                ) : null}
+              </View>
+              <View className='icon-button' onClick={() => setSearchOpen(false)}>
+                <AppIcon name='close' size={15} />
+              </View>
+            </View>
+            {!searchKeyword ? (
+              <View className='search-hot-row'>
+                {['写真', 'Logo', '首尾帧', '动作克隆'].map((item) => (
+                  <View key={item} className='filter-chip' onClick={() => setSearchKeyword(item)}>
+                    <Text>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {searchResults.length ? (
+              <View className='search-result-list'>
+                {searchResults.map((tool) => {
+                  const tabs = tabsOf(tool)
+                  const label = tabs.has('ai_video') ? 'AI生视频' : tabs.has('ai_image') ? 'AI生图' : '推荐'
+                  return (
+                    <View key={tool.id} className='search-result-card' onClick={() => {
+                      setSearchOpen(false)
+                      openTool(tool)
+                    }}>
+                      <View className='tool-icon compact-tool-icon'>
+                        <AppIcon name={tool.icon} size={17} />
+                      </View>
+                      <View className='search-result-copy'>
+                        <Text className='tool-name'>{tool.name}</Text>
+                        <Text className='tool-desc'>{tool.desc}</Text>
+                      </View>
+                      <Text className='tool-chip'>{label}</Text>
+                    </View>
+                  )
+                })}
+              </View>
+            ) : (
+              <EmptyState title='没有找到工具' description='换一个关键词试试。' icon='search' />
+            )}
+          </View>
+        </View>
+      ) : null}
     </Shell>
   )
 }
