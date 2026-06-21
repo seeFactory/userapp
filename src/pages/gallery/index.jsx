@@ -7,6 +7,7 @@ import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
+import { goPage } from '../../utils/navigation'
 
 export default function Gallery() {
   const [category, setCategory] = useState('all')
@@ -97,7 +98,7 @@ export default function Gallery() {
       ) : (
         <>
           {featured && (
-            <View className='gallery-featured-card' onClick={() => Taro.navigateTo({ url: `/pages/work-detail/index?id=${featured.id}&source=gallery` })}>
+            <View className='gallery-featured-card' onClick={() => goPage(`/pages/work-detail/index?id=${featured.id}&source=gallery`)}>
               <Image className='gallery-featured-image' src={featured.image} mode='aspectFill' />
               <View className='gallery-featured-mask' />
               <View className='gallery-featured-body'>
@@ -116,7 +117,7 @@ export default function Gallery() {
               <View
                 key={item.id}
                 className={index % 3 === 1 ? 'gallery-card tall' : 'gallery-card'}
-                onClick={() => Taro.navigateTo({ url: `/pages/work-detail/index?id=${item.id}&source=gallery` })}
+                onClick={() => goPage(`/pages/work-detail/index?id=${item.id}&source=gallery`)}
               >
                 <Image className='gallery-image' src={item.image} mode='aspectFill' />
                 <View className='gallery-card-body'>
