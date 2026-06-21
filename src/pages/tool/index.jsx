@@ -28,8 +28,9 @@ import { requireLogin } from '../../utils/storage'
 
 const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
+const defaultResolutions = ['1024x1024', '1024x1365', '1024x1792', '1792x1024']
 const defaultDurations = ['5 秒', '8 秒', '12 秒']
-const defaultModels = ['seeFactory Core', 'Sora 风格', 'Veo 风格']
+const defaultModels = []
 const uploadLimits = {
   image: {
     label: '图片',
@@ -65,7 +66,7 @@ function fallbackTool(id) {
     label: '工具',
     desc: '正在同步 Admin 配置的工具参数。',
     cost: 0,
-    fields: ['prompt', 'style', 'ratio', 'model'],
+    fields: ['prompt', 'style', 'ratio', 'resolution', 'model'],
     options: {}
   }
 }
@@ -75,9 +76,53 @@ function optionList(tool, key, fallback) {
   return Array.isArray(list) && list.length ? list : fallback
 }
 
+function normalizeResolution(value = '') {
+  const match = String(value).trim().toLowerCase().replace(/[×*]/g, 'x').match(/^(\d{2,5})x(\d{2,5})$/)
+  if (!match) return ''
+  const width = Number(match[1])
+  const height = Number(match[2])
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return ''
+  return `${Math.floor(width)}x${Math.floor(height)}`
+}
+
+function ratioValue(value = '') {
+  const match = String(value).trim().match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/)
+  if (!match) return 0
+  const width = Number(match[1])
+  const height = Number(match[2])
+  return width > 0 && height > 0 ? width / height : 0
+}
+
+function resolutionRatio(value = '') {
+  const normalized = normalizeResolution(value)
+  if (!normalized) return 0
+  const [width, height] = normalized.split('x').map(Number)
+  return width / height
+}
+
+function resolutionOptionsForRatio(tool, ratio, fallback) {
+  const all = optionList(tool, 'resolutions', fallback).map(normalizeResolution).filter(Boolean)
+  const map = tool?.options?.ratioResolutionMap || tool?.options?.ratioResolutions
+  const mapped = map && ratio && Array.isArray(map[ratio])
+    ? map[ratio].map(normalizeResolution).filter(Boolean)
+    : []
+  if (mapped.length) return mapped.filter((item) => all.includes(item))
+  const expected = ratioValue(ratio)
+  if (!expected) return all
+  return all.filter((item) => {
+    const actual = resolutionRatio(item)
+    return actual && Math.abs(expected - actual) / expected <= 0.04
+  })
+}
+
 function nextSelected(tool, key, fallback, current) {
   const list = optionList(tool, key, fallback)
   return list.includes(current) ? current : firstValue(list)
+}
+
+function nextResolution(tool, ratio, current) {
+  const list = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
+  return list.includes(normalizeResolution(current)) ? normalizeResolution(current) : firstValue(list)
 }
 
 function formatFileSize(size = 0) {
@@ -283,6 +328,7 @@ export default function ToolPage() {
   const [prompt, setPrompt] = useState(params.prompt ? decodeURIComponent(params.prompt) : '')
   const [style, setStyle] = useState(firstValue(defaultStyles))
   const [ratio, setRatio] = useState('9:16')
+  const [resolution, setResolution] = useState('1024x1792')
   const [duration, setDuration] = useState(firstValue(defaultDurations))
   const [model, setModel] = useState(firstValue(defaultModels))
   const [uploadItems, setUploadItems] = useState([])
@@ -316,7 +362,11 @@ export default function ToolPage() {
         }
         setTool(data)
         setStyle((current) => nextSelected(data, 'styles', defaultStyles, current))
-        setRatio((current) => nextSelected(data, 'ratios', defaultRatios, current))
+        setRatio((current) => {
+          const nextRatio = nextSelected(data, 'ratios', defaultRatios, current)
+          setResolution((resolutionValue) => nextResolution(data, nextRatio, resolutionValue))
+          return nextRatio
+        })
         setDuration((current) => nextSelected(data, 'durations', defaultDurations, current))
         setModel((current) => nextSelected(data, 'models', defaultModels, current))
         setToolError('')
@@ -335,9 +385,14 @@ export default function ToolPage() {
     return cleanup
   }, [params.id, configLoading, generationEnabled])
 
+  useEffect(() => {
+    setResolution((current) => nextResolution(tool, ratio, current))
+  }, [tool, ratio])
+
   const needs = (field) => (tool.fields || []).includes(field)
   const styleOptions = optionList(tool, 'styles', defaultStyles)
   const ratioOptions = optionList(tool, 'ratios', defaultRatios)
+  const resolutionOptions = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
   const durationOptions = optionList(tool, 'durations', defaultDurations)
   const modelOptions = optionList(tool, 'models', defaultModels)
   const uploadConfig = inferUploadConfig(tool)
@@ -613,7 +668,7 @@ export default function ToolPage() {
       const result = await createGenerationTask({
         toolKey: tool.id,
         prompt,
-        params: { style, ratio, duration, model, count: 1 },
+        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
         inputAssetIds: assetIds
       })
       const work = result.work
@@ -751,6 +806,23 @@ export default function ToolPage() {
               ))}
             </View>
             {fieldError(formErrors, 'ratio') ? <Text className='field-error'>{fieldError(formErrors, 'ratio')}</Text> : null}
+          </>
+        )}
+
+        {needs('resolution') && (
+          <>
+            <Text className='input-label'>分辨率</Text>
+            <View className={fieldError(formErrors, 'resolution') ? 'option-row has-error' : 'option-row'}>
+              {resolutionOptions.map((item) => (
+                <View key={item} className={resolution === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                  clearFieldError('resolution')
+                  setResolution(item)
+                }}>
+                  {item}
+                </View>
+              ))}
+            </View>
+            {fieldError(formErrors, 'resolution') ? <Text className='field-error'>{fieldError(formErrors, 'resolution')}</Text> : null}
           </>
         )}
 
