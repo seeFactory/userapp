@@ -234,6 +234,80 @@ function inferUploadConfig(tool) {
   }
 }
 
+function listOf(value) {
+  return [].concat(value || []).map((item) => String(item || '').trim()).filter(Boolean)
+}
+
+function modeKeyOf(mode) {
+  return String(mode?.modeKey || mode?.key || mode?.id || '').trim()
+}
+
+function enabledModes(tool) {
+  return Array.isArray(tool?.modes) ? tool.modes.filter((mode) => mode && mode.enabled !== false) : []
+}
+
+function modeForKey(tool, key) {
+  const modes = enabledModes(tool)
+  if (!modes.length) return null
+  const requested = String(key || '').trim()
+  if (requested) return modes.find((mode) => modeKeyOf(mode) === requested) || modes[0]
+  return modes.find((mode) => mode.default) || modes[0]
+}
+
+function fieldsForMode(tool, mode) {
+  const fields = Array.isArray(mode?.fields) ? mode.fields : tool?.fields
+  return Array.isArray(fields) ? fields : []
+}
+
+function toolWithMode(tool, mode) {
+  if (!mode) return tool
+  const modeModelOptions = {}
+  const allowedModels = listOf(mode.allowedModels)
+  if (allowedModels.length) modeModelOptions.models = allowedModels
+  if (mode.defaultModelKey) modeModelOptions.defaultModelKey = mode.defaultModelKey
+  return {
+    ...tool,
+    fields: fieldsForMode(tool, mode),
+    options: {
+      ...(tool?.options || {}),
+      ...modeModelOptions,
+      ...(mode?.options || {})
+    },
+    cost: mode.costPoints ?? mode.cost ?? tool?.cost
+  }
+}
+
+function slotsForMode(tool, mode) {
+  const slots = Array.isArray(mode?.assetSlots) ? mode.assetSlots : Array.isArray(tool?.assetSlots) ? tool.assetSlots : []
+  return slots
+    .map((slot) => ({ ...slot, slotKey: String(slot?.slotKey || slot?.key || slot?.name || '').trim() }))
+    .filter((slot) => slot.slotKey)
+}
+
+function slotMinCount(slot) {
+  if (slot.required === false) return Number(slot.minCount ?? slot.min ?? 0) || 0
+  return Math.max(1, Number(slot.minCount ?? slot.min ?? 1) || 1)
+}
+
+function slotMaxCount(slot) {
+  const fallback = slot.multiple ? 6 : 1
+  return Math.max(slotMinCount(slot), Number(slot.maxCount ?? slot.max ?? fallback) || fallback)
+}
+
+function slotUploadConfig(slot) {
+  const acceptTypes = listOf(slot.acceptTypes || slot.types || slot.type).map((type) => type.toLowerCase())
+  const primaryType = acceptTypes[0] || 'image'
+  const limit = uploadLimits[primaryType] || uploadLimits.image
+  return {
+    acceptTypes: acceptTypes.length ? acceptTypes : ['image'],
+    maxCount: slotMaxCount(slot),
+    minCount: slotMinCount(slot),
+    label: slot.label || slot.name || '参考素材',
+    actionText: `点击添加${slot.label || slot.name || limit.label}`,
+    tip: slot.tip || limit.tip
+  }
+}
+
 function inferFileType(file, fallbackType = 'image') {
   const fileType = file.fileType || file.kind || ''
   const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
@@ -374,7 +448,9 @@ export default function ToolPage() {
   const [resolution, setResolution] = useState('1024x1792')
   const [duration, setDuration] = useState(firstValue(defaultDurations))
   const [model, setModel] = useState(firstValue(defaultModels))
+  const [activeModeKey, setActiveModeKey] = useState('')
   const [uploadItems, setUploadItems] = useState([])
+  const [slotUploadItems, setSlotUploadItems] = useState({})
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [payment, setPayment] = useState(null)
@@ -404,6 +480,10 @@ export default function ToolPage() {
           return
         }
         setTool(data)
+        const nextMode = modeForKey(data)
+        setActiveModeKey(nextMode ? modeKeyOf(nextMode) : '')
+        setUploadItems([])
+        setSlotUploadItems({})
         setStyle((current) => nextSelected(data, 'styles', defaultStyles, current))
         setRatio((current) => {
           const nextRatio = nextSelected(data, 'ratios', defaultRatios, current)
@@ -432,18 +512,34 @@ export default function ToolPage() {
     setResolution((current) => nextResolution(tool, ratio, current))
   }, [tool, ratio])
 
-  const needs = (field) => (tool.fields || []).includes(field)
-  const styleOptions = optionList(tool, 'styles', defaultStyles)
-  const ratioOptions = optionList(tool, 'ratios', defaultRatios)
-  const resolutionOptions = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
-  const durationOptions = optionList(tool, 'durations', defaultDurations)
-  const modelOptions = optionList(tool, 'models', defaultModels)
+  const availableModes = enabledModes(tool)
+  const activeMode = modeForKey(tool, activeModeKey)
+  const activeTool = toolWithMode(tool, activeMode)
+  const activeFields = fieldsForMode(tool, activeMode)
+  const assetSlots = slotsForMode(tool, activeMode)
+  const usesAssetSlots = assetSlots.length > 0
+  const needs = (field) => activeFields.includes(field)
+  const styleOptions = optionList(activeTool, 'styles', defaultStyles)
+  const ratioOptions = optionList(activeTool, 'ratios', defaultRatios)
+  const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)
+  const durationOptions = optionList(activeTool, 'durations', defaultDurations)
+  const modelOptions = optionList(activeTool, 'models', defaultModels)
   const normalizedResolution = normalizeResolution(resolution)
   const selectedResolution = resolutionOptions.includes(normalizedResolution) ? normalizedResolution : ''
-  const resolutionLabel = isVideoTool(tool) ? '精度' : '分辨率'
-  const uploadConfig = inferUploadConfig(tool)
-  const assetIds = uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
-  const uploaded = assetIds.length > 0
+  const resolutionLabel = isVideoTool(activeTool) ? '精度' : '分辨率'
+  const uploadConfig = inferUploadConfig(activeTool)
+  const inputAssets = usesAssetSlots
+    ? Object.fromEntries(assetSlots.map((slot) => [
+      slot.slotKey,
+      (slotUploadItems[slot.slotKey] || []).filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+    ]))
+    : {}
+  const assetIds = usesAssetSlots
+    ? Object.values(inputAssets).flat()
+    : uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+  const uploaded = usesAssetSlots
+    ? assetSlots.every((slot) => (inputAssets[slot.slotKey] || []).length >= slotMinCount(slot))
+    : assetIds.length > 0
 
   if (!generationEnabled) {
     return (
@@ -469,7 +565,14 @@ export default function ToolPage() {
     )
   }
 
-  const updateUploadItem = (key, patch) => {
+  const updateUploadItem = (key, patch, slotKey = '') => {
+    if (slotKey) {
+      setSlotUploadItems((prev) => ({
+        ...prev,
+        [slotKey]: (prev[slotKey] || []).map((item) => (item.key === key ? { ...item, ...patch } : item))
+      }))
+      return
+    }
     setUploadItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)))
   }
 
@@ -484,9 +587,16 @@ export default function ToolPage() {
     })
   }
 
-  const removeUploadItem = (key) => {
+  const removeUploadItem = (key, slotKey = '') => {
     if (uploading) return
-    clearFieldError('inputAssetIds')
+    clearFieldError(slotKey ? `inputAssets.${slotKey}` : 'inputAssetIds')
+    if (slotKey) {
+      setSlotUploadItems((prev) => ({
+        ...prev,
+        [slotKey]: (prev[slotKey] || []).filter((item) => item.key !== key)
+      }))
+      return
+    }
     setUploadItems((prev) => prev.filter((item) => item.key !== key))
   }
 
@@ -519,23 +629,26 @@ export default function ToolPage() {
     }
   }
 
-  const chooseUpload = async () => {
+  const chooseUpload = async (slot = null) => {
     if (uploading) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
-    const existingCount = uploadConfig.maxCount === 1 ? 0 : uploadItems.filter((item) => item.status !== 'failed').length
-    const remaining = uploadConfig.maxCount - existingCount
+    const slotKey = slot?.slotKey || ''
+    const currentUploadConfig = slot ? slotUploadConfig(slot) : uploadConfig
+    const sourceItems = slotKey ? (slotUploadItems[slotKey] || []) : uploadItems
+    const existingCount = currentUploadConfig.maxCount === 1 ? 0 : sourceItems.filter((item) => item.status !== 'failed').length
+    const remaining = currentUploadConfig.maxCount - existingCount
     if (remaining <= 0) {
-      Taro.showToast({ title: `最多上传 ${uploadConfig.maxCount} 个素材`, icon: 'none' })
+      Taro.showToast({ title: `最多上传 ${currentUploadConfig.maxCount} 个素材`, icon: 'none' })
       return
     }
     setUploading(true)
     try {
-      const files = await chooseTypedFiles({ ...uploadConfig, maxCount: remaining })
-      clearFieldError('inputAssetIds')
+      const files = await chooseTypedFiles({ ...currentUploadConfig, maxCount: remaining })
+      clearFieldError(slotKey ? `inputAssets.${slotKey}` : 'inputAssetIds')
       const validFiles = []
       const invalidMessages = []
       files.forEach((file) => {
-        const message = validateFile(file, uploadConfig)
+        const message = validateFile(file, currentUploadConfig)
         if (message) {
           invalidMessages.push(`${file.name}：${message}`)
           return
@@ -556,12 +669,19 @@ export default function ToolPage() {
         progress: 0,
         message: '等待上传'
       }))
-      setUploadItems((prev) => (uploadConfig.maxCount === 1 ? pendingItems : prev.concat(pendingItems)))
+      if (slotKey) {
+        setSlotUploadItems((prev) => ({
+          ...prev,
+          [slotKey]: currentUploadConfig.maxCount === 1 ? pendingItems : (prev[slotKey] || []).concat(pendingItems)
+        }))
+      } else {
+        setUploadItems((prev) => (currentUploadConfig.maxCount === 1 ? pendingItems : prev.concat(pendingItems)))
+      }
       Taro.showLoading({ title: '上传素材' })
       let successCount = 0
       for (const file of pendingItems) {
         try {
-          updateUploadItem(file.key, { status: 'uploading', progress: 5, message: '上传中' })
+          updateUploadItem(file.key, { status: 'uploading', progress: 5, message: '上传中' }, slotKey)
           const policy = await getUploadToken({
             type: file.type,
             filename: file.name,
@@ -569,9 +689,9 @@ export default function ToolPage() {
             size: file.size
           })
           if (policy.configured) {
-            await uploadToOss(policy, file, (progress) => updateUploadItem(file.key, { progress }))
+            await uploadToOss(policy, file, (progress) => updateUploadItem(file.key, { progress }, slotKey))
           }
-          updateUploadItem(file.key, { progress: 96, message: '写入素材记录' })
+          updateUploadItem(file.key, { progress: 96, message: '写入素材记录' }, slotKey)
           const asset = await createAsset({
             type: file.type,
             url: policy.publicUrl,
@@ -586,13 +706,13 @@ export default function ToolPage() {
             status: 'ready',
             progress: 100,
             message: '已上传'
-          })
+          }, slotKey)
         } catch (error) {
           updateUploadItem(file.key, {
             status: 'failed',
             progress: 0,
             message: error.message || '上传失败'
-          })
+          }, slotKey)
         }
       }
       Taro.showToast({ title: successCount ? `已上传 ${successCount} 个素材` : '素材上传失败', icon: successCount ? 'success' : 'none' })
@@ -610,6 +730,11 @@ export default function ToolPage() {
     try {
       const paymentPayload = await createGenerationPaymentOrder({
         toolKey: tool.id,
+        modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
+        modelKey: model,
+        prompt,
+        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
+        ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds }),
         clientRuntime
       })
       const order = paymentPayload.order
@@ -678,20 +803,36 @@ export default function ToolPage() {
       Taro.showToast({ title: '请输入提示词', icon: 'none' })
       return
     }
-    if ((needs('upload') || needs('multiUpload')) && !uploaded) {
+    if (usesAssetSlots) {
+      for (const slot of assetSlots) {
+        const count = (inputAssets[slot.slotKey] || []).length
+        const min = slotMinCount(slot)
+        if (count < min) {
+          const message = `请添加${slot.label || slot.name || '参考素材'}`
+          nextErrors = mergeFieldError(nextErrors, `inputAssets.${slot.slotKey}`, message)
+          setFormErrors(nextErrors)
+          Taro.showToast({ title: message, icon: 'none' })
+          return
+        }
+      }
+    }
+    if (!usesAssetSlots && (needs('upload') || needs('multiUpload')) && !uploaded) {
       nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', '请先添加参考素材')
       setFormErrors(nextErrors)
       Taro.showToast({ title: '请先添加参考素材', icon: 'none' })
       return
     }
-    if (needs('multiUpload') && assetIds.length < uploadConfig.minCount) {
+    if (!usesAssetSlots && needs('multiUpload') && assetIds.length < uploadConfig.minCount) {
       nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', `请至少添加 ${uploadConfig.minCount} 张参考素材`)
       setFormErrors(nextErrors)
       Taro.showToast({ title: `请至少添加 ${uploadConfig.minCount} 张参考素材`, icon: 'none' })
       return
     }
-    if (uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')) {
-      nextErrors = mergeFieldError(nextErrors, 'inputAssetIds', '素材仍在上传中')
+    const hasPendingUpload = usesAssetSlots
+      ? Object.values(slotUploadItems).flat().some((item) => item.status === 'pending' || item.status === 'uploading')
+      : uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')
+    if (hasPendingUpload) {
+      nextErrors = mergeFieldError(nextErrors, usesAssetSlots ? 'inputAssets' : 'inputAssetIds', '素材仍在上传中')
       setFormErrors(nextErrors)
       Taro.showToast({ title: '素材仍在上传中', icon: 'none' })
       return
@@ -702,8 +843,9 @@ export default function ToolPage() {
       const result = await createGenerationTask({
         toolKey: tool.id,
         prompt,
+        modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
         params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
-        inputAssetIds: assetIds
+        ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
       })
       const work = result.work
       Taro.showToast({ title: '任务已提交', icon: 'success' })
@@ -725,6 +867,63 @@ export default function ToolPage() {
     }
   }
 
+  const renderUploadBlock = ({ blockKey = '', label, config, items, errorKey, onClick }) => {
+    const readyIds = items.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+    const hasReady = readyIds.length > 0
+    return (
+      <>
+        <Text className='input-label'>{label || config.label}</Text>
+        <View className={`${uploading ? 'upload-box uploading' : 'upload-box'}${fieldError(formErrors, errorKey) ? ' has-error' : ''}`} onClick={onClick}>
+          <AppIcon name={hasReady ? 'badge' : uploadLimits[config.acceptTypes[0]]?.icon || 'image'} size={18} />
+          <View className='upload-copy'>
+            <Text>{hasReady ? `已添加 ${readyIds.length} 个素材` : uploading ? '素材上传中...' : config.actionText}</Text>
+            <Text className='upload-hint'>{config.tip}</Text>
+          </View>
+        </View>
+        {fieldError(formErrors, errorKey) ? <Text className='field-error'>{fieldError(formErrors, errorKey)}</Text> : null}
+        {items.length > 0 && (
+          <View className='upload-preview-grid'>
+            {items.map((item) => (
+              <View key={item.key} className={item.status === 'failed' ? 'upload-preview-card failed' : 'upload-preview-card'}>
+                {item.type === 'image' ? (
+                  <Image className='upload-preview-media' src={item.previewPath} mode='aspectFill' />
+                ) : item.type === 'video' ? (
+                  <Video className='upload-preview-media' src={item.filePath} poster={item.previewPath} controls={false} muted />
+                ) : (
+                  <View className='upload-file-preview'>
+                    <AppIcon name='music' size={22} />
+                    <Text>音频素材</Text>
+                  </View>
+                )}
+                <View className='upload-preview-meta'>
+                  <Text className='upload-preview-name'>{item.name}</Text>
+                  <Text>{formatFileSize(item.size)} · {uploadLimits[item.type]?.label || '素材'}</Text>
+                </View>
+                <View className='upload-status'>{item.message}</View>
+                {item.status === 'uploading' && (
+                  <View className='upload-progress'>
+                    <View className='upload-progress-bar' style={{ width: `${item.progress || 4}%` }} />
+                  </View>
+                )}
+                {item.status !== 'uploading' && (
+                  <View
+                    className='upload-remove'
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      removeUploadItem(item.key, blockKey)
+                    }}
+                  >
+                    <AppIcon name='close' size={12} />
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+      </>
+    )
+  }
+
   return (
     <Shell title={tool.name} showTab={false}>
       <View className='panel'>
@@ -742,59 +941,50 @@ export default function ToolPage() {
         {!tool.fields?.length ? (
           <InlineNotice tone='danger'>当前工具缺少可用字段配置，请联系管理员检查工具配置。</InlineNotice>
         ) : null}
-        {(needs('upload') || needs('multiUpload')) && (
+        {availableModes.length > 1 ? (
           <>
-            <Text className='input-label'>{uploadConfig.label}</Text>
-            <View className={`${uploading ? 'upload-box uploading' : 'upload-box'}${fieldError(formErrors, 'inputAssetIds') ? ' has-error' : ''}`} onClick={chooseUpload}>
-              <AppIcon name={uploaded ? 'badge' : uploadLimits[uploadConfig.acceptTypes[0]]?.icon || 'image'} size={18} />
-              <View className='upload-copy'>
-                <Text>{uploaded ? `已添加 ${assetIds.length} 个参考素材` : uploading ? '素材上传中...' : uploadConfig.actionText}</Text>
-                <Text className='upload-hint'>{uploadConfig.tip}</Text>
-              </View>
-            </View>
-            {fieldError(formErrors, 'inputAssetIds') ? <Text className='field-error'>{fieldError(formErrors, 'inputAssetIds')}</Text> : null}
-            {uploadItems.length > 0 && (
-              <View className='upload-preview-grid'>
-                {uploadItems.map((item) => (
-                  <View key={item.key} className={item.status === 'failed' ? 'upload-preview-card failed' : 'upload-preview-card'}>
-                    {item.type === 'image' ? (
-                      <Image className='upload-preview-media' src={item.previewPath} mode='aspectFill' />
-                    ) : item.type === 'video' ? (
-                      <Video className='upload-preview-media' src={item.filePath} poster={item.previewPath} controls={false} muted />
-                    ) : (
-                      <View className='upload-file-preview'>
-                        <AppIcon name='music' size={22} />
-                        <Text>音频素材</Text>
-                      </View>
-                    )}
-                    <View className='upload-preview-meta'>
-                      <Text className='upload-preview-name'>{item.name}</Text>
-                      <Text>{formatFileSize(item.size)} · {uploadLimits[item.type]?.label || '素材'}</Text>
-                    </View>
-                    <View className='upload-status'>{item.message}</View>
-                    {item.status === 'uploading' && (
-                      <View className='upload-progress'>
-                        <View className='upload-progress-bar' style={{ width: `${item.progress || 4}%` }} />
-                      </View>
-                    )}
-                    {item.status !== 'uploading' && (
-                      <View
-                        className='upload-remove'
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          removeUploadItem(item.key)
-                        }}
-                      >
-                        <AppIcon name='close' size={12} />
-                      </View>
-                    )}
+            <Text className='input-label'>生成模式</Text>
+            <View className='option-row'>
+              {availableModes.map((mode) => {
+                const key = modeKeyOf(mode)
+                return (
+                  <View
+                    key={key}
+                    className={activeMode && modeKeyOf(activeMode) === key ? 'option-chip active' : 'option-chip'}
+                    onClick={() => {
+                      setActiveModeKey(key)
+                      setUploadItems([])
+                      setSlotUploadItems({})
+                      setFormErrors({})
+                    }}
+                  >
+                    {mode.label || mode.name || key}
                   </View>
-                ))}
-              </View>
-            )}
+                )
+              })}
+            </View>
           </>
-        )}
+        ) : null}
 
+        {usesAssetSlots ? (
+          <>
+            {assetSlots.map((slot) => renderUploadBlock({
+              blockKey: slot.slotKey,
+              label: slot.label || slot.name,
+              config: slotUploadConfig(slot),
+              items: slotUploadItems[slot.slotKey] || [],
+              errorKey: `inputAssets.${slot.slotKey}`,
+              onClick: () => chooseUpload(slot)
+            }))}
+          </>
+        ) : (needs('upload') || needs('multiUpload')) ? (
+          renderUploadBlock({
+            config: uploadConfig,
+            items: uploadItems,
+            errorKey: 'inputAssetIds',
+            onClick: () => chooseUpload()
+          })
+        ) : null}
         <Text className='input-label'>提示词</Text>
         <Textarea
           className={fieldError(formErrors, 'prompt') ? 'text-area has-error' : 'text-area'}
