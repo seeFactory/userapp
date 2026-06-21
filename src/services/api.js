@@ -187,6 +187,12 @@ export async function fetchTools(params = {}) {
     desc: item.description || item.desc,
     cost: item.cost,
     fields: item.fields || [],
+    modes: item.modes || [],
+    outputTypes: [].concat(item.outputTypes || item.outputType || []),
+    homeTabs: item.homeTabs || [],
+    homeRecommended: Boolean(item.homeRecommended),
+    homeSort: item.homeSort ?? item.sort ?? 0,
+    searchKeywords: item.searchKeywords || item.keywords || [],
     options: item.options || {}
   }))
 }
@@ -212,6 +218,12 @@ export async function fetchTool(toolKey) {
     desc: item.description || item.desc,
     cost: item.cost,
     fields: item.fields || [],
+    modes: item.modes || [],
+    outputTypes: [].concat(item.outputTypes || item.outputType || []),
+    homeTabs: item.homeTabs || [],
+    homeRecommended: Boolean(item.homeRecommended),
+    homeSort: item.homeSort ?? item.sort ?? 0,
+    searchKeywords: item.searchKeywords || item.keywords || [],
     options: item.options || {}
   }
 }
@@ -460,30 +472,12 @@ export async function fetchWithdrawalAddress() {
   return request('/wallet/withdrawal-address')
 }
 
-export async function saveWithdrawalAddress(payload) {
-  return request('/wallet/withdrawal-address', {
-    method: 'PUT',
-    data: payload
-  })
-}
-
 export async function fetchWalletWithdrawals(params = {}) {
   const query = new URLSearchParams({
     page: String(params.page || 1),
     pageSize: String(params.pageSize || 10)
   })
   return request(`/wallet/withdrawals?${query.toString()}`)
-}
-
-export async function createWalletWithdrawal(payload) {
-  return request('/wallet/withdrawals', {
-    method: 'POST',
-    data: payload
-  })
-}
-
-export async function cancelWalletWithdrawal(id) {
-  return request(`/wallet/withdrawals/${id}/cancel`, { method: 'POST' })
 }
 
 export async function fetchRechargeSettings() {

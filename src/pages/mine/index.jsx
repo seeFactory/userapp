@@ -36,7 +36,7 @@ function money(value) {
 function defaultRechargePolicy() {
   return {
     currency: 'CNY',
-    pointRate: 7,
+    pointRate: 1,
     minAmountCents: 100,
     maxAmountCents: 999900,
     allowCustomAmount: true
@@ -109,14 +109,6 @@ export default function Mine() {
       Taro.hideLoading()
       Taro.showToast({ title: error.message || '协议暂未发布', icon: 'none' })
     }
-  }
-
-  const goWallet = () => {
-    if (loggedIn) {
-      goPage('/pages/wallet/index')
-      return
-    }
-    requireLogin('/pages/wallet/index')
   }
 
   const goAgent = () => {
@@ -272,19 +264,15 @@ export default function Mine() {
         </View>
         <Text className='tool-desc'>
           {loggedIn
-            ? `点数 ${balance === null ? '--' : balance} 点，钱包可用 ${money(wallet?.availableBalance)} ${wallet?.currency || 'USD'}。`
+            ? `点数 ${balance === null ? '--' : balance} 点。所有充值均直接购买点数，不能提现。`
             : '登录后可查看作品、复制提示词并使用生成工具。'}
         </Text>
         <View className='hero-actions'>
           {loggedIn ? (
             <>
-              <View className='primary-button' onClick={goWallet}>
-                <AppIcon name='wallet' size={16} />
-                <Text>钱包</Text>
-              </View>
               <View className={rechargeDisabled ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={rechargeDisabled ? undefined : beginRecharge}>
                 <AppIcon name='coin' size={16} />
-                <Text>点数充值</Text>
+                <Text>购买点数</Text>
               </View>
               <View className='ghost-button glass-button' onClick={signOut}>
                 <AppIcon name='logout' size={16} />
@@ -308,7 +296,7 @@ export default function Mine() {
               <Text className='section-title'>自填金额充值</Text>
             </View>
             <Text className={rechargeDisabled ? 'status failed' : 'status success'}>
-              {rechargeDisabled ? '后台已关闭' : `1 元 = ${rechargePolicy.pointRate} 点`}
+              {rechargeDisabled ? '后台已关闭' : `1 CNY = ${rechargePolicy.pointRate} 点`}
             </Text>
           </View>
 
@@ -330,7 +318,7 @@ export default function Mine() {
           </View>
           <View className={creatingRecharge || rechargeDisabled ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'} onClick={creatingRecharge || rechargeDisabled ? undefined : beginRecharge}>
             <AppIcon name='coin' size={16} />
-            <Text>{rechargeDisabled ? '充值已关闭' : creatingRecharge ? '创建中...' : '创建充值订单'}</Text>
+            <Text>{rechargeDisabled ? '充值已关闭' : creatingRecharge ? '创建中...' : '创建点数订单'}</Text>
           </View>
         </View>
       )}
@@ -343,15 +331,10 @@ export default function Mine() {
       </View>
 
       <View className='profile-grid'>
-        <View className='profile-card' onClick={goWallet}>
-          <View className='profile-icon'><AppIcon name='wallet' size={22} /></View>
-          <Text className='profile-name'>钱包充值</Text>
-          <Text className='tool-desc'>充值与提现</Text>
-        </View>
         <View className={rechargeDisabled ? 'profile-card disabled' : 'profile-card'} onClick={rechargeDisabled ? undefined : beginRecharge}>
           <View className='profile-icon'><AppIcon name='coin' size={22} /></View>
-          <Text className='profile-name'>点数充值</Text>
-          <Text className='tool-desc'>自填金额</Text>
+          <Text className='profile-name'>购买点数</Text>
+          <Text className='tool-desc'>充值后不可提现</Text>
         </View>
         {!configLoading && agentFeatureEnabled ? (
         <View className='profile-card' onClick={goAgent}>
