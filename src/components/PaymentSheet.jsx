@@ -22,6 +22,23 @@ function statusText(status) {
   return map[status] || status || '待支付'
 }
 
+function displayPaymentAmount(order, crypto, stars) {
+  if (crypto) return `${crypto.payAmount || crypto.sourceAmount || crypto.amount || '--'} ${crypto.payCurrency || crypto.sourceCurrency || crypto.currency || 'USDT'}`
+  if (stars) return `${stars.starsAmount || stars.sourceAmount || '--'} Stars`
+  return formatMoney(order.amount || 0)
+}
+
+function displayPoints(order, crypto, stars) {
+  return order.creditedPoints ?? order.points ?? crypto?.creditedPoints ?? crypto?.points ?? stars?.creditedPoints ?? stars?.points ?? 0
+}
+
+function displayRate(order, crypto, stars) {
+  const sourceCurrency = stars ? 'Stars' : crypto?.sourceCurrency || order.sourceCurrency || order.currency || 'CNY'
+  const rate = stars ? '10 Stars = 1 点' : `${sourceCurrency} 汇率 ${crypto?.pointRate ?? order.pointRate ?? 1} 点`
+  const rounding = crypto?.roundingMode || order.roundingMode || stars?.roundingMode
+  return rounding === 'floor' ? `${rate}，向下取整` : rate
+}
+
 function copy(value, label) {
   if (!value) {
     Taro.showToast({ title: `${label}暂未生成`, icon: 'none' })
@@ -159,11 +176,12 @@ export default function PaymentSheet({
   const status = order.status || crypto?.status || stars?.status
   const cryptoAddress = crypto?.depositAddress || crypto?.bridgeDepositAddress || crypto?.bridgeReceiveAddress
   const cryptoOptions = payment.cryptoOptions || {}
+  const cryptoSelectable = (cryptoOptions.chains || []).length > 0
   const primaryBusy = invoking || Boolean(payment.cryptoCreating)
   const primaryAction = async () => {
     if (primaryBusy) return
     if (needsCryptoOrder) {
-      if (!cryptoOptions.acquiringConfigured) {
+      if (!cryptoSelectable) {
         Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 收单暂未配置', icon: 'none' })
         return
       }
@@ -213,8 +231,9 @@ export default function PaymentSheet({
 
         <View className='payment-summary'>
           <Text className='section-kicker'>{statusText(status)}</Text>
-          <Text className='payment-amount'>{formatMoney(order.amount || crypto?.amountCents || stars?.amountCents)}</Text>
-          <Text className='modal-note'>到账点数：{order.points || crypto?.points || 0} 点</Text>
+          <Text className='payment-amount'>{displayPaymentAmount(order, crypto, stars)}</Text>
+          <Text className='modal-note'>到账点数：{displayPoints(order, crypto, stars)} 点</Text>
+          <Text className='tool-desc'>{displayRate(order, crypto, stars)}</Text>
         </View>
 
         {crypto && (
@@ -244,7 +263,7 @@ export default function PaymentSheet({
               disabled={payment.cryptoCreating}
             />
             <Text className={cryptoOptions.acquiringConfigured ? 'modal-note' : 'modal-note danger-note'}>
-              {cryptoOptions.acquiringConfigured
+              {cryptoSelectable
                 ? '创建订单后会展示打币地址、应付数量和过期时间。'
                 : cryptoOptions.unavailableReason || '后台尚未配置可用的 Crypto 收单地址。'}
             </Text>
@@ -256,6 +275,10 @@ export default function PaymentSheet({
             <View className='payment-row'>
               <Text>支付单位</Text>
               <Text>{stars.starsAmount} Stars</Text>
+            </View>
+            <View className='payment-row'>
+              <Text>固定换算</Text>
+              <Text>10 Stars = 1 点</Text>
             </View>
             <View className='copy-box' onClick={() => copy(stars.invoiceLink, 'Stars 支付链接')}>
               <Text>{stars.invoiceLink || 'Stars 支付链接生成中'}</Text>
