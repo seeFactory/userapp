@@ -79,7 +79,10 @@ function optionList(tool, key, fallback) {
 
 function normalizeResolution(value = '') {
   const match = String(value).trim().toLowerCase().replace(/[×*]/g, 'x').match(/^(\d{2,5})x(\d{2,5})$/)
-  if (!match) return ''
+  if (!match) {
+    const quality = String(value).trim().toLowerCase().match(/^(480|720|1080)p$/)
+    return quality ? `${quality[1]}P` : ''
+  }
   const width = Number(match[1])
   const height = Number(match[2])
   if (!Number.isFinite(width) || !Number.isFinite(height)) return ''
@@ -96,14 +99,14 @@ function ratioValue(value = '') {
 
 function resolutionRatio(value = '') {
   const normalized = normalizeResolution(value)
-  if (!normalized) return 0
+  if (!normalized || !normalized.includes('x')) return 0
   const [width, height] = normalized.split('x').map(Number)
   return width / height
 }
 
 function resolutionParts(value = '') {
   const normalized = normalizeResolution(value)
-  if (!normalized) return { width: '', height: '' }
+  if (!normalized || !normalized.includes('x')) return { width: '', height: '' }
   const [width, height] = normalized.split('x')
   return { width, height }
 }
@@ -146,6 +149,7 @@ function resolutionOptionsForRatio(tool, ratio, fallback) {
     ? map[ratio].map(normalizeResolution).filter(Boolean)
     : []
   if (mapped.length) return mapped.filter((item) => all.includes(item))
+  if (all.some((item) => !item.includes('x'))) return all
   const expected = ratioValue(ratio)
   if (!expected) return all
   return all.filter((item) => {
@@ -157,6 +161,7 @@ function resolutionOptionsForRatio(tool, ratio, fallback) {
 function defaultCustomResolutionForRatio(tool, ratio, fallback) {
   const mapped = resolutionOptionsForRatio(tool, ratio, fallback)
   const configuredDefault = normalizeResolution(tool?.options?.defaultResolution)
+  if (configuredDefault && mapped.includes(configuredDefault)) return configuredDefault
   if (configuredDefault && resolutionMatchesRatio(tool, ratio, configuredDefault)) return configuredDefault
   if (mapped.length) return mapped[0]
   const config = customResolutionConfig(tool)
