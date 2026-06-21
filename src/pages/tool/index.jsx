@@ -97,6 +97,14 @@ function ratioValue(value = '') {
   return width > 0 && height > 0 ? width / height : 0
 }
 
+function ratioFrameClass(value = '') {
+  const key = String(value).trim().replace(':', '-')
+  if (['4-3', '3-4', '16-9', '9-16', '1-1'].includes(key)) {
+    return `ratio-frame ratio-${key}`
+  }
+  return 'ratio-frame ratio-1-1'
+}
+
 function resolutionRatio(value = '') {
   const normalized = normalizeResolution(value)
   if (!normalized || !normalized.includes('x')) return 0
@@ -867,11 +875,12 @@ export default function ToolPage() {
             <Text className='input-label'>画面比例</Text>
             <View className={fieldError(formErrors, 'ratio') ? 'option-row has-error' : 'option-row'}>
               {ratioOptions.map((item) => (
-                <View key={item} className={ratio === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                <View key={item} className={ratio === item ? 'option-chip ratio-option-chip active' : 'option-chip ratio-option-chip'} onClick={() => {
                   clearFieldError('ratio')
                   setRatio(item)
                 }}>
-                  {item}
+                  <View className={ratioFrameClass(item)} />
+                  <Text className='ratio-option-label'>{item}</Text>
                 </View>
               ))}
             </View>
