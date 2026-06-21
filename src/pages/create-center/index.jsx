@@ -7,6 +7,7 @@ import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
+import { goPage } from '../../utils/navigation'
 
 export default function CreateCenter() {
   const [category, setCategory] = useState('all')
@@ -117,7 +118,7 @@ export default function CreateCenter() {
       ) : (
         <View className='case-grid'>
           {filtered.map((item) => (
-            <View key={item.id} className='case-card' onClick={() => Taro.navigateTo({ url: `/pages/prompt-detail/index?id=${item.id}` })}>
+            <View key={item.id} className='case-card' onClick={() => goPage(`/pages/prompt-detail/index?id=${item.id}`)}>
               <Image className='case-image' src={item.image} mode='aspectFill' />
               <View className='case-body'>
                 <Text className='case-title'>{item.title}</Text>

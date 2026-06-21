@@ -9,6 +9,7 @@ import PaymentSheet from '../../components/PaymentSheet'
 import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
+import { goPage } from '../../utils/navigation'
 import {
   createAsset,
   createCryptoOrder,
@@ -403,10 +404,6 @@ export default function ToolPage() {
     return (
       <Shell title='创作工具' showTab={false}>
         <EmptyState title='生成服务已关闭' description='当前后台已关闭生成服务，请稍后再试。' icon='wand' />
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-          <AppIcon name='back' size={16} />
-          <Text>返回</Text>
-        </View>
       </Shell>
     )
   }
@@ -415,10 +412,6 @@ export default function ToolPage() {
     return (
       <Shell title='创作工具' showTab={false}>
         <PageLoading title='正在同步工具配置' description='正在读取工具字段、模型、比例和素材规则。' />
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-          <AppIcon name='back' size={16} />
-          <Text>返回</Text>
-        </View>
       </Shell>
     )
   }
@@ -427,10 +420,6 @@ export default function ToolPage() {
     return (
       <Shell title='创作工具' showTab={false}>
         <ErrorState title='工具配置加载失败' description={toolError} onRetry={loadTool} />
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-          <AppIcon name='back' size={16} />
-          <Text>返回</Text>
-        </View>
       </Shell>
     )
   }
@@ -673,7 +662,7 @@ export default function ToolPage() {
       })
       const work = result.work
       Taro.showToast({ title: '任务已提交', icon: 'success' })
-      Taro.navigateTo({ url: `/pages/work-detail/index?id=${work.id}` })
+      goPage(`/pages/work-detail/index?id=${work.id}`)
     } catch (error) {
       if (error.code === 'INSUFFICIENT_CREDITS' || error.action === 'refresh_payment') {
         await beginGenerationPayment()
@@ -864,10 +853,6 @@ export default function ToolPage() {
           <View className='primary-button' onClick={submit}>
             <AppIcon name='wand' size={16} />
             <Text>{busy ? '生成中...' : '生成'}</Text>
-          </View>
-          <View className='ghost-button glass-button' onClick={() => Taro.navigateBack()}>
-            <AppIcon name='back' size={16} />
-            <Text>返回</Text>
           </View>
         </View>
       </View>

@@ -3,8 +3,10 @@ import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
 import { captureInviteFromParams } from '../platform/invite'
 import { isFeatureEnabled, useAppConfig } from '../hooks/useAppConfig'
+import { goTab } from '../utils/navigation'
 import AppIcon from './AppIcon'
 import BrandLogo from './BrandLogo'
+import PageBackButton from './PageBackButton'
 
 const fallbackHomeVideo = 'https://videos.pexels.com/video-files/16998437/16998437-hd_1080_1920_30fps.mp4'
 const tabs = [
@@ -27,7 +29,7 @@ function normalizeOpacity(value, fallback) {
   return Math.min(Math.max(parsed, 0), 1)
 }
 
-export default function Shell({ active, children, showTab = true }) {
+export default function Shell({ active, children, showTab = true, showBack, backFallback, transitionKey }) {
   const { config } = useAppConfig()
   const homeConfig = config?.home || {}
   const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
@@ -43,6 +45,13 @@ export default function Shell({ active, children, showTab = true }) {
     const feature = featureForTab(tab.key)
     return !feature || isFeatureEnabled(config, feature) || tab.key === active
   })
+  const hasTopBack = showBack ?? !showTab
+  const contentClass = [
+    'page-content',
+    showTab ? 'with-tab' : '',
+    hasTopBack ? 'has-top-back' : '',
+    'page-transition'
+  ].filter(Boolean).join(' ')
 
   useEffect(() => {
     captureInviteFromParams(getCurrentInstance()?.router?.params || {})
@@ -86,7 +95,7 @@ export default function Shell({ active, children, showTab = true }) {
 
   const go = (tab) => {
     if (tab.key === active) return
-    Taro.redirectTo({ url: tab.path })
+    goTab(tab.path)
   }
 
   return (
@@ -112,8 +121,10 @@ export default function Shell({ active, children, showTab = true }) {
       )}
       {active === 'home' && <View className='home-video-overlay' />}
       <View className='factory-grid' />
+      {hasTopBack && <PageBackButton fallbackUrl={backFallback} />}
       <ScrollView
-        className={showTab ? 'page-content with-tab' : 'page-content'}
+        key={transitionKey || active || 'page'}
+        className={contentClass}
         scrollY
         enhanced
         showScrollbar={false}

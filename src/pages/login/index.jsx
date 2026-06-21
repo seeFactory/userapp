@@ -3,9 +3,11 @@ import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { formatAgreementContent } from '../../utils/agreement'
+import { goTab } from '../../utils/navigation'
 import { acceptAgreement, saveAuth } from '../../utils/storage'
 import {
   createXAuthorizeUrl,
@@ -333,7 +335,8 @@ export default function Login() {
   }
 
   return (
-    <View className='login-wrap'>
+    <View className='login-wrap page-transition'>
+      <PageBackButton fallbackUrl='/pages/index/index' />
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>
         <Text className='hero-kicker'>seeFactory</Text>
@@ -397,7 +400,7 @@ export default function Login() {
           </View>
         </View>
 
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.redirectTo({ url: '/pages/index/index' })}>
+        <View className='ghost-button glass-button block-gap' onClick={() => goTab('/pages/index/index')}>
           <AppIcon name='home' size={16} />
           <Text>先逛逛</Text>
         </View>
