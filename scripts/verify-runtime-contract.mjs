@@ -247,6 +247,19 @@ assertIncludesAll(detail, "work detail public/download contract", [
   "detailMode === 'share'"
 ]);
 
+const toolPage = source("src/pages/tool/index.jsx");
+assertIncludesAll(toolPage, "tool page resolution/model option contract", [
+  "const defaultResolutions",
+  "function normalizeResolution",
+  "function resolutionOptionsForRatio",
+  "nextResolution(tool, ratio, current)",
+  "const [resolution, setResolution]",
+  "const resolutionOptions = resolutionOptionsForRatio(tool, ratio, defaultResolutions)",
+  "needs('resolution')",
+  "fieldError(formErrors, 'resolution')",
+  "params: { style, ratio, resolution, size: resolution, duration, model, count: 1 }"
+]);
+
 const paymentSheet = source("src/components/PaymentSheet.jsx");
 assertIncludesAll(paymentSheet, "PaymentSheet payment skill frontend contract", [
   "invokeTelegramStarsPayment",
