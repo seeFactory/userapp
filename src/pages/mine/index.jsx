@@ -26,6 +26,7 @@ import {
   logoutRemote
 } from '../../services/api'
 import { formatAgreementContent } from '../../utils/agreement'
+import { goPage } from '../../utils/navigation'
 import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
 
 function money(value) {
@@ -112,7 +113,7 @@ export default function Mine() {
 
   const goWallet = () => {
     if (loggedIn) {
-      Taro.navigateTo({ url: '/pages/wallet/index' })
+      goPage('/pages/wallet/index')
       return
     }
     requireLogin('/pages/wallet/index')
@@ -128,7 +129,7 @@ export default function Mine() {
       return
     }
     if (loggedIn) {
-      Taro.navigateTo({ url: '/pages/agent/index' })
+      goPage('/pages/agent/index')
       return
     }
     requireLogin('/pages/agent/index')
@@ -291,7 +292,7 @@ export default function Mine() {
               </View>
             </>
           ) : (
-            <View className='primary-button' onClick={() => Taro.navigateTo({ url: '/pages/login/index?redirect=/pages/mine/index' })}>
+            <View className='primary-button' onClick={() => goPage('/pages/login/index?redirect=/pages/mine/index')}>
               <AppIcon name='login' size={16} />
               <Text>立即登录</Text>
             </View>

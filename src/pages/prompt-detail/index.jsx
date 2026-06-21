@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { ErrorState, PageLoading } from '../../components/PageState'
 import { copyPromptCase, fetchPromptCase, fetchTools, usePromptCase } from '../../services/api'
+import { goPage } from '../../utils/navigation'
 import { requireLogin } from '../../utils/storage'
 
 export default function PromptDetail() {
@@ -56,7 +57,7 @@ export default function PromptDetail() {
     if (!requireLogin(`/pages/prompt-detail/index?id=${item.id}`)) return
     try {
       const payload = await usePromptCase(item.id)
-      Taro.navigateTo({ url: `/pages/tool/index?id=${payload.toolKey || item.toolId}&prompt=${encodeURIComponent(payload.prompt || item.prompt)}` })
+      goPage(`/pages/tool/index?id=${payload.toolKey || item.toolId}&prompt=${encodeURIComponent(payload.prompt || item.prompt)}`)
     } catch (err) {
       Taro.showToast({ title: err.message || '同款生成失败', icon: 'none' })
     }
@@ -64,22 +65,18 @@ export default function PromptDetail() {
 
   if (!item) {
     return (
-      <Shell title='提示词详情' showTab={false}>
+      <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index'>
         {loading ? (
           <PageLoading title='正在同步案例详情' description='正在读取完整提示词、封面和同款创作入口。' />
         ) : (
           <ErrorState title='案例不可访问' description={error || '案例不存在、已删除或暂未公开。'} onRetry={loadPromptDetail} />
         )}
-        <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-          <AppIcon name='back' size={16} />
-          <Text>返回</Text>
-        </View>
       </Shell>
     )
   }
 
   return (
-    <Shell title='提示词详情' showTab={false}>
+    <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index'>
       <Image className='detail-image' src={item.image} mode='aspectFill' />
 
       <View className='section-head'>
@@ -107,10 +104,6 @@ export default function PromptDetail() {
           <AppIcon name='copy' size={16} />
           <Text>复制提示词</Text>
         </View>
-      </View>
-      <View className='ghost-button glass-button block-gap' onClick={() => Taro.navigateBack()}>
-        <AppIcon name='back' size={16} />
-        <Text>返回</Text>
       </View>
     </Shell>
   )
