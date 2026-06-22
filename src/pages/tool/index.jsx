@@ -79,7 +79,10 @@ function optionList(tool, key, fallback) {
 
 function normalizeResolution(value = '') {
   const match = String(value).trim().toLowerCase().replace(/[×*]/g, 'x').match(/^(\d{2,5})x(\d{2,5})$/)
-  if (!match) return ''
+  if (!match) {
+    const quality = String(value).trim().toLowerCase().match(/^(480|720|1080)p$/)
+    return quality ? `${quality[1]}P` : ''
+  }
   const width = Number(match[1])
   const height = Number(match[2])
   if (!Number.isFinite(width) || !Number.isFinite(height)) return ''
@@ -94,11 +97,28 @@ function ratioValue(value = '') {
   return width > 0 && height > 0 ? width / height : 0
 }
 
+function ratioFrameClass(value = '') {
+  const key = String(value).trim().replace(':', '-')
+  if (['4-3', '3-4', '16-9', '9-16', '1-1'].includes(key)) {
+    return `ratio-frame ratio-${key}`
+  }
+  return 'ratio-frame ratio-1-1'
+}
+
 function resolutionRatio(value = '') {
   const normalized = normalizeResolution(value)
-  if (!normalized) return 0
+  if (!normalized || !normalized.includes('x')) return 0
   const [width, height] = normalized.split('x').map(Number)
   return width / height
+}
+
+function resolutionTolerance(tool) {
+  const optionValue = Number(tool?.options?.ratioTolerance)
+  return Number.isFinite(optionValue) && optionValue > 0 ? optionValue : 0.04
+}
+
+function uniqueValues(list) {
+  return Array.from(new Set((list || []).filter(Boolean)))
 }
 
 function resolutionOptionsForRatio(tool, ratio, fallback) {
@@ -107,13 +127,14 @@ function resolutionOptionsForRatio(tool, ratio, fallback) {
   const mapped = map && ratio && Array.isArray(map[ratio])
     ? map[ratio].map(normalizeResolution).filter(Boolean)
     : []
-  if (mapped.length) return mapped.filter((item) => all.includes(item))
+  if (mapped.length) return uniqueValues(mapped)
+  if (all.some((item) => !item.includes('x'))) return all
   const expected = ratioValue(ratio)
   if (!expected) return all
-  return all.filter((item) => {
+  return uniqueValues(all.filter((item) => {
     const actual = resolutionRatio(item)
-    return actual && Math.abs(expected - actual) / expected <= 0.04
-  })
+    return actual && Math.abs(expected - actual) / expected <= resolutionTolerance(tool)
+  }))
 }
 
 function nextSelected(tool, key, fallback, current) {
@@ -123,7 +144,17 @@ function nextSelected(tool, key, fallback, current) {
 
 function nextResolution(tool, ratio, current) {
   const list = resolutionOptionsForRatio(tool, ratio, defaultResolutions)
-  return list.includes(normalizeResolution(current)) ? normalizeResolution(current) : firstValue(list)
+  const normalized = normalizeResolution(current)
+  if (list.includes(normalized)) return normalized
+  const configuredDefault = normalizeResolution(tool?.options?.defaultResolution)
+  if (configuredDefault && list.includes(configuredDefault)) return configuredDefault
+  return firstValue(list) || ''
+}
+
+function isVideoTool(tool) {
+  const category = String(tool?.category || '').toLowerCase()
+  if (category === 'video') return true
+  return optionList(tool, 'resolutions', []).some((item) => /^[0-9]+p$/i.test(String(item).trim()))
 }
 
 function formatFileSize(size = 0) {
@@ -482,6 +513,10 @@ export default function ToolPage() {
   const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)
   const durationOptions = optionList(activeTool, 'durations', defaultDurations)
   const modelOptions = optionList(activeTool, 'models', defaultModels)
+  const normalizedResolution = normalizeResolution(resolution)
+  const selectedResolution = resolutionOptions.includes(normalizedResolution) ? normalizedResolution : ''
+  const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution
+  const resolutionLabel = isVideoTool(activeTool) ? '精度' : '分辨率'
   const uploadConfig = inferUploadConfig(activeTool)
   const inputAssets = usesAssetSlots
     ? Object.fromEntries(assetSlots.map((slot) => [
@@ -688,7 +723,7 @@ export default function ToolPage() {
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
         modelKey: model,
         prompt,
-        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds }),
         clientRuntime
       })
@@ -799,7 +834,7 @@ export default function ToolPage() {
         toolKey: tool.id,
         prompt,
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
       })
       const work = result.work
@@ -976,11 +1011,14 @@ export default function ToolPage() {
             <Text className='input-label'>画面比例</Text>
             <View className={fieldError(formErrors, 'ratio') ? 'option-row has-error' : 'option-row'}>
               {ratioOptions.map((item) => (
-                <View key={item} className={ratio === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                <View key={item} className={ratio === item ? 'option-chip ratio-option-chip active' : 'option-chip ratio-option-chip'} onClick={() => {
                   clearFieldError('ratio')
+                  clearFieldError('resolution')
+                  setResolution((current) => nextResolution(tool, item, current))
                   setRatio(item)
                 }}>
-                  {item}
+                  <View className={ratioFrameClass(item)} />
+                  <Text className='ratio-option-label'>{item}</Text>
                 </View>
               ))}
             </View>
@@ -990,10 +1028,10 @@ export default function ToolPage() {
 
         {needs('resolution') && (
           <>
-            <Text className='input-label'>分辨率</Text>
+            <Text className='input-label'>{resolutionLabel}</Text>
             <View className={fieldError(formErrors, 'resolution') ? 'option-row has-error' : 'option-row'}>
               {resolutionOptions.map((item) => (
-                <View key={item} className={resolution === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                <View key={item} className={selectedResolution === item ? 'option-chip active' : 'option-chip'} onClick={() => {
                   clearFieldError('resolution')
                   setResolution(item)
                 }}>
