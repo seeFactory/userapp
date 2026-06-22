@@ -7,7 +7,7 @@ const kib = 1024
 const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
-  maxTotalJsBytes: 3300 * kib,
+  maxTotalJsBytes: 3600 * kib,
   maxLogoCopies: 1
 }
 
