@@ -3541,6 +3541,13 @@ taro-video-core {
   padding: 14px;
 }
 
+.locked-work-panel {
+  border-color: rgba(245, 158, 11, 0.26);
+  background:
+    linear-gradient(145deg, rgba(245, 158, 11, 0.12), rgba(92, 231, 255, 0.045) 48%, rgba(3, 6, 14, 0.86)),
+    rgba(8, 11, 22, 0.72);
+}
+
 .task-state-main {
   display: flex;
   align-items: center;
@@ -3568,6 +3575,7 @@ taro-video-core {
 }
 
 .task-actions > .ghost-button,
+.task-actions > .primary-button,
 .task-actions > .danger-button {
   min-height: 42px;
   padding: 0 10px;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import Taro from '@tarojs/taro'
+import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
@@ -50,9 +50,10 @@ function canTrialRun(status, item) {
 }
 
 export default function WorkflowCases() {
+  const routeCaseId = String(getCurrentInstance().router?.params?.id || '')
   const loggedIn = isLoggedIn()
   const [list, setList] = useState([])
-  const [selectedId, setSelectedId] = useState('')
+  const [selectedId, setSelectedId] = useState(routeCaseId)
   const [detail, setDetail] = useState(null)
   const [status, setStatus] = useState(null)
   const [values, setValues] = useState({})
@@ -75,7 +76,8 @@ export default function WorkflowCases() {
         const rows = data.list || []
         setList(rows)
         setError('')
-        const nextId = selectedId && rows.some((item) => item.id === selectedId) ? selectedId : rows[0]?.id || ''
+        const requestedId = selectedId || routeCaseId
+        const nextId = requestedId || rows[0]?.id || ''
         setSelectedId(nextId)
       })
       .catch((err) => mounted && setError(err?.message || 'Workflow 案例暂未同步，请稍后重试。'))
