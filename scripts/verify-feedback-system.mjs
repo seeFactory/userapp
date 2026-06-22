@@ -40,6 +40,7 @@ const expectedPages = [
   "pages/work-detail/index",
   "pages/agent/index",
   "pages/wallet/index",
+  "pages/workflow-cases/index",
   "pages/workflow-purchases/index",
   "pages/workflow-linear/index",
   "pages/workflow-runs/detail/index"
@@ -77,6 +78,7 @@ const dataPageRules = {
   "pages/work-detail/index": ["PageLoading", "ErrorState", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
   "pages/agent/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showModal"],
   "pages/wallet/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
+  "pages/workflow-cases/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
   "pages/workflow-purchases/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
   "pages/workflow-linear/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal", "submitting"],
   "pages/workflow-runs/detail/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice"]

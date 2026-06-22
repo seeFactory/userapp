@@ -341,6 +341,28 @@ export async function fetchWorkflowPurchases(params = {}) {
   return request(`/workflow-purchases?${query.toString()}`)
 }
 
+export async function fetchWorkflowCases(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  if (params.keyword) query.set('keyword', params.keyword)
+  if (params.licenseMode) query.set('licenseMode', params.licenseMode)
+  return request(`/workflow-cases?${query.toString()}`)
+}
+
+export async function fetchWorkflowCase(id) {
+  return request(`/workflow-cases/${id}`)
+}
+
+export async function fetchWorkflowCasePurchaseStatus(id) {
+  return request(`/workflow-cases/${id}/purchase-status`)
+}
+
+export async function purchaseWorkflowCase(id) {
+  return request(`/workflow-cases/${id}/purchase`, { method: 'POST' })
+}
+
 export async function fetchWorkflowComponents(params = {}) {
   const query = new URLSearchParams({
     page: String(params.page || 1),
