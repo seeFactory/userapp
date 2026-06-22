@@ -6,7 +6,7 @@
   "description": "seeFactory mini program prototype built with React and Taro.",
   "scripts": {
     "dev:h5": "taro build --type h5 --watch",
-    "build:h5": "pnpm prepare:h5-dist && taro build --type h5 && pnpm postbuild:h5 && pnpm verify:h5-size",
+    "build:h5": "pnpm clean:dist && pnpm prepare:h5-dist && taro build --type h5 && pnpm postbuild:h5 && pnpm verify:h5-size",
     "build:h5:prod": "node scripts/build-production.mjs h5",
     "postbuild:h5": "node scripts/postprocess-h5-cache-bust.mjs",
     "dev:tma": "taro build --type h5 --watch",
