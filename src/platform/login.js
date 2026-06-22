@@ -1,7 +1,10 @@
 export const LOGIN_BRANCH = 'tma'
 export const BRANCH_CLIENT_RUNTIME = 'telegram-tma'
-export const TELEGRAM_SDK_URL = 'https://telegram.org/js/telegram-web-app.js?62'
 export const TELEGRAM_LAUNCH_PARAMS_KEY = 'seeFactoryTgLaunchParams'
+
+export function isTelegramRuntimeTarget(runtimeTarget = 'h5') {
+  return runtimeTarget === 'tma' || runtimeTarget === 'telegram-tma'
+}
 
 export function resolveClientRuntime({
   runtimeTarget = 'h5',
@@ -9,7 +12,7 @@ export function resolveClientRuntime({
   hasTelegramWebApp = false
 } = {}) {
   if (BRANCH_CLIENT_RUNTIME) return BRANCH_CLIENT_RUNTIME
-  if (runtimeTarget === 'tma') return 'telegram-tma'
+  if (isTelegramRuntimeTarget(runtimeTarget)) return 'telegram-tma'
   if (hasTelegramWebApp) return 'telegram-tma'
   if (taroEnv === 'weapp') return 'wechat-miniapp'
   if (taroEnv === 'alipay') return 'alipay-miniapp'
@@ -19,7 +22,12 @@ export function resolveClientRuntime({
 }
 
 export function shouldLoadTelegramSdk(runtimeTarget = 'h5') {
-  return BRANCH_CLIENT_RUNTIME === 'telegram-tma' || runtimeTarget === 'tma'
+  return BRANCH_CLIENT_RUNTIME === 'telegram-tma' || isTelegramRuntimeTarget(runtimeTarget)
+}
+
+export function telegramSdkUrl(runtimeTarget = 'h5') {
+  if (!shouldLoadTelegramSdk(runtimeTarget)) return ''
+  return ['https://telegram.org', '/js/', 'telegram-web', '-app.js?62'].join('')
 }
 
 export function readTelegramLaunchParams() {
