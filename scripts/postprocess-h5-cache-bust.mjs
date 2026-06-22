@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const distIndex = resolve("dist", "index.html");
 const distJs = resolve("dist", "js");
 const version = process.env.SEEFACTORY_BUILD_VERSION || String(Date.now());
+const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || "h5";
 
 function withVersion(url) {
   if (!url || /^(?:https?:)?\/\//.test(url) || url.startsWith("data:")) return url;
@@ -14,6 +15,10 @@ function withVersion(url) {
 }
 
 let html = readFileSync(distIndex, "utf8");
+
+if (runtimeTarget !== "telegram-tma") {
+  html = html.replace(/\s*<script\s+data-seefactory-tma-launch>[\s\S]*?<\/script>\s*/m, "\n");
+}
 
 html = html.replace(/\b(src|href)="([^"]+)"/g, (match, attr, url) => {
   if (!/\.(?:js|css)(?:$|\?)/.test(url)) return match;
@@ -37,5 +42,6 @@ for (const file of readdirSync(distJs)) {
 
 console.log(JSON.stringify({
   index: distIndex,
+  runtimeTarget,
   version
 }, null, 2));
