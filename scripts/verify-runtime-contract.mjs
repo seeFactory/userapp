@@ -135,11 +135,22 @@ assertIncludesAll(platformLogin, "platform/login.js Telegram runtime split contr
   "shouldLoadTelegramSdk",
   "BRANCH_CLIENT_RUNTIME === 'telegram-tma' || isTelegramRuntimeTarget(runtimeTarget)",
   "telegramSdkUrl",
-  "if (!shouldLoadTelegramSdk(runtimeTarget)) return ''",
-  "['https://telegram.org', '/js/', 'telegram-web', '-app.js?62'].join('')"
 ]);
 assert.ok(!platformLogin.includes("TELEGRAM_SDK_URL"), "platform/login.js must not export a static Telegram SDK URL into App H5 bundles.");
 assert.ok(!platformLogin.includes("https://telegram.org/js/telegram-web-app.js"), "platform/login.js must not contain the full Telegram Mini App SDK URL literal.");
+if (platformLogin.includes("BRANCH_CLIENT_RUNTIME = 'telegram-tma'")) {
+  assertIncludesAll(platformLogin, "platform/login.js TMA SDK URL contract", [
+    "if (!shouldLoadTelegramSdk(runtimeTarget)) return ''",
+    "['https://telegram.org', '/js/', 'telegram-web', '-app.js?62'].join('')"
+  ]);
+} else {
+  assertIncludesAll(platformLogin, "platform/login.js non-TMA SDK URL contract", [
+    "export function telegramSdkUrl(runtimeTarget = 'h5')",
+    "return ''"
+  ]);
+  assert.ok(!platformLogin.includes("telegram-web"), "non-TMA login module must not contain Telegram SDK URL fragments.");
+  assert.ok(!platformLogin.includes("-app.js?62"), "non-TMA login module must not contain Telegram SDK URL fragments.");
+}
 
 const appEntry = source("src/app.jsx");
 assertIncludesAll(appEntry, "app.jsx Telegram SDK lazy runtime contract", [
