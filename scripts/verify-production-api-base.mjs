@@ -4,6 +4,7 @@ import path from "node:path";
 
 const distDir = path.resolve("dist");
 const requiredApiBase = "https://api.seefactory.xyz/api/v1";
+const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || "h5";
 const forbiddenPatterns = [
   "http://127.0.0.1",
   "https://127.0.0.1",
@@ -14,6 +15,13 @@ const forbiddenPatterns = [
   "43.165.167.179:31087",
   "10087/api/v1",
   "31087/api/v1"
+];
+const h5ForbiddenTelegramMiniAppMarkers = [
+  "telegram-web-app.js",
+  "telegram.org/js",
+  "seeFactoryTgLaunchParams",
+  "__SEEFACTORY_TG_LAUNCH_PARAMS__",
+  "#/pages/index/index?tgLaunch="
 ];
 
 function walk(dir) {
@@ -38,10 +46,18 @@ for (const file of files) {
 
 assert.ok(joined.includes(requiredApiBase), `App/TMA production artifacts must include ${requiredApiBase}.`);
 
+if (runtimeTarget !== "telegram-tma") {
+  for (const pattern of h5ForbiddenTelegramMiniAppMarkers) {
+    assert.ok(!joined.includes(pattern), `App H5 production artifacts must not include Telegram Mini App marker ${pattern}.`);
+  }
+}
+
 console.log(JSON.stringify({
   checked: [
     "App/TMA production API base is embedded",
-    "App/TMA production artifacts exclude localhost and origin-IP API bases"
+    "App/TMA production artifacts exclude localhost and origin-IP API bases",
+    "App H5 production artifacts exclude Telegram Mini App launch and SDK markers"
   ],
-  apiBase: requiredApiBase
+  apiBase: requiredApiBase,
+  runtimeTarget
 }, null, 2));

@@ -42,6 +42,9 @@ const joined = textFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n")
 
 for (const pattern of [
   "telegram-tma",
+  "telegramSdkUrl",
+  "telegram-web",
+  "-app.js?62",
   "/auth/tma-login",
   "readTelegramLoginPayload",
   "createTelegramStarsOrder"
@@ -52,6 +55,7 @@ for (const pattern of [
 console.log(JSON.stringify({
   checked: [
     "TMA launch hash is preserved before Taro routing",
+    "TMA Telegram SDK lazy loading contract is present",
     "TMA runtime and login/payment contracts are present"
   ],
   index: indexPath

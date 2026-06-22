@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { shouldLoadTelegramSdk, TELEGRAM_SDK_URL } from './platform/login'
+import { shouldLoadTelegramSdk, telegramSdkUrl } from './platform/login'
 import './app.css'
 
 const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
@@ -17,8 +17,10 @@ function isTelegramTarget() {
 function loadTelegramSdk() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.resolve(false)
   if (window.Telegram?.WebApp) return Promise.resolve(true)
+  const sdkUrl = telegramSdkUrl(RUNTIME_TARGET)
+  if (!sdkUrl) return Promise.resolve(false)
 
-  const existing = document.querySelector(`script[src="${TELEGRAM_SDK_URL}"]`)
+  const existing = document.querySelector(`script[src="${sdkUrl}"]`)
   if (existing) {
     return new Promise((resolve) => {
       let settled = false
@@ -35,7 +37,7 @@ function loadTelegramSdk() {
 
   return new Promise((resolve) => {
     const script = document.createElement('script')
-    script.src = TELEGRAM_SDK_URL
+    script.src = sdkUrl
     script.async = true
     let settled = false
     const finish = (loaded) => {
