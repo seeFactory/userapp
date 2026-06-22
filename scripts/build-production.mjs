@@ -36,3 +36,6 @@ run(["exec", "taro", "build", "--type", "h5"]);
 run(["postbuild:h5"]);
 run(["verify:h5-size"]);
 run(["verify:production-api"]);
+if (runtimeTarget === "telegram-tma") {
+  run(["verify:tma-dist"]);
+}
