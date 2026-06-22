@@ -12,6 +12,7 @@ export default defineAppConfig({
     'pages/agent/index',
     'pages/wallet/index',
     'pages/workflow-purchases/index',
+    'pages/workflow-linear/index',
     'pages/workflow-runs/detail/index'
   ],
   window: {

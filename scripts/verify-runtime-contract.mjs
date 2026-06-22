@@ -68,6 +68,14 @@ assertIncludesAll(api, "services/api.js backend contract", [
   "request(`/gallery/works/${id}`",
   "fetchSharedWork",
   "request(`/works/share/",
+  "fetchWorkflowComponents",
+  "request(`/components?",
+  "createWorkflowDraft",
+  "request('/workflows'",
+  "validateWorkflowDraft",
+  "estimateWorkflowDraft",
+  "runWorkflowDraft",
+  "request(`/workflows/${id}/run`",
   "getDownloadUrl",
   "request(`/works/${id}/download-url",
   "fetchPaymentProviders",
@@ -272,6 +280,41 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 }"
 ]);
 
+const workflowLinearPage = source("src/pages/workflow-linear/index.jsx");
+assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract", [
+  "fetchWorkflowComponents({ pageSize: 80, allowedInLinear: true })",
+  "fetchTools()",
+  "buildLinearGraph",
+  "schemaVersion: 'seeFactory.workflow.v1'",
+  "promptTemplate: '{{prompt}}'",
+  "editorMode: 'linear'",
+  "validateWorkflowDraft",
+  "estimateWorkflowDraft",
+  "runWorkflowDraft",
+  "input: runInput, params: runInput",
+  "小程序端只支持顺序拼接组件",
+  "不开放自由连线、条件分支、循环或 .seeflow 导入导出",
+  "小程序线性链最多 8 步",
+  "保存并运行"
+]);
+assert.ok(!workflowLinearPage.includes("publish-case"), "Miniapp linear workflow builder must not publish workflow cases directly.");
+assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
+assertIncludesAll(source("src/app.config.js"), "workflow miniapp pages", [
+  "'pages/workflow-purchases/index'",
+  "'pages/workflow-linear/index'",
+  "'pages/workflow-runs/detail/index'"
+]);
+assertIncludesAll(source("src/pages/create-center/index.jsx"), "create center linear workflow entry", [
+  "goWorkflowLinear",
+  "/pages/workflow-linear/index",
+  "线性拼积木"
+]);
+assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entry", [
+  "goWorkflowLinear",
+  "/pages/workflow-linear/index",
+  "创建 Workflow"
+]);
+
 const homePage = source("src/pages/index/index.jsx");
 assertIncludesAll(homePage, "home tool grouping contract", [
   "tool.homeRecommended || configured.includes('recommended')",
@@ -326,6 +369,7 @@ console.log(JSON.stringify({
     "public gallery and share detail access",
     "download/save flow with backend signed download URL",
     "home tool tabs use explicit Admin recommendation only",
+    "miniapp linear workflow builder uses backend components, tools, validation and run APIs",
     "payment sheet invokes only backend-created platform, crypto, and Telegram Stars orders",
     "runtime environment example keys",
     "verification script is wired into app verify"

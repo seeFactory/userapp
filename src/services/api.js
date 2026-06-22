@@ -341,6 +341,53 @@ export async function fetchWorkflowPurchases(params = {}) {
   return request(`/workflow-purchases?${query.toString()}`)
 }
 
+export async function fetchWorkflowComponents(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 50)
+  })
+  if (params.category) query.set('category', params.category)
+  if (params.modelKey) query.set('modelKey', params.modelKey)
+  if (params.allowedInLinear !== undefined) query.set('allowedInLinear', String(params.allowedInLinear))
+  query.set('clientRuntime', params.clientRuntime || getClientRuntime())
+  return request(`/components?${query.toString()}`)
+}
+
+export async function createWorkflowDraft(payload) {
+  return request('/workflows', {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function updateWorkflowDraft(id, payload) {
+  return request(`/workflows/${id}/draft`, {
+    method: 'PUT',
+    data: payload
+  })
+}
+
+export async function validateWorkflowDraft(id, graph) {
+  return request(`/workflows/${id}/validate`, {
+    method: 'POST',
+    data: { graph }
+  })
+}
+
+export async function estimateWorkflowDraft(id, graph) {
+  return request(`/workflows/${id}/estimate`, {
+    method: 'POST',
+    data: { graph }
+  })
+}
+
+export async function runWorkflowDraft(id, payload = {}) {
+  return request(`/workflows/${id}/run`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
 export async function runWorkflowCase(caseContentId, payload = {}) {
   return request(`/workflow-cases/${caseContentId}/run`, {
     method: 'POST',
