@@ -25,6 +25,5 @@ export function shouldLoadTelegramSdk(runtimeTarget = 'h5') {
 }
 
 export function telegramSdkUrl(runtimeTarget = 'h5') {
-  if (!shouldLoadTelegramSdk(runtimeTarget)) return ''
-  return ['https://telegram.org', '/js/', 'telegram-web', '-app.js?62'].join('')
+  return ''
 }
