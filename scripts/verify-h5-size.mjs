@@ -8,7 +8,7 @@ const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
   // H5 pages are split into lazy chunks; keep the raw total budget aligned with the current multi-runtime page set.
-  maxTotalJsBytes: 3900 * kib,
+  maxTotalJsBytes: 4200 * kib,
   maxLogoCopies: 1
 }
 

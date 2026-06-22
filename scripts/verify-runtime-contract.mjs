@@ -70,6 +70,14 @@ assertIncludesAll(api, "services/api.js backend contract", [
   "request(`/works/share/",
   "fetchWorkflowComponents",
   "request(`/components?",
+  "fetchWorkflowCases",
+  "request(`/workflow-cases?",
+  "fetchWorkflowCasePurchaseStatus",
+  "request(`/workflow-cases/${id}/purchase-status`",
+  "purchaseWorkflowCase",
+  "request(`/workflow-cases/${id}/purchase`, { method: 'POST' })",
+  "trialRunWorkflowCase",
+  "request(`/workflow-cases/${caseContentId}/trial-run`",
   "createWorkflowDraft",
   "request('/workflows'",
   "validateWorkflowDraft",
@@ -335,30 +343,56 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
 assert.ok(!workflowLinearPage.includes("publish-case"), "Miniapp linear workflow builder must not publish workflow cases directly.");
 assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
 const workflowPurchasesPage = source("src/pages/workflow-purchases/index.jsx");
-assertIncludesAll(workflowPurchasesPage, "purchased workflow run form contract", [
-  "function runFormOf(item)",
+const workflowRunFormComponent = source("src/components/WorkflowRunFormFields.jsx");
+assertIncludesAll(workflowRunFormComponent, "miniapp shared workflow run form contract", [
   "function workflowRunFields(runForm)",
   "function buildWorkflowRunPayload(runForm, values = {})",
-  "function WorkflowRunFormFields({ runForm, values, disabled, onChange })",
   "Input, Picker, Switch, Textarea",
   "isUnsupportedRunField(field)",
-  "PC Dashboard",
+  "PC Dashboard"
+]);
+const workflowCasesPage = source("src/pages/workflow-cases/index.jsx");
+assertIncludesAll(workflowCasesPage, "workflow case marketplace run contract", [
+  "fetchWorkflowCases({ pageSize: 30 })",
+  "fetchWorkflowCase(selectedId)",
+  "fetchWorkflowCasePurchaseStatus(selectedId)",
+  "purchaseWorkflowCase(selected.id)",
+  "trialRunWorkflowCase(selected.id, payloadResult.payload)",
+  "runWorkflowCase(selected.id, payloadResult.payload)",
+  "buildWorkflowRunPayload(runFormOf(selected), values)",
+  "<WorkflowRunFormFields",
+  "requireLogin('/pages/workflow-cases/index')",
+  "/pages/workflow-runs/detail/index?id=",
+  "goPage('/pages/workflow-purchases/index')",
+  "Workflow 案例"
+]);
+assert.ok(!workflowCasesPage.includes("runWorkflowCase(selected.id, { input: {}, params: {} })"), "Workflow cases must not run with an empty hard-coded payload.");
+assertIncludesAll(workflowPurchasesPage, "purchased workflow run form contract", [
+  "function runFormOf(item)",
   "initialWorkflowRunValues(runFormOf(item))",
   "buildWorkflowRunPayload(runFormOf(item), runValuesById[item.id]",
+  "<WorkflowRunFormFields",
   "runWorkflowCase(caseId, payloadResult.payload)"
 ]);
 assert.ok(!workflowPurchasesPage.includes("runWorkflowCase(caseId, { input: {}, params: {} })"), "Purchased workflow templates must not run with an empty hard-coded payload.");
 assertIncludesAll(source("src/app.config.js"), "workflow miniapp pages", [
+  "'pages/workflow-cases/index'",
   "'pages/workflow-purchases/index'",
   "'pages/workflow-linear/index'",
   "'pages/workflow-runs/detail/index'"
 ]);
 assertIncludesAll(source("src/pages/create-center/index.jsx"), "create center linear workflow entry", [
+  "goWorkflowCases",
+  "/pages/workflow-cases/index",
+  "Workflow 案例",
   "goWorkflowLinear",
   "/pages/workflow-linear/index",
   "线性拼积木"
 ]);
 assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entry", [
+  "goWorkflowCases",
+  "/pages/workflow-cases/index",
+  "购买和运行模板",
   "goWorkflowLinear",
   "/pages/workflow-linear/index",
   "创建 Workflow"

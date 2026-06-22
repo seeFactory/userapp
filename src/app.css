@@ -3287,6 +3287,28 @@ taro-video-core {
   margin-bottom: 12px;
 }
 
+.workflow-entry-stack {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.workflow-entry-stack .workflow-entry-panel {
+  margin-bottom: 0;
+}
+
+.work-card.active {
+  border-color: rgba(103, 232, 249, 0.48);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(103, 232, 249, 0.2), transparent 34%),
+    linear-gradient(155deg, rgba(28, 36, 61, 0.86), rgba(9, 12, 24, 0.94)),
+    rgba(8, 12, 24, 0.76);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(103, 232, 249, 0.12),
+    0 18px 34px rgba(34, 211, 238, 0.14);
+}
+
 .linear-component-grid,
 .linear-step-list {
   display: grid;

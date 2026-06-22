@@ -138,6 +138,14 @@ export default function Mine() {
     requireLogin('/pages/workflow-purchases/index')
   }
 
+  const goWorkflowCases = () => {
+    if (loggedIn) {
+      goPage('/pages/workflow-cases/index')
+      return
+    }
+    requireLogin('/pages/workflow-cases/index')
+  }
+
   const goWorkflowLinear = () => {
     if (loggedIn) {
       goPage('/pages/workflow-linear/index')
@@ -360,6 +368,11 @@ export default function Mine() {
           <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
           <Text className='profile-name'>已购模板库</Text>
           <Text className='tool-desc'>Workflow 权益</Text>
+        </View>
+        <View className='profile-card' onClick={goWorkflowCases}>
+          <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
+          <Text className='profile-name'>Workflow 案例</Text>
+          <Text className='tool-desc'>购买和运行模板</Text>
         </View>
         <View className='profile-card' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>

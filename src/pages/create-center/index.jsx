@@ -78,6 +78,14 @@ export default function CreateCenter() {
     requireLogin('/pages/workflow-linear/index')
   }
 
+  const goWorkflowCases = () => {
+    if (isLoggedIn()) {
+      goPage('/pages/workflow-cases/index')
+      return
+    }
+    requireLogin('/pages/workflow-cases/index')
+  }
+
   return (
     <Shell active='center' title='创作中心'>
       <View className='section-head'>
@@ -90,15 +98,28 @@ export default function CreateCenter() {
         </View>
       </View>
 
-      <View className='form-panel compact-panel workflow-entry-panel' onClick={goWorkflowLinear}>
-        <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
-        <View className='task-state-copy'>
-          <Text className='profile-name'>线性拼积木</Text>
-          <Text className='tool-desc'>从零创建顺序 Workflow，并提交运行</Text>
+      <View className='workflow-entry-stack'>
+        <View className='form-panel compact-panel workflow-entry-panel' onClick={goWorkflowCases}>
+          <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
+          <View className='task-state-copy'>
+            <Text className='profile-name'>Workflow 案例</Text>
+            <Text className='tool-desc'>选择公开模板，购买、试运行或直接运行</Text>
+          </View>
+          <View className='ghost-button compact'>
+            <AppIcon name='play' size={13} />
+            <Text>运行</Text>
+          </View>
         </View>
-        <View className='ghost-button compact'>
-          <AppIcon name='play' size={13} />
-          <Text>创建</Text>
+        <View className='form-panel compact-panel workflow-entry-panel' onClick={goWorkflowLinear}>
+          <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
+          <View className='task-state-copy'>
+            <Text className='profile-name'>线性拼积木</Text>
+            <Text className='tool-desc'>从零创建顺序 Workflow，并提交运行</Text>
+          </View>
+          <View className='ghost-button compact'>
+            <AppIcon name='wand' size={13} />
+            <Text>创建</Text>
+          </View>
         </View>
       </View>
 
