@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 import { goPage } from '../../utils/navigation'
+import { isLoggedIn, requireLogin } from '../../utils/storage'
 
 export default function CreateCenter() {
   const [category, setCategory] = useState('all')
@@ -69,6 +70,14 @@ export default function CreateCenter() {
 
   const toolName = (id) => tools.find((tool) => tool.id === id)?.name || 'AI 工具'
 
+  const goWorkflowLinear = () => {
+    if (isLoggedIn()) {
+      goPage('/pages/workflow-linear/index')
+      return
+    }
+    requireLogin('/pages/workflow-linear/index')
+  }
+
   return (
     <Shell active='center' title='创作中心'>
       <View className='section-head'>
@@ -78,6 +87,18 @@ export default function CreateCenter() {
           <Text className='section-kicker'>{loading ? '正在加载提示词' : '提示词案例'}</Text>
           <Text className='section-title'>案例与提示词</Text>
           </View>
+        </View>
+      </View>
+
+      <View className='form-panel compact-panel workflow-entry-panel' onClick={goWorkflowLinear}>
+        <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
+        <View className='task-state-copy'>
+          <Text className='profile-name'>线性拼积木</Text>
+          <Text className='tool-desc'>从零创建顺序 Workflow，并提交运行</Text>
+        </View>
+        <View className='ghost-button compact'>
+          <AppIcon name='play' size={13} />
+          <Text>创建</Text>
         </View>
       </View>
 

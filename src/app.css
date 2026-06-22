@@ -940,6 +940,8 @@ taro-video-core {
 .tool-card,
 .case-card,
 .work-card,
+.linear-component-card,
+.linear-step-card,
 .panel,
 .profile-card,
 .form-panel,
@@ -1018,6 +1020,8 @@ taro-video-core {
 .tool-card > *,
 .case-card > *,
 .work-card > *,
+.linear-component-card > *,
+.linear-step-card > *,
 .panel > *,
 .profile-card > *,
 .form-panel > * {
@@ -1205,6 +1209,8 @@ taro-video-core {
 .tool-card,
 .case-card,
 .work-card,
+.linear-component-card,
+.linear-step-card,
 .profile-card {
   width: auto;
   margin-bottom: 0;
@@ -3274,6 +3280,91 @@ taro-video-core {
 .full-width-button {
   width: 100%;
   justify-content: center;
+}
+
+.workflow-entry-panel {
+  min-height: 74px;
+  margin-bottom: 12px;
+}
+
+.linear-component-grid,
+.linear-step-list {
+  display: grid;
+  gap: 10px;
+}
+
+.linear-component-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.linear-component-card {
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.linear-component-copy,
+.linear-step-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.linear-step-card {
+  padding: 14px;
+}
+
+.linear-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.linear-step-index {
+  display: flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  border-radius: 12px;
+  color: #e0f2fe;
+  background: rgba(15, 23, 42, 0.56);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.compact-label {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.linear-option-row {
+  border-radius: 18px;
+}
+
+.linear-option-row .option-chip {
+  min-height: 34px;
+}
+
+.linear-step-actions,
+.linear-submit-bar {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.linear-step-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.linear-submit-bar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 14px 0 calc(16px + env(safe-area-inset-bottom));
 }
 
 .copy-box {
