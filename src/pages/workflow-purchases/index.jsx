@@ -18,9 +18,19 @@ function formatDate(value) {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
+function canRunWorkflowPurchase(item) {
+  if (item?.canRun !== undefined) return Boolean(item.canRun)
+  if (item?.runnable !== undefined) return Boolean(item.runnable)
+  return item?.status !== 'disabled' && item?.disabled !== true
+}
+
+function workflowBlockedReason(item) {
+  return item?.runBlockedReason || item?.disabledReason || ''
+}
+
 function statusText(item) {
-  if (item.status === 'disabled' || item.runnable === false) return '暂停运行'
-  if (item.replacementAvailable) return '可替代'
+  if (!canRunWorkflowPurchase(item)) return '暂停运行'
+  if (item.hasReplacementModel || item.replacementAvailable) return '可替代'
   return '可运行'
 }
 
@@ -63,8 +73,8 @@ export default function WorkflowPurchases() {
   }, [loggedIn])
 
   const runTemplate = async (item) => {
-    if (!item.runnable || item.status === 'disabled') {
-      Taro.showToast({ title: item.disabledReason || '该模板已暂停运行', icon: 'none' })
+    if (!canRunWorkflowPurchase(item)) {
+      Taro.showToast({ title: workflowBlockedReason(item) || '该模板已暂停运行', icon: 'none' })
       return
     }
     const caseId = item.caseContentId || item.case?.id
@@ -153,18 +163,18 @@ export default function WorkflowPurchases() {
                     <AppIcon name='fusion' size={12} />
                     <Text>{item.pricePoints || 0} 点 · {formatDate(item.purchasedAt)}</Text>
                   </View>
-                  <View className={item.runnable === false || item.status === 'disabled' ? 'status failed' : 'status'}>
-                    <AppIcon name={item.runnable === false || item.status === 'disabled' ? 'alert' : 'badge'} size={11} />
+                  <View className={!canRunWorkflowPurchase(item) ? 'status failed' : 'status'}>
+                    <AppIcon name={!canRunWorkflowPurchase(item) ? 'alert' : 'badge'} size={11} />
                     <Text>{statusText(item)}</Text>
                   </View>
                 </View>
-                {item.disabledReason ? <Text className='tool-desc'>{item.disabledReason}</Text> : null}
+                {workflowBlockedReason(item) ? <Text className='tool-desc'>{workflowBlockedReason(item)}</Text> : null}
                 <View
-                  className={runningId === item.id || item.runnable === false ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'}
+                  className={runningId === item.id || !canRunWorkflowPurchase(item) ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'}
                   onClick={runningId === item.id ? undefined : () => runTemplate(item)}
                 >
                   <AppIcon name='play' size={15} />
-                  <Text>{runningId === item.id ? '提交中...' : item.runnable === false ? '暂停运行' : '运行模板'}</Text>
+                  <Text>{runningId === item.id ? '提交中...' : !canRunWorkflowPurchase(item) ? '暂停运行' : '运行模板'}</Text>
                 </View>
               </View>
             </View>
