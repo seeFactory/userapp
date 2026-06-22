@@ -299,6 +299,20 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
 ]);
 assert.ok(!workflowLinearPage.includes("publish-case"), "Miniapp linear workflow builder must not publish workflow cases directly.");
 assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
+const workflowPurchasesPage = source("src/pages/workflow-purchases/index.jsx");
+assertIncludesAll(workflowPurchasesPage, "purchased workflow run form contract", [
+  "function runFormOf(item)",
+  "function workflowRunFields(runForm)",
+  "function buildWorkflowRunPayload(runForm, values = {})",
+  "function WorkflowRunFormFields({ runForm, values, disabled, onChange })",
+  "Input, Picker, Switch, Textarea",
+  "isUnsupportedRunField(field)",
+  "PC Dashboard",
+  "initialWorkflowRunValues(runFormOf(item))",
+  "buildWorkflowRunPayload(runFormOf(item), runValuesById[item.id]",
+  "runWorkflowCase(caseId, payloadResult.payload)"
+]);
+assert.ok(!workflowPurchasesPage.includes("runWorkflowCase(caseId, { input: {}, params: {} })"), "Purchased workflow templates must not run with an empty hard-coded payload.");
 assertIncludesAll(source("src/app.config.js"), "workflow miniapp pages", [
   "'pages/workflow-purchases/index'",
   "'pages/workflow-linear/index'",
