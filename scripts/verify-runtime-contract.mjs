@@ -127,6 +127,30 @@ assertIncludesAll(storage, "utils/storage.js storage contract", [
   "requireLogin"
 ]);
 
+const platformLogin = source("src/platform/login.js");
+assertIncludesAll(platformLogin, "platform/login.js Telegram runtime split contract", [
+  "isTelegramRuntimeTarget",
+  "runtimeTarget === 'tma' || runtimeTarget === 'telegram-tma'",
+  "if (isTelegramRuntimeTarget(runtimeTarget)) return 'telegram-tma'",
+  "shouldLoadTelegramSdk",
+  "BRANCH_CLIENT_RUNTIME === 'telegram-tma' || isTelegramRuntimeTarget(runtimeTarget)",
+  "telegramSdkUrl",
+  "if (!shouldLoadTelegramSdk(runtimeTarget)) return ''",
+  "['https://telegram.org', '/js/', 'telegram-web', '-app.js?62'].join('')"
+]);
+assert.ok(!platformLogin.includes("TELEGRAM_SDK_URL"), "platform/login.js must not export a static Telegram SDK URL into App H5 bundles.");
+assert.ok(!platformLogin.includes("https://telegram.org/js/telegram-web-app.js"), "platform/login.js must not contain the full Telegram Mini App SDK URL literal.");
+
+const appEntry = source("src/app.jsx");
+assertIncludesAll(appEntry, "app.jsx Telegram SDK lazy runtime contract", [
+  "telegramSdkUrl",
+  "const sdkUrl = telegramSdkUrl(RUNTIME_TARGET)",
+  "if (!sdkUrl) return Promise.resolve(false)",
+  "document.querySelector(`script[src=\"${sdkUrl}\"]`)",
+  "script.src = sdkUrl"
+]);
+assert.ok(!appEntry.includes("TELEGRAM_SDK_URL"), "app.jsx must not import or use a static Telegram SDK URL.");
+
 const agreement = source("src/utils/agreement.js");
 assertIncludesAll(agreement, "utils/agreement.js legal agreement display contract", [
   "normalizeLegalInfo",
