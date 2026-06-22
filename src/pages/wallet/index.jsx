@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { View, Text } from '@tarojs/components'
+import Taro from '@tarojs/taro'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
@@ -56,6 +57,7 @@ export default function Wallet() {
   const loadWallet = async () => {
     if (!loggedIn) return
     setLoading(true)
+    Taro.showLoading({ title: '加载中', mask: true })
     try {
       const [accountData, withdrawalData] = await Promise.all([
         fetchWalletAccount(),
@@ -65,10 +67,22 @@ export default function Wallet() {
       setWithdrawals(withdrawalData?.list || [])
       setLoadError('')
     } catch (error) {
-      setLoadError(error.message || '历史钱包数据加载失败')
+      const message = error.message || '历史钱包数据加载失败'
+      setLoadError(message)
+      Taro.showToast({ title: message, icon: 'none' })
     } finally {
       setLoading(false)
+      Taro.hideLoading()
     }
+  }
+
+  const showClosedNotice = (content) => {
+    Taro.showModal({
+      title: '功能已关闭',
+      content,
+      showCancel: false,
+      confirmText: '知道了'
+    })
   }
 
   useEffect(() => {
@@ -161,11 +175,11 @@ export default function Wallet() {
 
       <View className='panel wallet-panel'>
         <View className='hero-actions'>
-          <View className='ghost-button glass-button disabled'>
+          <View className='ghost-button glass-button disabled' onClick={() => showClosedNotice('当前充值统一通过点数账户完成，历史钱包不再发起新的充值。')}>
             <AppIcon name='wallet' size={16} />
             <Text>钱包充值已关闭</Text>
           </View>
-          <View className='ghost-button glass-button disabled'>
+          <View className='ghost-button glass-button disabled' onClick={() => showClosedNotice('提现通道已关闭，仅保留历史记录查询。')}>
             <AppIcon name='share' size={16} />
             <Text>提现已关闭</Text>
           </View>

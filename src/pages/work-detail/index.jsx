@@ -266,6 +266,10 @@ export default function WorkDetail() {
   }
 
   const saveWork = async () => {
+    if (work.lockedUntilPurchase) {
+      Taro.showToast({ title: '购买模板后解锁保存', icon: 'none' })
+      return
+    }
     if (['gallery', 'share'].includes(detailMode) && work.downloadEnabled === false) {
       Taro.showToast({ title: '该作品暂不支持保存', icon: 'none' })
       return
@@ -312,6 +316,10 @@ export default function WorkDetail() {
       Taro.showToast({ title: '成功作品才可以分享', icon: 'none' })
       return
     }
+    if (work.lockedUntilPurchase) {
+      Taro.showToast({ title: '购买模板后解锁分享', icon: 'none' })
+      return
+    }
     if (sharing) return
     setSharing(true)
     Taro.showLoading({ title: '生成分享' })
@@ -343,6 +351,10 @@ export default function WorkDetail() {
   }
 
   const publish = async () => {
+    if (work.lockedUntilPurchase) {
+      Taro.showToast({ title: '购买模板后解锁发布', icon: 'none' })
+      return
+    }
     try {
       const next = await publishGalleryWork(work.id)
       setWork((prev) => ({ ...prev, ...next, galleryVisible: true, galleryStatus: 'published' }))
@@ -383,8 +395,9 @@ export default function WorkDetail() {
   const isSharedDetail = detailMode === 'share'
   const isGalleryDetail = detailMode === 'gallery'
   const publicLikeDetail = isGalleryDetail || isSharedDetail
-  const canSave = work.status === 'success' && (!publicLikeDetail || work.downloadEnabled !== false)
-  const canShare = work.status === 'success'
+  const lockedUntilPurchase = Boolean(work.lockedUntilPurchase)
+  const canSave = work.status === 'success' && !lockedUntilPurchase && (!publicLikeDetail || work.downloadEnabled !== false)
+  const canShare = work.status === 'success' && !lockedUntilPurchase
   const backFallback = isGalleryDetail ? '/pages/gallery/index' : '/pages/works/index'
 
   return (
@@ -440,11 +453,11 @@ export default function WorkDetail() {
       <View className='hero-actions'>
         <View className={canSave ? 'primary-button' : 'primary-button disabled'} onClick={canSave ? saveWork : undefined}>
           <AppIcon name='download' size={16} />
-          <Text>{work.downloadEnabled === false && publicLikeDetail ? '不可保存' : '保存'}</Text>
+          <Text>{lockedUntilPurchase ? '购买后保存' : work.downloadEnabled === false && publicLikeDetail ? '不可保存' : '保存'}</Text>
         </View>
         <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
           <AppIcon name='share' size={16} />
-          <Text>{sharing ? '生成中' : '分享'}</Text>
+          <Text>{lockedUntilPurchase ? '购买后分享' : sharing ? '生成中' : '分享'}</Text>
         </View>
       </View>
       {publicLikeDetail ? (
@@ -456,9 +469,9 @@ export default function WorkDetail() {
         </View>
       ) : (
         <View className='hero-actions'>
-          <View className={work.status === 'success' ? 'primary-button' : 'primary-button disabled'} onClick={work.status === 'success' ? publish : undefined}>
+          <View className={work.status === 'success' && !lockedUntilPurchase ? 'primary-button' : 'primary-button disabled'} onClick={work.status === 'success' && !lockedUntilPurchase ? publish : undefined}>
             <AppIcon name='gallery' size={16} />
-            <Text>发布广场</Text>
+            <Text>{lockedUntilPurchase ? '购买后发布' : '发布广场'}</Text>
           </View>
           <View className='ghost-button glass-button' onClick={unpublish}>
             <AppIcon name='close' size={16} />

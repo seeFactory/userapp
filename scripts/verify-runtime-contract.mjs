@@ -259,12 +259,17 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "nextResolution(tool, ratio, current)",
   "const [resolution, setResolution]",
   "const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)",
+  "const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution",
+  "function ratioFrameClass",
+  "function isVideoTool",
+  "ratio-option-chip",
+  "ratioFrameClass(item)",
   "needs('resolution')",
   "fieldError(formErrors, 'resolution')",
   "modelKey: model,",
   "prompt,",
   "...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })",
-  "params: { style, ratio, resolution, size: resolution, duration, model, count: 1 }"
+  "params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 }"
 ]);
 
 const homePage = source("src/pages/index/index.jsx");
