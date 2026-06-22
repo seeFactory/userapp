@@ -3,6 +3,7 @@ import { shouldLoadTelegramSdk, TELEGRAM_SDK_URL } from './platform/login'
 import './app.css'
 
 const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
+const TELEGRAM_SDK_TIMEOUT = 5000
 
 function setCssVar(name, value) {
   if (typeof document === 'undefined' || value === undefined || value === null) return
@@ -20,8 +21,15 @@ function loadTelegramSdk() {
   const existing = document.querySelector(`script[src="${TELEGRAM_SDK_URL}"]`)
   if (existing) {
     return new Promise((resolve) => {
-      existing.addEventListener('load', () => resolve(true), { once: true })
-      existing.addEventListener('error', () => resolve(false), { once: true })
+      let settled = false
+      const finish = (loaded) => {
+        if (settled) return
+        settled = true
+        resolve(loaded)
+      }
+      existing.addEventListener('load', () => finish(true), { once: true })
+      existing.addEventListener('error', () => finish(false), { once: true })
+      setTimeout(() => finish(Boolean(window.Telegram?.WebApp)), TELEGRAM_SDK_TIMEOUT)
     })
   }
 
@@ -29,10 +37,40 @@ function loadTelegramSdk() {
     const script = document.createElement('script')
     script.src = TELEGRAM_SDK_URL
     script.async = true
-    script.onload = () => resolve(true)
-    script.onerror = () => resolve(false)
+    let settled = false
+    const finish = (loaded) => {
+      if (settled) return
+      settled = true
+      resolve(loaded)
+    }
+    script.onload = () => finish(true)
+    script.onerror = () => finish(false)
+    setTimeout(() => finish(Boolean(window.Telegram?.WebApp)), TELEGRAM_SDK_TIMEOUT)
     document.head.appendChild(script)
   })
+}
+
+function postTelegramEvent(eventType, eventData = {}) {
+  if (typeof window === 'undefined') return
+  const payload = JSON.stringify(eventData)
+
+  try {
+    window.TelegramWebviewProxy?.postEvent?.(eventType, false, payload)
+  } catch (_) {}
+
+  try {
+    window.external?.notify?.(JSON.stringify({ eventType, eventData }))
+  } catch (_) {}
+
+  try {
+    window.parent?.postMessage?.(JSON.stringify({ eventType, eventData }), '*')
+  } catch (_) {}
+}
+
+function initTelegramMiniAppFallback() {
+  if (typeof window === 'undefined' || !isTelegramTarget()) return
+  postTelegramEvent('web_app_ready')
+  postTelegramEvent('web_app_expand')
 }
 
 function syncTelegramViewport(webApp) {
@@ -91,6 +129,7 @@ export default function App({ children }) {
     loadTelegramSdk().then(() => {
       if (disposed) return
       cleanup = initTelegramMiniApp()
+      if (!cleanup) initTelegramMiniAppFallback()
     })
 
     return () => {
