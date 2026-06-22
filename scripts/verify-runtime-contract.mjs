@@ -80,6 +80,10 @@ assertIncludesAll(api, "services/api.js backend contract", [
   "fetchCryptoOrder",
   "fetchTelegramStarsOrder"
 ]);
+assertIncludesAll(api, "services/api.js explicit home recommendation contract", [
+  "homeRecommended: Boolean(item.homeRecommended)"
+]);
+assert.ok(!api.includes("homeRecommended: item.homeRecommended ?? item.featured"), "Tool API mapper must not infer home recommendation from legacy featured.");
 
 const appConfig = source("src/hooks/useAppConfig.js");
 assertIncludesAll(appConfig, "useAppConfig app configuration contract", [
@@ -254,11 +258,25 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "function resolutionOptionsForRatio",
   "nextResolution(tool, ratio, current)",
   "const [resolution, setResolution]",
-  "const resolutionOptions = resolutionOptionsForRatio(tool, ratio, defaultResolutions)",
+  "const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)",
   "needs('resolution')",
   "fieldError(formErrors, 'resolution')",
+  "modelKey: model,",
+  "prompt,",
+  "...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })",
   "params: { style, ratio, resolution, size: resolution, duration, model, count: 1 }"
 ]);
+
+const homePage = source("src/pages/index/index.jsx");
+assertIncludesAll(homePage, "home tool grouping contract", [
+  "tool.homeRecommended || configured.includes('recommended')",
+  "if (!keyword) return groupedTools.recommended",
+  "homeTabs",
+  "outputTypesOf(tool)",
+  "searchOpen"
+]);
+assert.ok(!homePage.includes("tool.homeRecommended || tool.featured"), "Home recommended tab must not infer recommendation from legacy featured.");
+assert.ok(!homePage.includes("sorted.slice(0, 6)"), "Empty search recommendations must not fall back to all tools.");
 
 const paymentSheet = source("src/components/PaymentSheet.jsx");
 assertIncludesAll(paymentSheet, "PaymentSheet payment skill frontend contract", [
@@ -302,6 +320,7 @@ console.log(JSON.stringify({
     "iPhone 14 height baseline and safe-area styles",
     "public gallery and share detail access",
     "download/save flow with backend signed download URL",
+    "home tool tabs use explicit Admin recommendation only",
     "payment sheet invokes only backend-created platform, crypto, and Telegram Stars orders",
     "runtime environment example keys",
     "verification script is wired into app verify"

@@ -1,31 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { View, Text } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
-import CryptoRoutePicker, { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { fetchWalletAccount, fetchWalletWithdrawals } from '../../services/api'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
-import {
-  cancelWalletWithdrawal,
-  createWalletCryptoOrder,
-  createWalletWithdrawal,
-  fetchWalletAccount,
-  fetchWalletCryptoOrder,
-  fetchWalletRechargeOptions,
-  fetchWalletWithdrawals,
-  fetchWithdrawalAddress,
-  saveWithdrawalAddress
-} from '../../services/api'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
-
-const defaultOptions = {
-  currency: 'USD',
-  minRechargeAmount: 10,
-  chains: [],
-  acquiringConfigured: false
-}
 
 function asId(item) {
   return item?.id || item?._id || ''
@@ -42,26 +24,15 @@ function shortDate(value) {
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-function orderStatusText(status) {
-  const map = {
-    pending: '等待支付',
-    processing: '确认中',
-    paid: '已到账',
-    expired: '已过期',
-    failed: '失败'
-  }
-  return map[status] || '等待支付'
-}
-
 function withdrawalStatusText(status) {
   const map = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已驳回',
-    paid: '已打款',
-    cancelled: '已取消'
+    pending: '历史待处理',
+    approved: '历史已通过',
+    rejected: '历史已驳回',
+    paid: '历史已打款',
+    cancelled: '历史已取消'
   }
-  return map[status] || '待审核'
+  return map[status] || '历史记录'
 }
 
 function statusClass(status) {
@@ -73,101 +44,57 @@ function statusClass(status) {
 
 export default function Wallet() {
   const loggedIn = isLoggedIn()
+  const { config, loading: configLoading } = useAppConfig()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [overview, setOverview] = useState(null)
-  const [options, setOptions] = useState(defaultOptions)
-  const [rechargeRoute, setRechargeRoute] = useState({ chain: '', token: '', bridgeCurrency: '' })
-  const [withdrawRoute, setWithdrawRoute] = useState({ chain: '', token: '', bridgeCurrency: '' })
-  const [rechargeAmount, setRechargeAmount] = useState('10')
-  const [order, setOrder] = useState(null)
-  const [creatingOrder, setCreatingOrder] = useState(false)
-  const [addressForm, setAddressForm] = useState({ address: '', memo: '' })
-  const [withdrawAmount, setWithdrawAmount] = useState('10')
   const [withdrawals, setWithdrawals] = useState([])
-  const [savingAddress, setSavingAddress] = useState(false)
-  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false)
-  const { config, loading: configLoading } = useAppConfig()
-  const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
 
   const account = overview?.account || {}
-  const currency = options.currency || account.currency || 'USD'
-  const minRecharge = Number(options.minRechargeAmount || 10)
-  const minWithdrawal = Number(overview?.options?.minWithdrawalAmount || 10)
-  const currentOrderId = asId(order)
-  const currentOrderStatus = order?.status
+  const currency = account.currency || overview?.options?.currency || 'USD'
+  const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
 
-  const selectedDepositAddress = order?.bridgeDepositAddress || order?.depositAddress || ''
-  const paymentAmount = order?.payAmount || order?.amount || rechargeAmount
-  const paymentCurrency = order?.payBridgeCurrency || order?.payCurrency || rechargeRoute.bridgeCurrency
-
-  const loadWallet = async (silent = false) => {
+  const loadWallet = async () => {
     if (!loggedIn) return
-    if (!silent) setLoading(true)
+    setLoading(true)
+    Taro.showLoading({ title: '加载中', mask: true })
     try {
-      const [accountData, optionData, addressData, withdrawalData] = await Promise.all([
+      const [accountData, withdrawalData] = await Promise.all([
         fetchWalletAccount(),
-        fetchWalletRechargeOptions(),
-        fetchWithdrawalAddress().catch(() => null),
-        fetchWalletWithdrawals({ pageSize: 6 })
+        fetchWalletWithdrawals({ pageSize: 12 })
       ])
-      const nextOptions = { ...defaultOptions, ...(optionData || {}) }
-      const chains = nextOptions.chains || []
       setOverview(accountData)
-      setOptions(nextOptions)
-      setLoadError('')
       setWithdrawals(withdrawalData?.list || [])
-      setRechargeRoute((current) => current.chain ? current : firstCryptoRoute(chains))
-      setWithdrawRoute((current) => addressData?.chain ? firstCryptoRoute(chains, addressData) : (current.chain ? current : firstCryptoRoute(chains)))
-      if (addressData?.address) {
-        setAddressForm({
-          address: addressData.address,
-          memo: addressData.memo || ''
-        })
-      }
-      setRechargeAmount((value) => value || String(nextOptions.minRechargeAmount || 10))
-      setWithdrawAmount((value) => value || String(accountData?.options?.minWithdrawalAmount || 10))
+      setLoadError('')
     } catch (error) {
-      const message = error.message || '钱包数据加载失败'
+      const message = error.message || '历史钱包数据加载失败'
       setLoadError(message)
-      if (silent) {
-        Taro.showToast({ title: message, icon: 'none' })
-      }
+      Taro.showToast({ title: message, icon: 'none' })
     } finally {
-      if (!silent) setLoading(false)
+      setLoading(false)
+      Taro.hideLoading()
     }
   }
 
+  const showClosedNotice = (content) => {
+    Taro.showModal({
+      title: '功能已关闭',
+      content,
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  }
+
   useEffect(() => {
-    if (!loggedIn) return undefined
     loadWallet()
-    return undefined
   }, [loggedIn])
-
-  useEffect(() => {
-    if (!currentOrderId || !['pending', 'processing'].includes(currentOrderStatus)) return undefined
-    const timer = setInterval(async () => {
-      try {
-        const nextOrder = await fetchWalletCryptoOrder(currentOrderId)
-        setOrder(nextOrder)
-        if (nextOrder?.status === 'paid') {
-          await loadWallet(true)
-          Taro.showToast({ title: '充值已到账', icon: 'success' })
-        }
-      } catch (_) {}
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [currentOrderId, currentOrderStatus])
-
-  const chainCount = useMemo(() => options.chains?.length || 0, [options.chains])
-  const rechargeAvailable = !configLoading && rechargeFeatureEnabled && options.acquiringConfigured && chainCount > 0
 
   if (!loggedIn) {
     return (
-      <Shell title='钱包' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
         <EmptyState
           title='请先登录'
-          description='登录后可管理钱包充值、提现地址和提现记录。'
+          description='登录后可查看历史钱包余额和历史提现记录。'
           icon='lock'
           actionText='前往登录'
           onAction={() => requireLogin('/pages/wallet/index')}
@@ -176,340 +103,88 @@ export default function Wallet() {
     )
   }
 
-  const createOrder = async () => {
-    if (configLoading) {
-      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
-      return
-    }
-    if (!rechargeFeatureEnabled) {
-      Taro.showToast({ title: '充值功能已由后台关闭', icon: 'none' })
-      return
-    }
-    const amount = Number(rechargeAmount)
-    if (!Number.isFinite(amount) || amount < minRecharge) {
-      Taro.showToast({ title: `充值金额最低 ${minRecharge} ${currency}`, icon: 'none' })
-      return
-    }
-    if (!options.acquiringConfigured) {
-      Taro.showModal({
-        title: '充值暂不可用',
-        content: '后台尚未配置启用的收单地址，请稍后再试。',
-        showCancel: false,
-        confirmText: '我知道了'
-      })
-      return
-    }
-    if (!rechargeRoute.chain || !rechargeRoute.token) {
-      Taro.showToast({ title: '请选择支付链和支付代币', icon: 'none' })
-      return
-    }
-    if (creatingOrder) return
-    setCreatingOrder(true)
-    Taro.showLoading({ title: '创建订单' })
-    try {
-      const nextOrder = await createWalletCryptoOrder({
-        amount,
-        payChain: rechargeRoute.chain,
-        payToken: rechargeRoute.token
-      })
-      setOrder(nextOrder)
-      Taro.showToast({ title: '充值订单已创建', icon: 'success' })
-    } catch (error) {
-      Taro.showToast({ title: error.message || '创建订单失败', icon: 'none' })
-    } finally {
-      Taro.hideLoading()
-      setCreatingOrder(false)
-    }
-  }
-
-  const refreshOrder = async () => {
-    if (!currentOrderId) return
-    Taro.showLoading({ title: '刷新状态' })
-    try {
-      const nextOrder = await fetchWalletCryptoOrder(currentOrderId)
-      setOrder(nextOrder)
-      if (nextOrder.status === 'paid') await loadWallet(true)
-      Taro.showToast({ title: orderStatusText(nextOrder.status), icon: nextOrder.status === 'paid' ? 'success' : 'none' })
-    } catch (error) {
-      Taro.showToast({ title: error.message || '订单状态刷新失败', icon: 'none' })
-    } finally {
-      Taro.hideLoading()
-    }
-  }
-
-  const copyAddress = () => {
-    if (!selectedDepositAddress) return
-    Taro.setClipboardData({
-      data: selectedDepositAddress,
-      success: () => Taro.showToast({ title: '地址已复制', icon: 'success' })
-    })
-  }
-
-  const saveAddress = async () => {
-    if (!addressForm.address.trim()) {
-      Taro.showToast({ title: '请填写提现地址', icon: 'none' })
-      return null
-    }
-    if (!withdrawRoute.chain || !withdrawRoute.token) {
-      Taro.showToast({ title: '请选择提现链和代币', icon: 'none' })
-      return null
-    }
-    setSavingAddress(true)
-    Taro.showLoading({ title: '保存地址' })
-    try {
-      const saved = await saveWithdrawalAddress({
-        chain: withdrawRoute.chain,
-        token: withdrawRoute.token,
-        address: addressForm.address.trim(),
-        memo: addressForm.memo.trim()
-      })
-      Taro.showToast({ title: '提现地址已保存', icon: 'success' })
-      return saved
-    } catch (error) {
-      Taro.showToast({ title: error.message || '保存失败', icon: 'none' })
-      return null
-    } finally {
-      Taro.hideLoading()
-      setSavingAddress(false)
-    }
-  }
-
-  const submitWithdrawal = async () => {
-    const amount = Number(withdrawAmount)
-    if (!Number.isFinite(amount) || amount < minWithdrawal) {
-      Taro.showToast({ title: `提现金额最低 ${minWithdrawal} ${currency}`, icon: 'none' })
-      return
-    }
-    if (!addressForm.address.trim()) {
-      Taro.showToast({ title: '请先填写提现地址', icon: 'none' })
-      return
-    }
-    if (submittingWithdrawal) return
-    setSubmittingWithdrawal(true)
-    Taro.showLoading({ title: '提交提现' })
-    try {
-      await createWalletWithdrawal({
-        amount,
-        chain: withdrawRoute.chain,
-        token: withdrawRoute.token,
-        address: addressForm.address.trim(),
-        memo: addressForm.memo.trim()
-      })
-      await loadWallet(true)
-      Taro.showToast({ title: '提现申请已提交', icon: 'success' })
-    } catch (error) {
-      Taro.showToast({ title: error.message || '提现提交失败', icon: 'none' })
-    } finally {
-      Taro.hideLoading()
-      setSubmittingWithdrawal(false)
-    }
-  }
-
-  const cancelWithdrawal = async (item) => {
-    const id = asId(item)
-    if (!id) return
-    Taro.showLoading({ title: '取消提现' })
-    try {
-      await cancelWalletWithdrawal(id)
-      await loadWallet(true)
-      Taro.showToast({ title: '提现已取消', icon: 'success' })
-    } catch (error) {
-      Taro.showToast({ title: error.message || '取消失败', icon: 'none' })
-    } finally {
-      Taro.hideLoading()
-    }
-  }
-
   return (
-    <Shell title='钱包' showTab={false} backFallback='/pages/mine/index'>
+    <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
       <View className='panel wallet-hero'>
         <View className='panel-brand-row'>
           <BrandLogo size={52} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>钱包</Text>
-            <Text className='section-title'>平台钱包</Text>
+            <Text className='section-kicker'>只读历史</Text>
+            <Text className='section-title'>历史钱包记录</Text>
           </View>
         </View>
-        <Text className='tool-desc'>充值走 crypto bridge 真实订单，到账后进入平台钱包余额；提现申请由后台人工审核并打款。</Text>
+        <Text className='tool-desc'>当前充值统一购买点数，提现通道已关闭。这里仅保留历史钱包余额、流水和提现记录展示。</Text>
+        {!configLoading && !rechargeFeatureEnabled ? (
+          <InlineNotice tone='warning'>充值功能已由后台关闭</InlineNotice>
+        ) : null}
+        <InlineNotice tone='warning'>历史钱包余额不会自动兑换为点数，也不能继续发起提现。</InlineNotice>
         <View className='wallet-balance-grid'>
           <View className='wallet-balance-card'>
-            <Text>可用余额</Text>
+            <Text>历史可用余额</Text>
             <Text>{money(account.availableBalance)} {currency}</Text>
           </View>
           <View className='wallet-balance-card'>
-            <Text>冻结余额</Text>
+            <Text>历史冻结余额</Text>
             <Text>{money(account.frozenBalance)} {currency}</Text>
           </View>
           <View className='wallet-balance-card'>
-            <Text>累计充值</Text>
+            <Text>历史累计充值</Text>
             <Text>{money(account.totalRecharged)} {currency}</Text>
           </View>
         </View>
       </View>
 
       {loading ? (
-        <PageLoading title='正在同步钱包数据' description='正在读取余额、充值配置和提现记录。' />
+        <PageLoading title='正在同步历史钱包数据' description='正在读取历史余额和历史提现记录。' />
       ) : loadError && !overview ? (
-        <ErrorState title='钱包加载失败' description={loadError} onRetry={() => loadWallet(false)} />
+        <ErrorState title='历史钱包加载失败' description={loadError} onRetry={loadWallet} />
       ) : (
-        <>
-          <View className='form-panel wallet-panel'>
-            <View className='section-head slim'>
-              <View>
-                <Text className='section-kicker'>充值</Text>
-                <Text className='section-title'>钱包充值</Text>
-              </View>
-              <Text className={rechargeAvailable ? 'status success' : 'status failed'}>
-                {configLoading ? '同步中' : !rechargeFeatureEnabled ? '后台已关闭' : options.acquiringConfigured ? '已开放' : '未配置'}
-              </Text>
+        <View className='panel wallet-panel'>
+          <View className='section-head slim'>
+            <View>
+              <Text className='section-kicker'>记录</Text>
+              <Text className='section-title'>历史提现记录</Text>
             </View>
-            {loadError ? (
-              <InlineNotice tone='danger'>{loadError}</InlineNotice>
-            ) : null}
-            {!configLoading && !rechargeFeatureEnabled ? (
-              <InlineNotice tone='danger'>充值功能已由后台关闭，余额与提现功能仍可继续查看和使用。</InlineNotice>
-            ) : null}
-            {!options.acquiringConfigured ? (
-              <InlineNotice tone='danger'>{options.unavailableReason || '充值暂不可用，请联系管理员配置收单地址。'}</InlineNotice>
-            ) : null}
-            <Text className='input-label'>充值金额</Text>
-            <Input
-              className='text-input amount-input'
-              type='digit'
-              value={rechargeAmount}
-              disabled={configLoading || !rechargeFeatureEnabled}
-              placeholder={`最低 ${minRecharge} ${currency}`}
-              onInput={(event) => setRechargeAmount(event.detail.value)}
-            />
-            <Text className='wallet-hint'>当前钱包以 {currency} 记账，打币金额以订单页展示为准。</Text>
-            <CryptoRoutePicker
-              title='支付链与代币'
-              chains={options.chains || []}
-              value={rechargeRoute}
-              onChange={setRechargeRoute}
-              disabled={configLoading || !rechargeFeatureEnabled}
-            />
-            <View className={rechargeAvailable && !creatingOrder ? 'primary-button block-gap' : 'primary-button block-gap disabled'} onClick={rechargeAvailable && !creatingOrder ? createOrder : undefined}>
-              <AppIcon name='wallet' size={16} />
-              <Text>{creatingOrder ? '创建中...' : '创建充值订单'}</Text>
-            </View>
+            <Text className='status failed'>已关闭</Text>
           </View>
-
-          {order && (
-            <View className='panel wallet-order-card'>
-              <View className='modal-head'>
-                <Text className='modal-title'>打币订单</Text>
-                <Text className={statusClass(order.status)}>{orderStatusText(order.status)}</Text>
-              </View>
-              <View className='payment-row strong'>
-                <Text>需支付</Text>
-                <Text>{paymentAmount} {paymentCurrency}</Text>
-              </View>
-              <View className='payment-row'>
-                <Text>过期时间</Text>
-                <Text>{shortDate(order.expiresAt)}</Text>
-              </View>
-              <Text className='input-label'>打币地址</Text>
-              <View className='copy-box wallet-copy-box' onClick={copyAddress}>
-                <Text>{selectedDepositAddress || '等待订单返回地址'}</Text>
-                <AppIcon name='copy' size={16} />
-              </View>
-              <View className='hero-actions'>
-                <View className='primary-button' onClick={refreshOrder}>
-                  <AppIcon name='refresh' size={16} />
-                  <Text>刷新状态</Text>
-                </View>
-                <View className='ghost-button glass-button' onClick={copyAddress}>
-                  <AppIcon name='copy' size={16} />
-                  <Text>复制地址</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          <View className='form-panel wallet-panel'>
-            <View className='section-head slim'>
-              <View>
-                <Text className='section-kicker'>提现</Text>
-                <Text className='section-title'>提现管理</Text>
-              </View>
-            </View>
-            <CryptoRoutePicker
-              title='提现链与代币'
-              chains={options.chains || []}
-              value={withdrawRoute}
-              onChange={setWithdrawRoute}
-            />
-            <Text className='input-label'>提现地址</Text>
-            <Input
-              className='text-input'
-              value={addressForm.address}
-              placeholder='填写链上收款地址'
-              onInput={(event) => setAddressForm({ ...addressForm, address: event.detail.value })}
-            />
-            <Text className='input-label'>备注 / 标签</Text>
-            <Input
-              className='text-input'
-              value={addressForm.memo}
-              placeholder='没有备注可留空'
-              onInput={(event) => setAddressForm({ ...addressForm, memo: event.detail.value })}
-            />
-            <View className='ghost-button glass-button block-gap' onClick={saveAddress}>
-              <AppIcon name='badge' size={16} />
-              <Text>{savingAddress ? '保存中...' : '保存提现地址'}</Text>
-            </View>
-            <Text className='input-label'>提现金额</Text>
-            <Input
-              className='text-input amount-input'
-              type='digit'
-              value={withdrawAmount}
-              placeholder={`最低 ${minWithdrawal} ${currency}`}
-              onInput={(event) => setWithdrawAmount(event.detail.value)}
-            />
-            <View className='primary-button block-gap' onClick={submitWithdrawal}>
-              <AppIcon name='share' size={16} />
-              <Text>{submittingWithdrawal ? '提交中...' : '提交提现申请'}</Text>
-            </View>
-          </View>
-
-          <View className='panel wallet-panel'>
-            <View className='section-head slim'>
-              <View>
-                <Text className='section-kicker'>记录</Text>
-                <Text className='section-title'>提现记录</Text>
-              </View>
-            </View>
-            {withdrawals.length ? (
-              <View className='wallet-list'>
-                {withdrawals.map((item) => (
-                  <View key={asId(item)} className='wallet-row'>
-                    <View className='wallet-row-main'>
-                      <Text className='profile-name'>{money(item.amount)} {item.currency || currency}</Text>
-                      <Text className='tool-desc'>{item.chain} · {item.token} · {shortDate(item.createdAt)}</Text>
-                    </View>
-                    <View className='wallet-row-side'>
-                      <Text className={statusClass(item.status)}>{withdrawalStatusText(item.status)}</Text>
-                      {item.status === 'pending' && (
-                        <View className='ghost-button compact' onClick={() => cancelWithdrawal(item)}>
-                          <Text>取消</Text>
-                        </View>
-                      )}
-                    </View>
+          {loadError ? <InlineNotice tone='danger'>{loadError}</InlineNotice> : null}
+          {withdrawals.length ? (
+            <View className='wallet-list'>
+              {withdrawals.map((item) => (
+                <View key={asId(item)} className='wallet-row'>
+                  <View className='wallet-row-main'>
+                    <Text className='profile-name'>{money(item.amount)} {item.currency || currency}</Text>
+                    <Text className='tool-desc'>{item.chain} · {item.token} · {shortDate(item.createdAt)}</Text>
                   </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState
-                compact
-                title='暂无提现记录'
-                description='提交提现申请后会在这里显示审核和打款状态。'
-                icon='wallet'
-              />
-            )}
-          </View>
-        </>
+                  <View className='wallet-row-side'>
+                    <Text className={statusClass(item.status)}>{withdrawalStatusText(item.status)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              compact
+              title='暂无历史提现记录'
+              description='提现通道已关闭，不再创建新的提现申请。'
+              icon='wallet'
+            />
+          )}
+        </View>
       )}
 
+      <View className='panel wallet-panel'>
+        <View className='hero-actions'>
+          <View className='ghost-button glass-button disabled' onClick={() => showClosedNotice('当前充值统一通过点数账户完成，历史钱包不再发起新的充值。')}>
+            <AppIcon name='wallet' size={16} />
+            <Text>钱包充值已关闭</Text>
+          </View>
+          <View className='ghost-button glass-button disabled' onClick={() => showClosedNotice('提现通道已关闭，仅保留历史记录查询。')}>
+            <AppIcon name='share' size={16} />
+            <Text>提现已关闭</Text>
+          </View>
+        </View>
+      </View>
     </Shell>
   )
 }

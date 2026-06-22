@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
-import { getTelegramInitDataFromLaunchParams, getTelegramUserFromInitData, resolveClientRuntime } from '../platform/login'
+import { resolveClientRuntime } from '../platform/login'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
@@ -187,6 +187,12 @@ export async function fetchTools(params = {}) {
     desc: item.description || item.desc,
     cost: item.cost,
     fields: item.fields || [],
+    modes: item.modes || [],
+    outputTypes: [].concat(item.outputTypes || item.outputType || []),
+    homeTabs: item.homeTabs || [],
+    homeRecommended: Boolean(item.homeRecommended),
+    homeSort: item.homeSort ?? item.sort ?? 0,
+    searchKeywords: item.searchKeywords || item.keywords || [],
     options: item.options || {}
   }))
 }
@@ -212,6 +218,12 @@ export async function fetchTool(toolKey) {
     desc: item.description || item.desc,
     cost: item.cost,
     fields: item.fields || [],
+    modes: item.modes || [],
+    outputTypes: [].concat(item.outputTypes || item.outputType || []),
+    homeTabs: item.homeTabs || [],
+    homeRecommended: Boolean(item.homeRecommended),
+    homeSort: item.homeSort ?? item.sort ?? 0,
+    searchKeywords: item.searchKeywords || item.keywords || [],
     options: item.options || {}
   }
 }
@@ -321,6 +333,48 @@ export async function fetchSharedWork(ticket) {
   return toApiWork(await request(`/works/share/${encodeURIComponent(ticket)}`, { noAuth: true }))
 }
 
+export async function fetchWorkflowPurchases(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  return request(`/workflow-purchases?${query.toString()}`)
+}
+
+export async function runWorkflowCase(caseContentId, payload = {}) {
+  return request(`/workflow-cases/${caseContentId}/run`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function trialRunWorkflowCase(caseContentId, payload = {}) {
+  return request(`/workflow-cases/${caseContentId}/trial-run`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchWorkflowRuns(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  if (params.status) query.set('status', params.status)
+  if (params.caseContentId) query.set('caseContentId', params.caseContentId)
+  if (params.workflowVersionId) query.set('workflowVersionId', params.workflowVersionId)
+  if (params.isTrial !== undefined) query.set('isTrial', String(params.isTrial))
+  return request(`/workflow-runs?${query.toString()}`)
+}
+
+export async function fetchWorkflowRun(id) {
+  return request(`/workflow-runs/${id}`)
+}
+
+export async function fetchWorkflowRunNodes(id) {
+  return request(`/workflow-runs/${id}/nodes`)
+}
+
 const AUTH_ENDPOINTS = {
   'telegram-tma': '/auth/tma-login',
   'wechat-miniapp': '/auth/wechat-miniapp-login',
@@ -343,11 +397,11 @@ export async function loginDev(account = 'demo@seefactory.ai') {
 
 function readTelegramLoginPayload() {
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
-  const initData = webApp?.initData || getTelegramInitDataFromLaunchParams()
+  const initData = webApp?.initData
   if (!initData) {
     throw new Error('请在 Telegram Mini App 内打开后登录')
   }
-  const user = webApp?.initDataUnsafe?.user || getTelegramUserFromInitData(initData)
+  const user = webApp?.initDataUnsafe?.user || {}
   return {
     initData,
     nickname: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
@@ -460,30 +514,12 @@ export async function fetchWithdrawalAddress() {
   return request('/wallet/withdrawal-address')
 }
 
-export async function saveWithdrawalAddress(payload) {
-  return request('/wallet/withdrawal-address', {
-    method: 'PUT',
-    data: payload
-  })
-}
-
 export async function fetchWalletWithdrawals(params = {}) {
   const query = new URLSearchParams({
     page: String(params.page || 1),
     pageSize: String(params.pageSize || 10)
   })
   return request(`/wallet/withdrawals?${query.toString()}`)
-}
-
-export async function createWalletWithdrawal(payload) {
-  return request('/wallet/withdrawals', {
-    method: 'POST',
-    data: payload
-  })
-}
-
-export async function cancelWalletWithdrawal(id) {
-  return request(`/wallet/withdrawals/${id}/cancel`, { method: 'POST' })
 }
 
 export async function fetchRechargeSettings() {
