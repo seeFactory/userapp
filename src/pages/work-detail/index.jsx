@@ -374,6 +374,14 @@ export default function WorkDetail() {
     }
   }
 
+  const goPurchaseWorkflow = () => {
+    if (!work?.sourceCaseContentId) {
+      Taro.showToast({ title: '缺少对应 Workflow 案例信息', icon: 'none' })
+      return
+    }
+    goPage(`/pages/workflow-cases/index?id=${encodeURIComponent(work.sourceCaseContentId)}`)
+  }
+
   if (!work) {
     const fallbackUrl = source === 'gallery' ? '/pages/gallery/index' : '/pages/works/index'
     return (
@@ -449,6 +457,30 @@ export default function WorkDetail() {
         <Text>{work.prompt}</Text>
         {(work.failureReason || work.failReason) && <Text className='tool-desc'>失败原因：{work.failureReason || work.failReason}</Text>}
       </View>
+
+      {lockedUntilPurchase ? (
+        <View className='panel task-state-panel locked-work-panel'>
+          <View className='task-state-main'>
+            <View className='profile-icon'>
+              <AppIcon name='lock' size={20} />
+            </View>
+            <View className='task-state-copy'>
+              <Text className='profile-name'>试运行作品待解锁</Text>
+              <Text className='tool-desc'>该作品来自闭源付费 Workflow 试运行。购买对应模板后，可保存、分享并发布到广场。</Text>
+            </View>
+          </View>
+          <View className='task-actions'>
+            <View className={work.sourceCaseContentId ? 'primary-button' : 'primary-button disabled'} onClick={work.sourceCaseContentId ? goPurchaseWorkflow : undefined}>
+              <AppIcon name='fusion' size={14} />
+              <Text>购买解锁</Text>
+            </View>
+            <View className='ghost-button glass-button' onClick={() => goPage('/pages/workflow-cases/index')}>
+              <AppIcon name='gallery' size={14} />
+              <Text>Workflow 案例</Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       <View className='hero-actions'>
         <View className={canSave ? 'primary-button' : 'primary-button disabled'} onClick={canSave ? saveWork : undefined}>

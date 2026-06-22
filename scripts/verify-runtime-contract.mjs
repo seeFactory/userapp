@@ -283,6 +283,17 @@ assertIncludesAll(gallery, "gallery page public work contract", [
   "InlineNotice"
 ]);
 
+const worksPage = source("src/pages/works/index.jsx");
+assertIncludesAll(worksPage, "works page workflow trial lock contract", [
+  "function workBadgeText(item)",
+  "item?.lockedUntilPurchase",
+  "item?.isIntermediateOutput",
+  "function workBadgeIcon(item)",
+  "function workBadgeClass(item)",
+  "AppIcon name={workBadgeIcon(item)}",
+  "workBadgeText(item)"
+]);
+
 const detail = source("src/pages/work-detail/index.jsx");
 assertIncludesAll(detail, "work detail public/download contract", [
   "source === 'gallery' || !isLoggedIn()",
@@ -299,7 +310,12 @@ assertIncludesAll(detail, "work detail public/download contract", [
   "publishGalleryWork",
   "unpublishGalleryWork",
   "detailMode === 'gallery'",
-  "detailMode === 'share'"
+  "detailMode === 'share'",
+  "sourceCaseContentId",
+  "goPurchaseWorkflow",
+  "/pages/workflow-cases/index?id=",
+  "locked-work-panel",
+  "购买解锁"
 ]);
 
 const toolPage = source("src/pages/tool/index.jsx");
@@ -353,6 +369,10 @@ assertIncludesAll(workflowRunFormComponent, "miniapp shared workflow run form co
 ]);
 const workflowCasesPage = source("src/pages/workflow-cases/index.jsx");
 assertIncludesAll(workflowCasesPage, "workflow case marketplace run contract", [
+  "getCurrentInstance",
+  "routeCaseId",
+  "useState(routeCaseId)",
+  "const requestedId = selectedId || routeCaseId",
   "fetchWorkflowCases({ pageSize: 30 })",
   "fetchWorkflowCase(selectedId)",
   "fetchWorkflowCasePurchaseStatus(selectedId)",
