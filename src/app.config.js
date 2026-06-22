@@ -10,7 +10,9 @@ export default defineAppConfig({
     'pages/prompt-detail/index',
     'pages/work-detail/index',
     'pages/agent/index',
-    'pages/wallet/index'
+    'pages/wallet/index',
+    'pages/workflow-purchases/index',
+    'pages/workflow-runs/detail/index'
   ],
   window: {
     backgroundTextStyle: 'light',

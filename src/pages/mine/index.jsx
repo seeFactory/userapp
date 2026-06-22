@@ -47,6 +47,7 @@ export default function Mine() {
   const [customerOpen, setCustomerOpen] = useState(false)
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
   const [balance, setBalance] = useState(null)
+  const [frozenBalance, setFrozenBalance] = useState(0)
   const [wallet, setWallet] = useState(null)
   const [rechargePolicy, setRechargePolicy] = useState(defaultRechargePolicy())
   const [rechargeAmount, setRechargeAmount] = useState('20')
@@ -72,6 +73,7 @@ export default function Mine() {
     loadAccount().then(({ creditData, walletData, rechargeData }) => {
       if (!mounted) return
       setBalance(creditData?.balance ?? null)
+      setFrozenBalance(creditData?.frozenBalance || 0)
       setWallet(walletData?.account || null)
       if (rechargeData) setRechargePolicy({ ...defaultRechargePolicy(), ...rechargeData })
     })
@@ -84,6 +86,7 @@ export default function Mine() {
     await logoutRemote().catch(() => {})
     setLoggedIn(false)
     setBalance(null)
+    setFrozenBalance(0)
     setWallet(null)
     setRechargePayment(null)
     Taro.showToast({ title: '已退出登录', icon: 'success' })
@@ -127,6 +130,14 @@ export default function Mine() {
     requireLogin('/pages/agent/index')
   }
 
+  const goWorkflowPurchases = () => {
+    if (loggedIn) {
+      goPage('/pages/workflow-purchases/index')
+      return
+    }
+    requireLogin('/pages/workflow-purchases/index')
+  }
+
   const updateRechargeCryptoRoute = (route) => {
     setRechargePayment((current) => current ? { ...current, cryptoRoute: route } : current)
   }
@@ -159,6 +170,7 @@ export default function Mine() {
   const reloadBalance = async () => {
     const { creditData, walletData, rechargeData } = await loadAccount()
     setBalance(creditData?.balance ?? null)
+    setFrozenBalance(creditData?.frozenBalance || 0)
     setWallet(walletData?.account || null)
     if (rechargeData) setRechargePolicy({ ...defaultRechargePolicy(), ...rechargeData })
   }
@@ -264,7 +276,7 @@ export default function Mine() {
         </View>
         <Text className='tool-desc'>
           {loggedIn
-            ? `点数 ${balance === null ? '--' : balance} 点。所有充值均直接购买点数，不能提现。`
+            ? `点数 ${balance === null ? '--' : balance} 点${frozenBalance ? `，冻结 ${frozenBalance} 点` : ''}。所有充值均直接购买点数，不能提现。`
             : '登录后可查看作品、复制提示词并使用生成工具。'}
         </Text>
         <View className='hero-actions'>
@@ -335,6 +347,11 @@ export default function Mine() {
           <View className='profile-icon'><AppIcon name='coin' size={22} /></View>
           <Text className='profile-name'>购买点数</Text>
           <Text className='tool-desc'>充值后不可提现</Text>
+        </View>
+        <View className='profile-card' onClick={goWorkflowPurchases}>
+          <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
+          <Text className='profile-name'>已购模板库</Text>
+          <Text className='tool-desc'>Workflow 权益</Text>
         </View>
         {!configLoading && agentFeatureEnabled ? (
         <View className='profile-card' onClick={goAgent}>

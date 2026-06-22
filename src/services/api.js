@@ -333,6 +333,48 @@ export async function fetchSharedWork(ticket) {
   return toApiWork(await request(`/works/share/${encodeURIComponent(ticket)}`, { noAuth: true }))
 }
 
+export async function fetchWorkflowPurchases(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  return request(`/workflow-purchases?${query.toString()}`)
+}
+
+export async function runWorkflowCase(caseContentId, payload = {}) {
+  return request(`/workflow-cases/${caseContentId}/run`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function trialRunWorkflowCase(caseContentId, payload = {}) {
+  return request(`/workflow-cases/${caseContentId}/trial-run`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
+export async function fetchWorkflowRuns(params = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page || 1),
+    pageSize: String(params.pageSize || 20)
+  })
+  if (params.status) query.set('status', params.status)
+  if (params.caseContentId) query.set('caseContentId', params.caseContentId)
+  if (params.workflowVersionId) query.set('workflowVersionId', params.workflowVersionId)
+  if (params.isTrial !== undefined) query.set('isTrial', String(params.isTrial))
+  return request(`/workflow-runs?${query.toString()}`)
+}
+
+export async function fetchWorkflowRun(id) {
+  return request(`/workflow-runs/${id}`)
+}
+
+export async function fetchWorkflowRunNodes(id) {
+  return request(`/workflow-runs/${id}/nodes`)
+}
+
 const AUTH_ENDPOINTS = {
   'telegram-tma': '/auth/tma-login',
   'wechat-miniapp': '/auth/wechat-miniapp-login',

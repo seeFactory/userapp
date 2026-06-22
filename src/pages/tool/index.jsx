@@ -28,19 +28,8 @@ import {
 import { requireLogin } from '../../utils/storage'
 
 const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
-const defaultRatios = ['1:1', '4:3', '3:4', '16:9', '9:16']
-const defaultResolutions = [
-  '512x512',
-  '1024x1024',
-  '1024x768',
-  '1365x1024',
-  '768x1024',
-  '1024x1365',
-  '1024x576',
-  '1792x1024',
-  '576x1024',
-  '1024x1792'
-]
+const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
+const defaultResolutions = ['1024x1024', '1024x1365', '1024x1792', '1792x1024']
 const defaultDurations = ['5 秒', '8 秒', '12 秒']
 const defaultModels = []
 const uploadLimits = {
@@ -526,6 +515,7 @@ export default function ToolPage() {
   const modelOptions = optionList(activeTool, 'models', defaultModels)
   const normalizedResolution = normalizeResolution(resolution)
   const selectedResolution = resolutionOptions.includes(normalizedResolution) ? normalizedResolution : ''
+  const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution
   const resolutionLabel = isVideoTool(activeTool) ? '精度' : '分辨率'
   const uploadConfig = inferUploadConfig(activeTool)
   const inputAssets = usesAssetSlots
@@ -733,7 +723,7 @@ export default function ToolPage() {
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
         modelKey: model,
         prompt,
-        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds }),
         clientRuntime
       })
@@ -844,7 +834,7 @@ export default function ToolPage() {
         toolKey: tool.id,
         prompt,
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        params: { style, ratio, resolution, size: resolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
       })
       const work = result.work
