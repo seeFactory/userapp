@@ -138,6 +138,14 @@ export default function Mine() {
     requireLogin('/pages/workflow-purchases/index')
   }
 
+  const goWorkflowLinear = () => {
+    if (loggedIn) {
+      goPage('/pages/workflow-linear/index')
+      return
+    }
+    requireLogin('/pages/workflow-linear/index')
+  }
+
   const updateRechargeCryptoRoute = (route) => {
     setRechargePayment((current) => current ? { ...current, cryptoRoute: route } : current)
   }
@@ -352,6 +360,11 @@ export default function Mine() {
           <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
           <Text className='profile-name'>已购模板库</Text>
           <Text className='tool-desc'>Workflow 权益</Text>
+        </View>
+        <View className='profile-card' onClick={goWorkflowLinear}>
+          <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
+          <Text className='profile-name'>线性拼积木</Text>
+          <Text className='tool-desc'>创建 Workflow</Text>
         </View>
         {!configLoading && agentFeatureEnabled ? (
         <View className='profile-card' onClick={goAgent}>

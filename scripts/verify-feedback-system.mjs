@@ -39,7 +39,10 @@ const expectedPages = [
   "pages/prompt-detail/index",
   "pages/work-detail/index",
   "pages/agent/index",
-  "pages/wallet/index"
+  "pages/wallet/index",
+  "pages/workflow-purchases/index",
+  "pages/workflow-linear/index",
+  "pages/workflow-runs/detail/index"
 ];
 
 for (const page of expectedPages) {
@@ -73,7 +76,10 @@ const dataPageRules = {
   "pages/prompt-detail/index": ["PageLoading", "ErrorState", "Taro.showToast"],
   "pages/work-detail/index": ["PageLoading", "ErrorState", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
   "pages/agent/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showModal"],
-  "pages/wallet/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"]
+  "pages/wallet/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
+  "pages/workflow-purchases/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal"],
+  "pages/workflow-linear/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice", "Taro.showLoading", "Taro.showToast", "Taro.showModal", "submitting"],
+  "pages/workflow-runs/detail/index": ["PageLoading", "ErrorState", "EmptyState", "InlineNotice"]
 };
 
 for (const [pagePath, patterns] of Object.entries(dataPageRules)) {
@@ -136,6 +142,7 @@ console.log(JSON.stringify({
     "mine customer and payment modals",
     "PaymentSheet busy guard and feedback",
     "CustomerModal loading and QR feedback",
+    "Workflow purchase, run detail, and linear builder feedback",
     "app verify script registration"
   ]
 }, null, 2));
