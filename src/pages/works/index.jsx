@@ -26,6 +26,22 @@ function statusIcon(status) {
   return 'badge'
 }
 
+function workBadgeText(item) {
+  if (item?.lockedUntilPurchase) return '购买解锁'
+  if (item?.isIntermediateOutput) return '中间结果'
+  return statusLabel(item?.status)
+}
+
+function workBadgeIcon(item) {
+  if (item?.lockedUntilPurchase) return 'lock'
+  return statusIcon(item?.status)
+}
+
+function workBadgeClass(item) {
+  if (item?.lockedUntilPurchase || ['failed', 'canceled'].includes(item?.status)) return 'status failed'
+  return 'status'
+}
+
 export default function Works() {
   const loggedIn = isLoggedIn()
   const [category, setCategory] = useState('all')
@@ -147,11 +163,12 @@ export default function Works() {
                     <AppIcon name={item.category === 'video' ? 'video' : item.category === 'fusion' ? 'fusion' : 'image'} size={12} />
                     <Text>{item.toolName}</Text>
                   </View>
-                  <View className={['failed', 'canceled'].includes(item.status) ? 'status failed' : 'status'}>
-                    <AppIcon name={statusIcon(item.status)} size={11} />
-                    <Text>{statusLabel(item.status)}</Text>
+                  <View className={workBadgeClass(item)}>
+                    <AppIcon name={workBadgeIcon(item)} size={11} />
+                    <Text>{workBadgeText(item)}</Text>
                   </View>
                 </View>
+                {item.lockedUntilPurchase ? <Text className='tool-desc'>试运行作品，购买对应 Workflow 后可保存、分享和发布</Text> : null}
               </View>
             </View>
           ))}
