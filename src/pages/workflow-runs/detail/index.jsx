@@ -151,7 +151,7 @@ export default function WorkflowRunDetail() {
 
       {error ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
 
-      <View className='work-card'>
+      <View className='work-card workflow-run-summary-card'>
         <View className='work-body'>
           <View className='meta-row'>
             <View className={run.status === 'failed' ? 'status failed' : 'status'}>
@@ -179,7 +179,7 @@ export default function WorkflowRunDetail() {
       {!nodes.length ? (
         <EmptyState compact title='暂无节点明细' description='运行记录已创建，节点明细稍后同步。' icon='center' />
       ) : (
-        <View className='case-grid'>
+        <View className='case-grid workflow-run-node-grid'>
           {nodes.map((node) => {
             const previewUrl = nodePreviewUrl(node)
             const mediaKind = inferNodeMediaKind(node, previewUrl)

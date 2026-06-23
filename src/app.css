@@ -3511,6 +3511,241 @@ taro-video-core {
   font-weight: 850;
 }
 
+/* Workflow mobile layout */
+.workflow-case-grid,
+.workflow-purchase-grid,
+.workflow-run-node-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.workflow-case-card,
+.workflow-purchase-card,
+.workflow-run-summary-card,
+.workflow-node-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.workflow-case-card .work-image,
+.workflow-purchase-card .work-image,
+.workflow-case-card:nth-child(odd) .work-image,
+.workflow-purchase-card:nth-child(odd) .work-image,
+.workflow-case-card:nth-child(3n) .work-image,
+.workflow-purchase-card:nth-child(3n) .work-image {
+  height: 188px;
+}
+
+.workflow-case-card .work-body,
+.workflow-purchase-card .work-body,
+.workflow-run-summary-card .work-body,
+.workflow-node-card .work-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.workflow-case-card .work-title,
+.workflow-purchase-card .work-title,
+.workflow-run-summary-card .work-title,
+.workflow-node-card .work-title,
+.linear-step-copy .work-title,
+.linear-component-copy .profile-name {
+  min-height: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.workflow-case-card .tool-desc,
+.workflow-purchase-card .tool-desc,
+.workflow-run-summary-card .tool-desc,
+.workflow-node-card .tool-desc,
+.linear-step-copy .tool-desc,
+.linear-component-copy .tool-desc {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.workflow-case-card .meta-row,
+.workflow-purchase-card .meta-row,
+.workflow-run-summary-card .meta-row,
+.workflow-node-card .meta-row {
+  min-height: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.workflow-case-card .meta-icon-text,
+.workflow-purchase-card .meta-icon-text,
+.workflow-run-summary-card .meta-icon-text,
+.workflow-node-card .meta-icon-text {
+  min-width: 0;
+  flex: 1 1 180px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.workflow-case-card .status,
+.workflow-purchase-card .status,
+.workflow-run-summary-card .status,
+.workflow-node-card .status,
+.linear-step-card .status {
+  max-width: 100%;
+  flex: 0 1 auto;
+  white-space: normal;
+}
+
+.workflow-case-detail-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.workflow-case-detail-panel .section-head,
+.workflow-case-detail-panel .compact-head {
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin: 0;
+}
+
+.workflow-case-detail-panel .section-head > view:first-child,
+.workflow-case-detail-panel .section-head > taro-view-core:first-child,
+.workflow-case-detail-panel .brand-title-copy {
+  min-width: 0;
+  flex: 1 1 190px;
+}
+
+.workflow-case-detail-panel .hero-actions,
+.workflow-case-detail-panel .stacked-actions {
+  width: 100%;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.workflow-case-detail-panel .hero-actions > .primary-button,
+.workflow-case-detail-panel .hero-actions > .ghost-button,
+.workflow-case-detail-panel .hero-actions > .danger-button,
+.workflow-case-detail-panel .stacked-actions > .primary-button,
+.workflow-case-detail-panel .stacked-actions > .ghost-button,
+.workflow-case-detail-panel .stacked-actions > .danger-button {
+  width: 100%;
+  flex: none;
+}
+
+.workflow-node-preview {
+  width: 100%;
+  height: 188px;
+  border-radius: 18px 18px 0 0;
+  object-fit: cover;
+}
+
+.linear-component-grid {
+  grid-template-columns: 1fr;
+}
+
+.linear-component-card {
+  min-height: 84px;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.linear-component-card .profile-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  margin-top: 2px;
+}
+
+.linear-step-card {
+  min-width: 0;
+  padding: 13px;
+}
+
+.linear-step-head {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: flex-start;
+}
+
+.linear-step-head .status {
+  grid-column: 1 / -1;
+  justify-self: flex-start;
+  margin-top: 2px;
+  margin-left: 40px;
+}
+
+.linear-option-row {
+  display: flex;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.linear-option-row::-webkit-scrollbar {
+  display: none;
+}
+
+.linear-option-row .option-chip {
+  min-width: max-content;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.linear-step-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.linear-step-actions .danger-button {
+  grid-column: 1 / -1;
+}
+
+.linear-submit-bar {
+  grid-template-columns: 1fr;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(92, 231, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(6, 10, 20, 0.82)),
+    rgba(7, 11, 23, 0.86);
+}
+
+.linear-submit-bar .linear-publish-action {
+  grid-column: auto;
+}
+
+.workflow-run-form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.workflow-run-switch-field {
+  align-items: flex-start;
+}
+
+.workflow-run-picker {
+  min-height: 48px;
+}
+
+.workflow-run-picker-value {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .copy-box {
   display: flex;
   min-height: 46px;

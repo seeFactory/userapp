@@ -250,9 +250,9 @@ export default function WorkflowCases() {
         <EmptyState title='暂无 Workflow 案例' description='发布 open_free 或 closed_paid Workflow 后，会在这里展示。' icon='fusion' />
       ) : (
         <>
-          <View className='case-grid'>
+          <View className='case-grid workflow-case-grid'>
             {list.map((item) => (
-              <View key={item.id} className={selectedId === item.id ? 'work-card active' : 'work-card'} onClick={() => selectCase(item)}>
+              <View key={item.id} className={selectedId === item.id ? 'work-card workflow-case-card active' : 'work-card workflow-case-card'} onClick={() => selectCase(item)}>
                 <Image className='work-image' src={item.coverUrl || fallbackCover} mode='aspectFill' />
                 <View className='work-body'>
                   <View className='meta-row'>
