@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import AgreementModal from '../../components/AgreementModal'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
 import { useAppConfig } from '../../hooks/useAppConfig'
@@ -23,6 +22,7 @@ const X_CODE_VERIFIER_KEY = 'seeFactoryXCodeVerifier'
 const X_REDIRECT_URI_KEY = 'seeFactoryXRedirectUri'
 const X_RETURN_TO_KEY = 'seeFactoryXReturnTo'
 const X_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryXAcceptedAgreements'
+const AgreementModal = lazy(() => import('../../components/AgreementModal'))
 const REQUIRED_AGREEMENTS = [
   { type: 'user', label: '用户协议' },
   { type: 'privacy', label: '隐私政策' },
@@ -404,12 +404,16 @@ export default function Login() {
           <AppIcon name='home' size={16} />
           <Text>先逛逛</Text>
         </View>
-        <AgreementModal
-          open={Boolean(agreementModal)}
-          title={agreementModal?.title}
-          content={agreementModal?.content}
-          onClose={() => setAgreementModal(null)}
-        />
+        <Suspense fallback={null}>
+          {agreementModal && (
+            <AgreementModal
+              open={Boolean(agreementModal)}
+              title={agreementModal?.title}
+              content={agreementModal?.content}
+              onClose={() => setAgreementModal(null)}
+            />
+          )}
+        </Suspense>
       </View>
     </View>
   )
