@@ -1,13 +1,10 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import CustomerModal from '../../components/CustomerModal'
-import AgreementModal from '../../components/AgreementModal'
-import PaymentSheet from '../../components/PaymentSheet'
-import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import {
@@ -29,6 +26,10 @@ import {
 import { formatAgreementContent } from '../../utils/agreement'
 import { goPage } from '../../utils/navigation'
 import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
+
+const CustomerModal = lazy(() => import('../../components/CustomerModal'))
+const AgreementModal = lazy(() => import('../../components/AgreementModal'))
+const PaymentSheet = lazy(() => import('../../components/PaymentSheet'))
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -59,11 +60,11 @@ export default function Mine() {
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
 
-  const loadAccount = async () => {
+  const loadAccount = async (options = {}) => {
     const [creditData, walletData, rechargeData] = await Promise.all([
-      fetchCreditBalance().catch(() => null),
-      fetchWalletAccount().catch(() => null),
-      fetchRechargeSettings().catch(() => null)
+      fetchCreditBalance(options).catch(() => null),
+      fetchWalletAccount(options).catch(() => null),
+      fetchRechargeSettings(options).catch(() => null)
     ])
     return { creditData, walletData, rechargeData }
   }
@@ -167,7 +168,7 @@ export default function Mine() {
   }
 
   const reloadBalance = async () => {
-    const { creditData, walletData, rechargeData } = await loadAccount()
+    const { creditData, walletData, rechargeData } = await loadAccount({ force: true })
     setBalance(creditData?.balance ?? null)
     setFrozenBalance(creditData?.frozenBalance || 0)
     setWallet(walletData?.account || null)
@@ -384,14 +385,18 @@ export default function Mine() {
         </View>
       </View>
 
-      <CustomerModal open={customerOpen} onClose={() => setCustomerOpen(false)} />
-      <AgreementModal
+      <Suspense fallback={null}>
+        {customerOpen && <CustomerModal open={customerOpen} onClose={() => setCustomerOpen(false)} />}
+        {agreementModal && (
+          <AgreementModal
         open={Boolean(agreementModal)}
         title={agreementModal?.title}
         content={agreementModal?.content}
         onClose={() => setAgreementModal(null)}
-      />
-      <PaymentSheet
+          />
+        )}
+        {rechargePayment && (
+          <PaymentSheet
         open={Boolean(rechargePayment)}
         title='点数充值'
         payment={rechargePayment}
@@ -399,7 +404,9 @@ export default function Mine() {
         onRefresh={refreshRechargePayment}
         onCryptoRouteChange={updateRechargeCryptoRoute}
         onCreateCryptoOrder={createRechargeCryptoOrder}
-      />
+          />
+        )}
+      </Suspense>
     </Shell>
   )
 }
