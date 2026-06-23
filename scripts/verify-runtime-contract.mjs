@@ -371,6 +371,7 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
 assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
 const workflowPurchasesPage = source("src/pages/workflow-purchases/index.jsx");
 const workflowRunFormComponent = source("src/components/WorkflowRunFormFields.jsx");
+const workflowRunDetailPage = source("src/pages/workflow-runs/detail/index.jsx");
 assertIncludesAll(workflowRunFormComponent, "miniapp shared workflow run form contract", [
   "function workflowRunFields(runForm)",
   "function buildWorkflowRunPayload(runForm, values = {})",
@@ -428,6 +429,18 @@ assertIncludesAll(workflowPurchasesPage, "purchased workflow run form contract",
   "runWorkflowCase(caseId, payloadResult.payload)"
 ]);
 assert.ok(!workflowPurchasesPage.includes("runWorkflowCase(caseId, { input: {}, params: {} })"), "Purchased workflow templates must not run with an empty hard-coded payload.");
+assertIncludesAll(workflowRunDetailPage, "miniapp workflow run output asset contract", [
+  "function nodeResultUrls(node)",
+  "function nodePreviewUrl(node)",
+  "function workflowNodeWorkNotice(node)",
+  "node.workLockedUntilPurchase",
+  "node.workIsIntermediateOutput || node.isIntermediateOutput",
+  "node.isTerminalOutput",
+  "workflow-node-preview",
+  "`/pages/work-detail/index?id=${encodeURIComponent(node.workId)}`",
+  "查看锁定作品",
+  "查看作品详情"
+]);
 assertIncludesAll(source("src/app.config.js"), "workflow miniapp pages", [
   "'pages/workflow-cases/index'",
   "'pages/workflow-purchases/index'",
