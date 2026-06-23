@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image, Video } from '@tarojs/components'
 import Shell from '../../../components/Shell'
 import AppIcon from '../../../components/AppIcon'
 import BrandLogo from '../../../components/BrandLogo'
@@ -35,6 +35,30 @@ function compactId(value) {
   if (!value) return '--'
   const text = String(value)
   return text.length > 10 ? `${text.slice(0, 6)}...${text.slice(-4)}` : text
+}
+
+function nodeResultUrls(node) {
+  const urls = node?.output?.resultUrls
+  return Array.isArray(urls) ? urls.filter(Boolean) : []
+}
+
+function nodePreviewUrl(node) {
+  return nodeResultUrls(node)[0] || node?.output?.coverUrl || node?.output?.url || ''
+}
+
+function inferNodeMediaKind(node, url = '') {
+  const text = `${node?.componentKey || ''} ${node?.label || ''} ${url}`.toLowerCase()
+  if (/\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(text) || text.includes('video') || text.includes('视频')) return 'video'
+  if (/\.(jpg|jpeg|png|webp|gif|bmp)(\?|#|$)/i.test(text) || text.includes('image') || text.includes('图像') || text.includes('图片')) return 'image'
+  return 'file'
+}
+
+function workflowNodeWorkNotice(node) {
+  if (!node?.workId) return ''
+  if (node.workLockedUntilPurchase) return '试运行节点作品已入库，购买对应 Workflow 后可保存、分享和发布。'
+  if (node.workIsIntermediateOutput || node.isIntermediateOutput) return '中间结果已进入私有作品库，可在作品详情中保存、再次生成或手动发布。'
+  if (node.isTerminalOutput) return '最终结果已进入作品库，可在作品详情中保存、分享或发布。'
+  return '节点结果已进入作品库。'
 }
 
 export default function WorkflowRunDetail() {
@@ -156,8 +180,19 @@ export default function WorkflowRunDetail() {
         <EmptyState compact title='暂无节点明细' description='运行记录已创建，节点明细稍后同步。' icon='center' />
       ) : (
         <View className='case-grid'>
-          {nodes.map((node) => (
-            <View key={node.id} className='work-card'>
+          {nodes.map((node) => {
+            const previewUrl = nodePreviewUrl(node)
+            const mediaKind = inferNodeMediaKind(node, previewUrl)
+            const workNotice = workflowNodeWorkNotice(node)
+            return (
+            <View key={node.id} className='work-card workflow-node-card'>
+              {previewUrl ? (
+                mediaKind === 'video' ? (
+                  <Video className='workflow-node-preview' src={previewUrl} controls />
+                ) : (
+                  <Image className='workflow-node-preview' src={previewUrl} mode='aspectFill' />
+                )
+              ) : null}
               <View className='work-body'>
                 <View className='meta-row'>
                   <Text className='work-title'>{node.label || node.nodeId}</Text>
@@ -172,9 +207,19 @@ export default function WorkflowRunDetail() {
                 {node.generationTaskId ? <Text className='tool-desc'>任务：{compactId(node.generationTaskId)}</Text> : null}
                 {node.workId ? <Text className='tool-desc'>作品：{compactId(node.workId)}</Text> : null}
                 {node.errorMessage ? <Text className='tool-desc'>{node.errorMessage}</Text> : null}
+                {workNotice ? (
+                  <InlineNotice tone={node.workLockedUntilPurchase ? 'warning' : 'info'}>{workNotice}</InlineNotice>
+                ) : null}
+                {node.workId ? (
+                  <View className='primary-button full-width-button' onClick={() => goPage(`/pages/work-detail/index?id=${encodeURIComponent(node.workId)}`)}>
+                    <AppIcon name={node.workLockedUntilPurchase ? 'lock' : 'gallery'} size={15} />
+                    <Text>{node.workLockedUntilPurchase ? '查看锁定作品' : '查看作品详情'}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
-          ))}
+            )
+          })}
         </View>
       )}
     </Shell>
