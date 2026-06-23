@@ -29,6 +29,32 @@ function workflowBlockedReason(item) {
   return item?.runBlockedReason || item?.disabledReason || ''
 }
 
+function workflowLifecycleSource(item) {
+  return item?.case || item || {}
+}
+
+function workflowLifecycleLabel(item) {
+  const source = workflowLifecycleSource(item)
+  if (source.disabled || source.visibility === 'disabled' || source.listingStatus === 'disabled') return '已禁用'
+  if (source.deletedByAuthorAt) return '已停止公开'
+  if (source.public === false || source.visibility === 'hidden' || source.listingStatus === 'hidden') return '已隐藏'
+  return '公开中'
+}
+
+function workflowLifecycleNote(item) {
+  const source = workflowLifecycleSource(item)
+  if (source.disabled || source.visibility === 'disabled' || source.listingStatus === 'disabled') {
+    return '该模板已被平台暂停运行，购买记录仍保留，待平台恢复或提供替代模型后再运行。'
+  }
+  if (source.deletedByAuthorAt) {
+    return '作者已停止公开展示该案例，已购权益仍保留，可继续运行该发布版本。'
+  }
+  if (source.public === false || source.visibility === 'hidden' || source.listingStatus === 'hidden') {
+    return '作者已隐藏公开展示，已购权益仍保留，可继续运行该发布版本。'
+  }
+  return ''
+}
+
 function statusText(item) {
   if (!canRunWorkflowPurchase(item)) return '暂停运行'
   if (item.hasReplacementModel || item.replacementAvailable) return '可替代'
@@ -194,6 +220,10 @@ export default function WorkflowPurchases() {
                     <Text>{statusText(item)}</Text>
                   </View>
                 </View>
+                <Text className='tool-desc'>{workflowLifecycleLabel(item)}</Text>
+                {workflowLifecycleNote(item) ? (
+                  <InlineNotice tone={!canRunWorkflowPurchase(item) ? 'danger' : 'info'}>{workflowLifecycleNote(item)}</InlineNotice>
+                ) : null}
                 {workflowBlockedReason(item) ? <Text className='tool-desc'>{workflowBlockedReason(item)}</Text> : null}
                 <WorkflowRunFormFields
                   runForm={runFormOf(item)}
