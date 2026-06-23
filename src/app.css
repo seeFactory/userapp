@@ -3389,6 +3389,10 @@ taro-video-core {
   padding: 14px 0 calc(16px + env(safe-area-inset-bottom));
 }
 
+.linear-submit-bar .linear-publish-action {
+  grid-column: 1 / -1;
+}
+
 .workflow-run-form {
   display: grid;
   gap: 12px;
