@@ -45,6 +45,29 @@ function workflowBlockedReason(status, item) {
   return ''
 }
 
+function workflowLifecycleSource(status, item) {
+  return status || item || {}
+}
+
+function workflowLifecycleNote(status, item) {
+  const source = workflowLifecycleSource(status, item)
+  const purchased = Boolean(status?.purchased)
+  if (source.disabled || source.visibility === 'disabled' || source.listingStatus === 'disabled') {
+    return '该模板已被平台暂停运行，购买记录仍保留，待平台恢复或提供替代模型后再运行。'
+  }
+  if (source.deletedByAuthorAt) {
+    return purchased
+      ? '作者已停止公开展示该案例，已购权益仍保留，可继续运行该发布版本。'
+      : '作者已停止公开展示该案例，暂不支持新的购买或公开访问。'
+  }
+  if (source.public === false || source.visibility === 'hidden' || source.listingStatus === 'hidden') {
+    return purchased
+      ? '作者已隐藏公开展示，已购权益仍保留，可继续运行该发布版本。'
+      : '该案例当前已隐藏，暂不支持新的购买或公开访问。'
+  }
+  return ''
+}
+
 function canTrialRun(status, item) {
   return item?.licenseMode === 'closed_paid' && !status?.purchased && Boolean(status?.trialEnabled) && Number(status?.trialRemaining || 0) > 0
 }
@@ -65,6 +88,7 @@ export default function WorkflowCases() {
   const selected = detail || list.find((item) => item.id === selectedId) || list[0]
   const canRun = workflowCanRun(status, selected)
   const blockedReason = workflowBlockedReason(status, selected)
+  const lifecycleNote = workflowLifecycleNote(status, selected)
   const trialEnabled = canTrialRun(status, selected)
 
   const loadCases = () => {
@@ -262,6 +286,7 @@ export default function WorkflowCases() {
                 </View>
               </View>
               <Text className='tool-desc'>{caseSummary(selected)}</Text>
+              {lifecycleNote ? <InlineNotice tone={!canRun ? 'danger' : 'info'}>{lifecycleNote}</InlineNotice> : null}
               {blockedReason ? <InlineNotice tone={canRun ? 'info' : 'warning'}>{blockedReason}</InlineNotice> : null}
               <WorkflowRunFormFields
                 runForm={runFormOf(selected)}
