@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
-import PaymentSheet from '../../components/PaymentSheet'
-import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
+import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import { goPage } from '../../utils/navigation'
@@ -27,6 +26,8 @@ import {
   getUploadToken
 } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
+
+const PaymentSheet = lazy(() => import('../../components/PaymentSheet'))
 
 const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
@@ -933,7 +934,9 @@ export default function ToolPage() {
         </View>
       </View>
 
-      <PaymentSheet
+      <Suspense fallback={null}>
+        {payment && (
+          <PaymentSheet
         open={Boolean(payment)}
         title='本次生成支付'
         payment={payment}
@@ -941,7 +944,9 @@ export default function ToolPage() {
         onRefresh={refreshPayment}
         onCryptoRouteChange={updatePaymentCryptoRoute}
         onCreateCryptoOrder={createPaymentCryptoOrder}
-      />
+          />
+        )}
+      </Suspense>
     </Shell>
   )
 }

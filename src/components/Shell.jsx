@@ -49,6 +49,7 @@ export default function Shell({ active, children, showTab = true, showBack, back
   const contentClass = [
     'page-content',
     showTab ? 'with-tab' : '',
+    showTab ? 'tab-page-content' : '',
     hasTopBack ? 'has-top-back' : '',
     'page-transition'
   ].filter(Boolean).join(' ')
@@ -56,6 +57,13 @@ export default function Shell({ active, children, showTab = true, showBack, back
   useEffect(() => {
     captureInviteFromParams(getCurrentInstance()?.router?.params || {})
   }, [])
+
+  useEffect(() => {
+    if (!showTab) return
+    try {
+      Taro.hideTabBar?.({ animation: false })
+    } catch (_) {}
+  }, [showTab])
 
   useEffect(() => {
     if (active !== 'home') return undefined
