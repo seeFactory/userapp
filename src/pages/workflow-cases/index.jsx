@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text, Image, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
@@ -25,6 +25,19 @@ function caseTitle(item) {
 
 function caseSummary(item) {
   return item?.summary || item?.description || '可运行的 seeFactory Workflow 模板。'
+}
+
+function caseSearchText(item) {
+  return [
+    item?.title,
+    item?.summary,
+    item?.description,
+    item?.category,
+    item?.licenseMode,
+    item?.creator?.nickname,
+    item?.author?.nickname,
+    ...(Array.isArray(item?.tags) ? item.tags : [])
+  ].filter(Boolean).join(' ').toLowerCase()
 }
 
 function runFormOf(item) {
@@ -84,8 +97,18 @@ export default function WorkflowCases() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [caseQuery, setCaseQuery] = useState('')
 
-  const selected = detail || list.find((item) => item.id === selectedId) || list[0]
+  const filteredList = useMemo(() => {
+    const keyword = caseQuery.trim().toLowerCase()
+    if (!keyword) return list
+    return list.filter((item) => caseSearchText(item).includes(keyword))
+  }, [caseQuery, list])
+
+  const selectedInFilter = filteredList.some((item) => item.id === selectedId)
+  const selected = (
+    selectedInFilter ? detail || list.find((item) => item.id === selectedId) : null
+  ) || filteredList[0] || list[0]
   const canRun = workflowCanRun(status, selected)
   const blockedReason = workflowBlockedReason(status, selected)
   const lifecycleNote = workflowLifecycleNote(status, selected)
@@ -112,6 +135,16 @@ export default function WorkflowCases() {
   }
 
   useEffect(() => loadCases(), [])
+
+  useEffect(() => {
+    if (!caseQuery.trim() || !filteredList.length) return
+    if (filteredList.some((item) => item.id === selectedId)) return
+    const next = filteredList[0]
+    setSelectedId(next.id)
+    setDetail(null)
+    setStatus(null)
+    setValues(initialWorkflowRunValues(runFormOf(next)))
+  }, [caseQuery, filteredList, selectedId])
 
   useEffect(() => {
     if (!selectedId) return undefined
@@ -242,17 +275,33 @@ export default function WorkflowCases() {
 
       <InlineNotice>{headerNote}</InlineNotice>
 
+      <View className='search-box workflow-case-search'>
+        <Input
+          className='search-input'
+          value={caseQuery}
+          placeholder='搜索案例名称、描述、分类或标签'
+          placeholderClass='muted'
+          onInput={(event) => setCaseQuery(event.detail.value)}
+        />
+        <View className={caseQuery ? 'ghost-button glass-button compact' : 'ghost-button glass-button compact disabled'} onClick={caseQuery ? () => setCaseQuery('') : undefined}>
+          <AppIcon name='close' size={14} />
+          <Text>清空</Text>
+        </View>
+      </View>
+
       {loading ? (
         <PageLoading title='正在同步 Workflow 案例' description='正在读取公开模板、运行表单和购买状态。' />
       ) : error ? (
         <ErrorState title='案例加载失败' description={error} onRetry={loadCases} />
       ) : !list.length ? (
         <EmptyState title='暂无 Workflow 案例' description='发布 open_free 或 closed_paid Workflow 后，会在这里展示。' icon='fusion' />
+      ) : !filteredList.length ? (
+        <EmptyState title='没有匹配案例' description='换一个关键词试试，支持搜索案例名称、描述、分类和标签。' icon='search' />
       ) : (
         <>
           <View className='case-grid workflow-case-grid'>
-            {list.map((item) => (
-              <View key={item.id} className={selectedId === item.id ? 'work-card workflow-case-card active' : 'work-card workflow-case-card'} onClick={() => selectCase(item)}>
+            {filteredList.map((item) => (
+              <View key={item.id} className={selected?.id === item.id ? 'work-card workflow-case-card active' : 'work-card workflow-case-card'} onClick={() => selectCase(item)}>
                 <Image className='work-image' src={item.coverUrl || fallbackCover} mode='aspectFill' />
                 <View className='work-body'>
                   <View className='meta-row'>
