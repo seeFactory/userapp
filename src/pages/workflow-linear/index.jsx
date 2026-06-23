@@ -334,7 +334,7 @@ export default function WorkflowLinear() {
   const createValidatedDraft = async () => {
     const payload = {
       title: title.trim() || '我的线性 Workflow',
-      description: publishSummary.trim() || '由小程序线性拼积木创建，支持顺序运行，不包含自由连线、条件分支或循环。',
+      description: publishSummary.trim() || '由 AI模板创建，支持顺序运行，不包含自由连线、条件分支或循环。',
       coverUrl: '',
       graph,
       editorMode: 'linear'
@@ -404,7 +404,7 @@ export default function WorkflowLinear() {
       const draft = await createValidatedDraft()
       const result = await publishWorkflowDraftCase(draft.id, {
         title: title.trim() || '我的线性 Workflow',
-        summary: publishSummary.trim() || '由小程序线性拼积木发布的 Workflow 案例。',
+        summary: publishSummary.trim() || '由 AI模板发布的 Workflow 案例。',
         coverUrl: '',
         tags: splitTags(publishTags),
         category: publishCategory.trim() || '小程序线性链',
@@ -433,7 +433,7 @@ export default function WorkflowLinear() {
 
   if (!loggedIn) {
     return (
-      <Shell title='线性拼积木' showTab={false} backFallback='/pages/create-center/index'>
+      <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
         <EmptyState
           title='请先登录'
           description='登录后可从零创建线性 Workflow，并提交运行。'
@@ -446,13 +446,13 @@ export default function WorkflowLinear() {
   }
 
   return (
-    <Shell title='线性拼积木' showTab={false} backFallback='/pages/create-center/index'>
+    <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
             <Text className='section-kicker'>Linear Workflow</Text>
-            <Text className='section-title'>线性拼积木</Text>
+            <Text className='section-title'>AI模板</Text>
           </View>
         </View>
         <View className='ghost-button glass-button compact' onClick={loadResources}>
@@ -494,7 +494,7 @@ export default function WorkflowLinear() {
       </View>
 
       {loading ? (
-        <PageLoading title='正在同步组件库' description='正在读取允许小程序线性拼积木使用的组件。' />
+        <PageLoading title='正在同步组件库' description='正在读取允许 AI模板使用的组件。' />
       ) : error ? (
         <ErrorState title='组件库加载失败' description={error} onRetry={loadResources} />
       ) : !components.length ? (

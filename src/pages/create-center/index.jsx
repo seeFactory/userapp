@@ -113,7 +113,7 @@ export default function CreateCenter() {
         <View className='form-panel compact-panel workflow-entry-panel' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
           <View className='task-state-copy'>
-            <Text className='profile-name'>线性拼积木</Text>
+            <Text className='profile-name'>AI模板</Text>
             <Text className='tool-desc'>从零创建顺序 Workflow，并提交运行</Text>
           </View>
           <View className='ghost-button compact'>

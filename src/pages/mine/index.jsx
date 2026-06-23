@@ -5,6 +5,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import CustomerModal from '../../components/CustomerModal'
+import AgreementModal from '../../components/AgreementModal'
 import PaymentSheet from '../../components/PaymentSheet'
 import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
@@ -53,10 +54,10 @@ export default function Mine() {
   const [rechargeAmount, setRechargeAmount] = useState('20')
   const [creatingRecharge, setCreatingRecharge] = useState(false)
   const [rechargePayment, setRechargePayment] = useState(null)
+  const [agreementModal, setAgreementModal] = useState(null)
   const currentUser = getCurrentUser()
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
-  const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
 
   const loadAccount = async () => {
     const [creditData, walletData, rechargeData] = await Promise.all([
@@ -102,32 +103,14 @@ export default function Mine() {
     try {
       const agreement = await fetchAgreement(type)
       Taro.hideLoading()
-      Taro.showModal({
+      setAgreementModal({
         title: agreement.title || titleMap[type],
-        content: formatAgreementContent(agreement, config?.legal),
-        showCancel: false,
-        confirmText: '我知道了'
+        content: formatAgreementContent(agreement, config?.legal)
       })
     } catch (error) {
       Taro.hideLoading()
       Taro.showToast({ title: error.message || '协议暂未发布', icon: 'none' })
     }
-  }
-
-  const goAgent = () => {
-    if (configLoading) {
-      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
-      return
-    }
-    if (!agentFeatureEnabled) {
-      Taro.showToast({ title: '代理中心已由后台关闭', icon: 'none' })
-      return
-    }
-    if (loggedIn) {
-      goPage('/pages/agent/index')
-      return
-    }
-    requireLogin('/pages/agent/index')
   }
 
   const goWorkflowPurchases = () => {
@@ -371,21 +354,14 @@ export default function Mine() {
         </View>
         <View className='profile-card' onClick={goWorkflowCases}>
           <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
-          <Text className='profile-name'>Workflow 案例</Text>
+          <Text className='profile-name'>我的workflow</Text>
           <Text className='tool-desc'>购买和运行模板</Text>
         </View>
         <View className='profile-card' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
-          <Text className='profile-name'>线性拼积木</Text>
-          <Text className='tool-desc'>创建 Workflow</Text>
+          <Text className='profile-name'>我的积木</Text>
+          <Text className='tool-desc'>创建 AI模板</Text>
         </View>
-        {!configLoading && agentFeatureEnabled ? (
-        <View className='profile-card' onClick={goAgent}>
-          <View className='profile-icon'><AppIcon name='agent' size={22} /></View>
-          <Text className='profile-name'>代理中心</Text>
-          <Text className='tool-desc'>用户和激活</Text>
-        </View>
-        ) : null}
         <View className='profile-card' onClick={() => setCustomerOpen(true)}>
           <View className='profile-icon'><AppIcon name='headphones' size={22} /></View>
           <Text className='profile-name'>联系客服</Text>
@@ -409,6 +385,12 @@ export default function Mine() {
       </View>
 
       <CustomerModal open={customerOpen} onClose={() => setCustomerOpen(false)} />
+      <AgreementModal
+        open={Boolean(agreementModal)}
+        title={agreementModal?.title}
+        content={agreementModal?.content}
+        onClose={() => setAgreementModal(null)}
+      />
       <PaymentSheet
         open={Boolean(rechargePayment)}
         title='点数充值'

@@ -59,6 +59,7 @@ export default function Gallery() {
   }, [category, works])
 
   const featured = filtered[0]
+  const gridWorks = featured ? filtered.slice(1) : filtered
 
   return (
     <Shell active='gallery' title='作品广场'>
@@ -112,11 +113,12 @@ export default function Gallery() {
             </View>
           )}
 
+          {gridWorks.length ? (
           <View className='gallery-grid'>
-            {filtered.map((item, index) => (
+            {gridWorks.map((item) => (
               <View
                 key={item.id}
-                className={index % 3 === 1 ? 'gallery-card tall' : 'gallery-card'}
+                className='gallery-card'
                 onClick={() => goPage(`/pages/work-detail/index?id=${item.id}&source=gallery`)}
               >
                 <Image className='gallery-image' src={item.image} mode='aspectFill' />
@@ -133,6 +135,7 @@ export default function Gallery() {
               </View>
             ))}
           </View>
+          ) : null}
         </>
       )}
     </Shell>
