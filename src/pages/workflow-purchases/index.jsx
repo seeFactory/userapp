@@ -232,9 +232,9 @@ export default function WorkflowPurchases() {
           onAction={() => goPage('/pages/gallery/index')}
         />
       ) : (
-        <View className='case-grid'>
+        <View className='case-grid workflow-purchase-grid'>
           {list.map((item) => (
-            <View key={item.id} className='work-card'>
+            <View key={item.id} className='work-card workflow-purchase-card'>
               <Image className='work-image' src={item.case?.coverUrl || item.version?.coverUrl || fallbackCover} mode='aspectFill' />
               <View className='work-body'>
                 <Text className='work-title'>{templateTitle(item)}</Text>
