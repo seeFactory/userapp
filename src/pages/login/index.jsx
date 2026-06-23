@@ -3,6 +3,7 @@ import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import AgreementModal from '../../components/AgreementModal'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
 import { useAppConfig } from '../../hooks/useAppConfig'
@@ -133,6 +134,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [googleReady, setGoogleReady] = useState(false)
   const [agreementCache, setAgreementCache] = useState({})
+  const [agreementModal, setAgreementModal] = useState(null)
   const googleHostId = useRef(`google-login-${Date.now()}`)
   const { config } = useAppConfig()
   const runtime = getClientRuntime()
@@ -168,11 +170,9 @@ export default function Login() {
       const agreement = await loadAgreement(type)
       Taro.hideLoading()
       const meta = REQUIRED_AGREEMENTS.find((item) => item.type === type)
-      Taro.showModal({
+      setAgreementModal({
         title: agreement.title || meta?.label || '协议',
-        content: formatAgreementContent(agreement, config?.legal),
-        showCancel: false,
-        confirmText: '我知道了'
+        content: formatAgreementContent(agreement, config?.legal)
       })
     } catch (error) {
       Taro.hideLoading()
@@ -404,6 +404,12 @@ export default function Login() {
           <AppIcon name='home' size={16} />
           <Text>先逛逛</Text>
         </View>
+        <AgreementModal
+          open={Boolean(agreementModal)}
+          title={agreementModal?.title}
+          content={agreementModal?.content}
+          onClose={() => setAgreementModal(null)}
+        />
       </View>
     </View>
   )

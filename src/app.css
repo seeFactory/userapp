@@ -2057,23 +2057,19 @@ taro-video-core {
 }
 
 .gallery-grid {
-  column-count: 2;
-  column-gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .gallery-card {
-  display: inline-block;
+  display: block;
   width: 100%;
-  margin: 0 0 10px;
-  break-inside: avoid;
+  min-width: 0;
 }
 
 .gallery-card .gallery-image {
   height: 164px;
-}
-
-.gallery-card.tall .gallery-image {
-  height: 218px;
 }
 
 .gallery-card-body {
@@ -2207,6 +2203,56 @@ taro-video-core {
   border-radius: 16px;
   color: #e2e8f0;
   background: rgba(15, 23, 42, 0.52);
+}
+
+.legal-modal-mask {
+  z-index: 80;
+  align-items: flex-end;
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+}
+
+.legal-modal-panel {
+  display: flex;
+  max-height: 76vh;
+  min-height: 420px;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.legal-modal-head {
+  flex: 0 0 auto;
+  align-items: flex-start;
+}
+
+.legal-close-btn {
+  flex: 0 0 auto;
+}
+
+.legal-modal-scroll {
+  flex: 1 1 auto;
+  height: 48vh;
+  max-height: 480px;
+  min-height: 0;
+  margin: 14px 0 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 18px;
+  background: rgba(3, 7, 18, 0.58);
+}
+
+.legal-modal-content {
+  display: block;
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.68;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.legal-modal-action {
+  flex: 0 0 auto;
 }
 
 .modal-note {
