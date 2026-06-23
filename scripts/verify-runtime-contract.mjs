@@ -371,13 +371,24 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
 assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
 const workflowPurchasesPage = source("src/pages/workflow-purchases/index.jsx");
 const workflowRunFormComponent = source("src/components/WorkflowRunFormFields.jsx");
+const uploadUtil = source("src/utils/upload.js");
 const workflowRunDetailPage = source("src/pages/workflow-runs/detail/index.jsx");
 assertIncludesAll(workflowRunFormComponent, "miniapp shared workflow run form contract", [
   "function workflowRunFields(runForm)",
   "function buildWorkflowRunPayload(runForm, values = {})",
   "Input, Picker, Switch, Textarea",
   "isUnsupportedRunField(field)",
-  "PC Dashboard"
+  "isWorkflowRunUploadField(field)",
+  "getUploadToken",
+  "createAsset",
+  "../utils/upload",
+  "uploadToOss(policy, file,"
+]);
+assertIncludesAll(uploadUtil, "miniapp shared upload utility contract", [
+  "export const uploadLimits",
+  "export async function chooseTypedFiles(config)",
+  "export function uploadToOss(policy, file, onProgress)",
+  "export function validateUploadFile(file, config"
 ]);
 const workflowCasesPage = source("src/pages/workflow-cases/index.jsx");
 assertIncludesAll(workflowCasesPage, "workflow case marketplace run contract", [
