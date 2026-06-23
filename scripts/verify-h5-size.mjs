@@ -7,8 +7,8 @@ const kib = 1024
 const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
-  // H5 pages are split into lazy chunks; keep the raw total budget aligned with the current multi-runtime page set.
-  maxTotalJsBytes: 4200 * kib,
+  // H5 pages are split into lazy chunks; includes workflow asset upload runtime shared by tool and workflow pages.
+  maxTotalJsBytes: 4220 * kib,
   maxLogoCopies: 1
 }
 
