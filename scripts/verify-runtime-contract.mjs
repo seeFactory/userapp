@@ -84,6 +84,8 @@ assertIncludesAll(api, "services/api.js backend contract", [
   "estimateWorkflowDraft",
   "runWorkflowDraft",
   "request(`/workflows/${id}/run`",
+  "publishWorkflowDraftCase",
+  "request(`/workflows/${id}/publish-case`",
   "getDownloadUrl",
   "request(`/works/${id}/download-url",
   "fetchPaymentProviders",
@@ -344,19 +346,28 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
   "fetchWorkflowComponents({ pageSize: 80, allowedInLinear: true })",
   "fetchTools()",
   "buildLinearGraph",
+  "buildLinearRunForm",
   "schemaVersion: 'seeFactory.workflow.v1'",
+  "schemaVersion: 'seeFactory.runForm.v1'",
   "promptTemplate: '{{prompt}}'",
   "editorMode: 'linear'",
   "validateWorkflowDraft",
   "estimateWorkflowDraft",
   "runWorkflowDraft",
+  "publishWorkflowDraftCase",
+  "`/pages/workflow-cases/index?id=${encodeURIComponent(caseId)}`",
+  "publishAgreementAccepted: true",
+  "licenseMode: publishMode",
+  "pricePoints: publishMode === 'closed_paid' ? normalizedPrice : 0",
+  "trialEnabled: publishMode === 'closed_paid' && trialEnabled",
+  "trialLimitPerUser: publishMode === 'closed_paid' && trialEnabled ? normalizedTrialLimit : 0",
   "input: runInput, params: runInput",
   "小程序端只支持顺序拼接组件",
   "不开放自由连线、条件分支、循环或 .seeflow 导入导出",
   "小程序线性链最多 8 步",
-  "保存并运行"
+  "保存并运行",
+  "保存并发布"
 ]);
-assert.ok(!workflowLinearPage.includes("publish-case"), "Miniapp linear workflow builder must not publish workflow cases directly.");
 assert.ok(!workflowLinearPage.includes("/workflows/import"), "Miniapp linear workflow builder must not import .seeflow files.");
 const workflowPurchasesPage = source("src/pages/workflow-purchases/index.jsx");
 const workflowRunFormComponent = source("src/components/WorkflowRunFormFields.jsx");
@@ -495,7 +506,7 @@ console.log(JSON.stringify({
     "public gallery and share detail access",
     "download/save flow with backend signed download URL",
     "home tool tabs use explicit Admin recommendation only",
-    "miniapp linear workflow builder uses backend components, tools, validation and run APIs",
+    "miniapp linear workflow builder uses backend components, tools, validation, run and publish APIs",
     "payment sheet invokes only backend-created platform, crypto, and Telegram Stars orders",
     "runtime environment example keys",
     "verification script is wired into app verify"
