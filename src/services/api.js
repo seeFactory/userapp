@@ -410,6 +410,13 @@ export async function runWorkflowDraft(id, payload = {}) {
   })
 }
 
+export async function publishWorkflowDraftCase(id, payload = {}) {
+  return request(`/workflows/${id}/publish-case`, {
+    method: 'POST',
+    data: payload
+  })
+}
+
 export async function runWorkflowCase(caseContentId, payload = {}) {
   return request(`/workflow-cases/${caseContentId}/run`, {
     method: 'POST',
