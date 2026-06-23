@@ -359,7 +359,7 @@ export default function Mine() {
         </View>
         <View className='profile-card' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
-          <Text className='profile-name'>我的积木</Text>
+          <Text className='profile-name'>我的模板</Text>
           <Text className='tool-desc'>创建 AI模板</Text>
         </View>
         <View className='profile-card' onClick={() => setCustomerOpen(true)}>
