@@ -19,6 +19,13 @@ function formatDate(value) {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
+function formatDateTime(value) {
+  if (!value) return '--'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '--'
+  return `${formatDate(value)} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 function canRunWorkflowPurchase(item) {
   if (item?.canRun !== undefined) return Boolean(item.canRun)
   if (item?.runnable !== undefined) return Boolean(item.runnable)
@@ -27,6 +34,14 @@ function canRunWorkflowPurchase(item) {
 
 function workflowBlockedReason(item) {
   return item?.runBlockedReason || item?.disabledReason || ''
+}
+
+function workflowRunStatusText(status) {
+  if (status === 'success') return '已完成'
+  if (status === 'failed') return '失败'
+  if (status === 'canceled') return '已取消'
+  if (status === 'processing') return '生成中'
+  return '排队中'
 }
 
 function workflowLifecycleSource(item) {
@@ -67,6 +82,20 @@ function templateTitle(item) {
 
 function templateSummary(item) {
   return item.case?.summary || item.version?.summary || '已购买的闭源模板，可在权限可用时继续调度运行。'
+}
+
+function templateCreatorName(item) {
+  return item?.creator?.nickname || 'seeFactory 创作者'
+}
+
+function templateVersionLabel(item) {
+  return item?.versionLabel || (item?.purchasedVersion?.version ? `v${item.purchasedVersion.version}` : '发布版本')
+}
+
+function templateLastRunText(item) {
+  if (!item?.lastRunAt) return '暂无运行'
+  const runKind = item.lastRun?.isTrial ? '试运行' : '正式运行'
+  return `${runKind} ${workflowRunStatusText(item.lastRunStatus)} · ${formatDateTime(item.lastRunAt)}`
 }
 
 function runFormOf(item) {
@@ -213,13 +242,15 @@ export default function WorkflowPurchases() {
                 <View className='meta-row'>
                   <View className='meta-icon-text'>
                     <AppIcon name='fusion' size={12} />
-                    <Text>{item.pricePoints || 0} 点 · {formatDate(item.purchasedAt)}</Text>
+                    <Text>{item.pricePoints || 0} 点 · {templateVersionLabel(item)} · {formatDate(item.purchasedAt)}</Text>
                   </View>
                   <View className={!canRunWorkflowPurchase(item) ? 'status failed' : 'status'}>
                     <AppIcon name={!canRunWorkflowPurchase(item) ? 'alert' : 'badge'} size={11} />
                     <Text>{statusText(item)}</Text>
                   </View>
                 </View>
+                <Text className='tool-desc'>作者 {templateCreatorName(item)} · {templateLastRunText(item)}</Text>
+                {item.hasReplacementModel || item.replacementAvailable ? <Text className='tool-desc'>存在可替代模型，运行时按后台映射处理。</Text> : null}
                 <Text className='tool-desc'>{workflowLifecycleLabel(item)}</Text>
                 {workflowLifecycleNote(item) ? (
                   <InlineNotice tone={!canRunWorkflowPurchase(item) ? 'danger' : 'info'}>{workflowLifecycleNote(item)}</InlineNotice>
