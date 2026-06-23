@@ -10,9 +10,11 @@ import {
   estimateWorkflowDraft,
   fetchTools,
   fetchWorkflowComponents,
+  publishWorkflowDraftCase,
   runWorkflowDraft,
   validateWorkflowDraft
 } from '../../services/api'
+import { useAppConfig } from '../../hooks/useAppConfig'
 import { goPage } from '../../utils/navigation'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 
@@ -171,17 +173,64 @@ function buildLinearGraph(steps, tools) {
   }
 }
 
+function buildLinearRunForm(steps) {
+  const ratios = unique(steps.flatMap((step) => ratioOptionsFor(step.component)))
+  const resolutions = unique(steps.filter((step) => componentKind(step.component) === 'image').flatMap((step) => resolutionOptionsFor(step.component, step.ratio)))
+  const qualities = unique(steps.filter((step) => componentKind(step.component) === 'video').flatMap((step) => qualityOptionsFor(step.component)))
+  const fields = [{
+    key: 'prompt',
+    label: '提示词',
+    type: 'textarea',
+    required: true,
+    placeholder: '描述你希望这个 Workflow 生成的主体、风格、场景和细节'
+  }]
+  if (ratios.length) fields.push({ key: 'ratio', label: '比例', type: 'select', options: ratios, defaultValue: ratios[0], required: false })
+  if (resolutions.length) fields.push({ key: 'resolution', label: '图像分辨率', type: 'select', options: resolutions, defaultValue: resolutions[0], required: false })
+  if (qualities.length) fields.push({ key: 'quality', label: '视频精度', type: 'select', options: qualities, defaultValue: qualities[0], required: false })
+  return {
+    schemaVersion: 'seeFactory.runForm.v1',
+    fields,
+    nodes: steps.map((step, index) => ({
+      nodeId: `node_${index + 1}`,
+      componentKey: step.component.componentKey,
+      label: componentTitle(step.component),
+      category: componentKind(step.component),
+      exposedFields: exposedFieldsForStep(step)
+    }))
+  }
+}
+
 function runIdFrom(result) {
   return result?.run?.id || result?.id || result?.runId || ''
 }
 
+function caseIdFromPublishResult(result) {
+  return result?.case?.id || result?.caseContent?.id || result?.id || ''
+}
+
+function splitTags(text) {
+  return unique(String(text || '').split(/[\s,，、#]+/)).slice(0, 12)
+}
+
 export default function WorkflowLinear() {
   const loggedIn = isLoggedIn()
+  const { config } = useAppConfig()
+  const workflowPolicy = config?.workflowPolicy || {}
+  const priceMinPoints = Number(workflowPolicy.priceMinPoints || 7)
+  const priceMaxPoints = Number(workflowPolicy.priceMaxPoints || 7000)
+  const trialLimitMaxPerUser = Math.max(0, Number(workflowPolicy.trialLimitMaxPerUser || 20))
   const [components, setComponents] = useState([])
   const [tools, setTools] = useState([])
   const [steps, setSteps] = useState([])
   const [title, setTitle] = useState('我的线性 Workflow')
   const [prompt, setPrompt] = useState('')
+  const [publishMode, setPublishMode] = useState('open_free')
+  const [publishSummary, setPublishSummary] = useState('')
+  const [publishCategory, setPublishCategory] = useState('小程序线性链')
+  const [publishTags, setPublishTags] = useState('线性链 Workflow')
+  const [pricePoints, setPricePoints] = useState(35)
+  const [trialEnabled, setTrialEnabled] = useState(true)
+  const [trialLimitPerUser, setTrialLimitPerUser] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState('')
@@ -259,13 +308,13 @@ export default function WorkflowLinear() {
     setEstimate(null)
   }
 
-  const validateBeforeSubmit = () => {
+  const validateBeforeSubmit = ({ requirePrompt = false } = {}) => {
     if (!requireLogin('/pages/workflow-linear/index')) return false
     if (!steps.length) {
       Taro.showToast({ title: '请先添加至少一个组件', icon: 'none' })
       return false
     }
-    if (!prompt.trim()) {
+    if (requirePrompt && !prompt.trim()) {
       Taro.showToast({ title: '请填写本次运行提示词', icon: 'none' })
       return false
     }
@@ -282,25 +331,30 @@ export default function WorkflowLinear() {
     return true
   }
 
+  const createValidatedDraft = async () => {
+    const payload = {
+      title: title.trim() || '我的线性 Workflow',
+      description: publishSummary.trim() || '由小程序线性拼积木创建，支持顺序运行，不包含自由连线、条件分支或循环。',
+      coverUrl: '',
+      graph,
+      editorMode: 'linear'
+    }
+    const draft = await createWorkflowDraft(payload)
+    const validation = await validateWorkflowDraft(draft.id, graph)
+    if (!validation.valid) {
+      throw new Error((validation.errors || []).join('；') || 'Workflow 校验未通过')
+    }
+    const nextEstimate = await estimateWorkflowDraft(draft.id, graph).catch(() => validation)
+    setEstimate(nextEstimate)
+    return draft
+  }
+
   const saveOrRun = async (shouldRun = false) => {
-    if (!validateBeforeSubmit()) return
+    if (!validateBeforeSubmit({ requirePrompt: shouldRun })) return
     setSubmitting(shouldRun ? 'run' : 'save')
     Taro.showLoading({ title: shouldRun ? '提交运行' : '保存草稿' })
     try {
-      const payload = {
-        title: title.trim() || '我的线性 Workflow',
-        description: '由小程序线性拼积木创建，支持顺序运行，不包含自由连线、条件分支或循环。',
-        coverUrl: '',
-        graph,
-        editorMode: 'linear'
-      }
-      const draft = await createWorkflowDraft(payload)
-      const validation = await validateWorkflowDraft(draft.id, graph)
-      if (!validation.valid) {
-        throw new Error((validation.errors || []).join('；') || 'Workflow 校验未通过')
-      }
-      const nextEstimate = await estimateWorkflowDraft(draft.id, graph).catch(() => validation)
-      setEstimate(nextEstimate)
+      const draft = await createValidatedDraft()
       if (!shouldRun) {
         Taro.showToast({ title: '草稿已保存', icon: 'success' })
         return
@@ -314,6 +368,60 @@ export default function WorkflowLinear() {
       Taro.showModal({
         title: shouldRun ? '运行失败' : '保存失败',
         content: err?.message || '线性 Workflow 暂未处理成功，请稍后重试。',
+        showCancel: false,
+        confirmText: '我知道了'
+      })
+    } finally {
+      Taro.hideLoading()
+      setSubmitting('')
+    }
+  }
+
+  const publishLinearWorkflow = async () => {
+    if (!validateBeforeSubmit({ requirePrompt: false })) return
+    const normalizedPrice = Math.max(0, Number(pricePoints || 0))
+    const normalizedTrialLimit = Math.max(0, Number(trialLimitPerUser || 0))
+    if (publishMode === 'closed_paid' && (normalizedPrice < priceMinPoints || normalizedPrice > priceMaxPoints)) {
+      Taro.showToast({ title: `售价需在 ${priceMinPoints}-${priceMaxPoints} 点`, icon: 'none' })
+      return
+    }
+    if (publishMode === 'closed_paid' && normalizedTrialLimit > trialLimitMaxPerUser) {
+      Taro.showToast({ title: `试运行最多 ${trialLimitMaxPerUser} 次`, icon: 'none' })
+      return
+    }
+    const confirm = await Taro.showModal({
+      title: '确认发布 Workflow',
+      content: publishMode === 'closed_paid'
+        ? `将发布为闭源付费模板，售价 ${normalizedPrice} 点。购买者仅获得运行权。`
+        : '将发布为开源免费模板，其他用户可查看 graph、克隆并导出 .seeflow。',
+      confirmText: '确认发布',
+      cancelText: '再检查'
+    })
+    if (!confirm.confirm) return
+    setSubmitting('publish')
+    Taro.showLoading({ title: '发布案例' })
+    try {
+      const draft = await createValidatedDraft()
+      const result = await publishWorkflowDraftCase(draft.id, {
+        title: title.trim() || '我的线性 Workflow',
+        summary: publishSummary.trim() || '由小程序线性拼积木发布的 Workflow 案例。',
+        coverUrl: '',
+        tags: splitTags(publishTags),
+        category: publishCategory.trim() || '小程序线性链',
+        licenseMode: publishMode,
+        pricePoints: publishMode === 'closed_paid' ? normalizedPrice : 0,
+        runForm: buildLinearRunForm(steps),
+        trialEnabled: publishMode === 'closed_paid' && trialEnabled,
+        trialLimitPerUser: publishMode === 'closed_paid' && trialEnabled ? normalizedTrialLimit : 0,
+        publishAgreementAccepted: true
+      })
+      Taro.showToast({ title: 'Workflow 已发布', icon: 'success' })
+      const caseId = caseIdFromPublishResult(result)
+      if (caseId) goPage(`/pages/workflow-cases/index?id=${encodeURIComponent(caseId)}`)
+    } catch (err) {
+      Taro.showModal({
+        title: '发布失败',
+        content: err?.message || '线性 Workflow 暂未发布成功，请稍后重试。',
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -492,6 +600,95 @@ export default function WorkflowLinear() {
         </InlineNotice>
       ) : null}
 
+      <View className='form-panel'>
+        <Text className='input-label'>发布模式</Text>
+        <View className='option-row linear-option-row'>
+          <View className={publishMode === 'open_free' ? 'option-chip active' : 'option-chip'} onClick={() => setPublishMode('open_free')}>
+            <Text>开源免费</Text>
+          </View>
+          <View className={publishMode === 'closed_paid' ? 'option-chip active' : 'option-chip'} onClick={() => setPublishMode('closed_paid')}>
+            <Text>闭源付费</Text>
+          </View>
+        </View>
+
+        <Text className='input-label compact-label'>案例摘要</Text>
+        <View className='text-area'>
+          <Textarea
+            value={publishSummary}
+            maxlength={240}
+            placeholder='写给其他用户看的模板说明，例如适合什么素材、会生成什么结果。'
+            placeholderClass='muted'
+            onInput={(event) => setPublishSummary(event.detail.value)}
+          />
+        </View>
+
+        <Text className='input-label compact-label'>分类</Text>
+        <View className='text-input'>
+          <Input
+            value={publishCategory}
+            placeholder='例如：商品营销、头像写真、短视频脚本'
+            placeholderClass='muted'
+            onInput={(event) => setPublishCategory(event.detail.value)}
+          />
+        </View>
+
+        <Text className='input-label compact-label'>标签</Text>
+        <View className='text-input'>
+          <Input
+            value={publishTags}
+            placeholder='用空格或逗号分隔，例如：电商 海报 视频'
+            placeholderClass='muted'
+            onInput={(event) => setPublishTags(event.detail.value)}
+          />
+        </View>
+
+        {publishMode === 'closed_paid' ? (
+          <>
+            <Text className='input-label compact-label'>模板售价</Text>
+            <View className='text-input'>
+              <Input
+                type='number'
+                value={String(pricePoints)}
+                placeholder={`${priceMinPoints}-${priceMaxPoints} 点，以后端策略为准`}
+                placeholderClass='muted'
+                onInput={(event) => setPricePoints(Number(event.detail.value || 0))}
+              />
+            </View>
+
+            <Text className='input-label compact-label'>购买前试运行</Text>
+            <View className='option-row linear-option-row'>
+              <View className={trialEnabled ? 'option-chip active' : 'option-chip'} onClick={() => setTrialEnabled(true)}>
+                <Text>开放</Text>
+              </View>
+              <View className={!trialEnabled ? 'option-chip active' : 'option-chip'} onClick={() => setTrialEnabled(false)}>
+                <Text>不开放</Text>
+              </View>
+            </View>
+
+            {trialEnabled ? (
+              <>
+                <Text className='input-label compact-label'>每人试运行次数</Text>
+                <View className='text-input'>
+                  <Input
+                    type='number'
+                    value={String(trialLimitPerUser)}
+                    placeholder={`最多 ${trialLimitMaxPerUser} 次`}
+                    placeholderClass='muted'
+                    onInput={(event) => setTrialLimitPerUser(Number(event.detail.value || 0))}
+                  />
+                </View>
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        <InlineNotice tone={publishMode === 'closed_paid' ? 'warning' : 'info'}>
+          {publishMode === 'closed_paid'
+            ? '闭源付费发布后购买者只获得运行权，不会看到 graph、节点提示词或 .seeflow 导出。'
+            : '开源免费发布后将公开 graph、节点提示词和公开参数，并允许其他用户克隆。'}
+        </InlineNotice>
+      </View>
+
       <View className='linear-submit-bar'>
         <View className={submitting ? 'ghost-button full-width-button disabled' : 'ghost-button full-width-button'} onClick={submitting ? undefined : () => saveOrRun(false)}>
           <AppIcon name='center' size={15} />
@@ -500,6 +697,10 @@ export default function WorkflowLinear() {
         <View className={submitting ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'} onClick={submitting ? undefined : () => saveOrRun(true)}>
           <AppIcon name='play' size={15} />
           <Text>{submitting === 'run' ? '提交中...' : '保存并运行'}</Text>
+        </View>
+        <View className={submitting ? 'primary-button full-width-button linear-publish-action disabled' : 'primary-button full-width-button linear-publish-action'} onClick={submitting ? undefined : publishLinearWorkflow}>
+          <AppIcon name='badge' size={15} />
+          <Text>{submitting === 'publish' ? '发布中...' : '保存并发布'}</Text>
         </View>
       </View>
     </Shell>
