@@ -104,7 +104,7 @@ export default function Index() {
 
   const openTool = (tool) => {
     if (!generationEnabled) {
-      Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '创作功能暂未开放', icon: 'none' })
       return
     }
     goPage(`/pages/tool/index?id=${tool.id}`)
@@ -112,7 +112,7 @@ export default function Index() {
 
   const startFirstTool = () => {
     if (!generationEnabled) {
-      Taro.showToast({ title: '创作功能已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '创作功能暂未开放', icon: 'none' })
       return
     }
     goPage(`/pages/tool/index?id=${visibleTools[0]?.id || tools[0]?.id || 'factory-painter'}`)
@@ -151,10 +151,10 @@ export default function Index() {
           <View className='hero-orbit-icon'>
             <View className='hero-brand-image' style={{ backgroundImage: 'url(/static/logo-hero.png)' }} />
           </View>
-          <Text className='hero-kicker'>seeFactory 智能创作工厂</Text>
+          <Text className='hero-kicker'>seeFactory AI 创作平台</Text>
         </View>
         <Text className='hero-title'>Hi，{loggedIn ? '创作者' : '游客'}</Text>
-        <Text className='hero-subtitle'>用 AI 启动你的视觉工厂，从图片、视频到品牌漫画都在一个深色控制台里完成。</Text>
+        <Text className='hero-subtitle'>从图片生成、视频创作到品牌漫画，用 AI 快速完成多场景内容制作。</Text>
         <View className='hero-actions'>
           <View className={generationEnabled ? 'primary-button' : 'primary-button disabled'} onClick={startFirstTool}>
             <AppIcon name='wand' size={16} />
@@ -169,7 +169,7 @@ export default function Index() {
 
       <View className='section-head'>
         <View>
-          <Text className='section-kicker'>工厂模块</Text>
+          <Text className='section-kicker'>创作入口</Text>
           <Text className='section-title'>创作工具</Text>
         </View>
         <View className='home-tool-actions'>
@@ -191,9 +191,9 @@ export default function Index() {
       </View>
 
       {!generationEnabled ? (
-        <EmptyState title='创作功能已关闭' description='当前后台已关闭生成服务，已保留作品浏览、客服和账号能力。' icon='wand' />
+        <EmptyState title='创作功能已关闭' description='生成服务暂未开放，你仍可查看作品、联系客服和管理账号。' icon='wand' />
       ) : loading ? (
-        <PageLoading title='正在同步工具配置' description='正在读取后台配置的创作工具。' />
+        <PageLoading title='正在同步工具配置' description='正在同步可用创作工具。' />
       ) : error ? (
         <ErrorState title='工具配置加载失败' description={error} onRetry={loadTools} />
       ) : visibleTools.length ? (
@@ -214,7 +214,7 @@ export default function Index() {
           ))}
         </View>
       ) : (
-        <EmptyState title='该分类暂无工具' description='请切换其他分类，或在管理后台为工具配置首页分类。' icon='wand' />
+        <EmptyState title='该分类暂无工具' description='请切换其他分类，或稍后查看新上线工具。' icon='wand' />
       )}
 
       {searchOpen ? (

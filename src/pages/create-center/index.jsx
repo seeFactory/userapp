@@ -150,13 +150,13 @@ export default function CreateCenter() {
       </View>
 
       {!generationEnabled ? (
-        <EmptyState title='创作中心已关闭' description='当前后台已关闭生成服务，案例与提示词入口暂不开放。' icon='center' />
+        <EmptyState title='创作中心已关闭' description='当前暂未开放生成服务，案例与提示词入口暂不开放。' icon='center' />
       ) : loading ? (
         <PageLoading title='正在加载提示词案例' description='正在同步案例、工具分类和同款创作配置。' />
       ) : error ? (
         <ErrorState title='案例加载失败' description={error} onRetry={loadCenter} />
       ) : filtered.length === 0 ? (
-        <EmptyState title='暂无匹配案例' description={keyword.trim() ? '换个关键词或分类再试试。' : '请在管理后台发布至少一个公开案例。'} icon='book' />
+        <EmptyState title='暂无匹配案例' description={keyword.trim() ? '换个关键词或分类再试试。' : '公开案例上线后会显示在这里。'} icon='book' />
       ) : (
         <View className='case-grid'>
           {filtered.map((item) => (

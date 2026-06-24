@@ -24,7 +24,7 @@ function caseTitle(item) {
 }
 
 function caseSummary(item) {
-  return item?.summary || item?.description || '可运行的 seeFactory Workflow 模板。'
+  return item?.summary || item?.description || '可直接运行的 seeFactory 创作模板。'
 }
 
 function caseSearchText(item) {
@@ -252,9 +252,9 @@ export default function WorkflowCases() {
   const headerNote = useMemo(() => {
     if (!selected) return '选择公开 Workflow 案例后，可查看权益并提交运行。'
     if (selected.licenseMode === 'closed_paid') {
-      return status?.purchased ? '已购买该发布版本，可永久运行。' : '闭源付费模板购买后获得运行权，不开放 graph、克隆或导出。'
+      return status?.purchased ? '已购买该发布版本，可永久运行。' : '闭源付费模板购买后获得运行权，不开放流程结构、克隆或导出。'
     }
-    return '开源免费案例可登录后运行；复杂编辑请到 PC Dashboard。'
+    return '开源免费案例登录后即可运行，高级编辑能力将在后续版本开放。'
   }, [selected, status])
 
   return (
@@ -294,7 +294,7 @@ export default function WorkflowCases() {
       ) : error ? (
         <ErrorState title='案例加载失败' description={error} onRetry={loadCases} />
       ) : !list.length ? (
-        <EmptyState title='暂无 Workflow 案例' description='发布 open_free 或 closed_paid Workflow 后，会在这里展示。' icon='fusion' />
+        <EmptyState title='暂无 Workflow 案例' description='公开模板上线后，会在这里展示。' icon='fusion' />
       ) : !filteredList.length ? (
         <EmptyState title='没有匹配案例' description='换一个关键词试试，支持搜索案例名称、描述、分类和标签。' icon='search' />
       ) : (
