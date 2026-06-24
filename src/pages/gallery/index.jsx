@@ -71,7 +71,7 @@ export default function Gallery() {
             <Text className='section-title'>作品广场</Text>
           </View>
         </View>
-        <Text className='gallery-hero-copy'>发现公开发布的 AI 视觉作品，查看完整灵感并一键同款创作。</Text>
+        <Text className='gallery-hero-copy'>浏览公开作品，查看完整提示词，并快速发起同款创作。</Text>
       </View>
 
       <View className='filter-row'>
@@ -89,7 +89,7 @@ export default function Gallery() {
       {error && works.length ? <InlineNotice tone='danger'>{error}</InlineNotice> : null}
 
       {!galleryEnabled ? (
-        <EmptyState title='作品广场已关闭' description='当前后台已关闭公开广场，个人作品仍可在作品页查看。' icon='gallery' />
+        <EmptyState title='作品广场已关闭' description='公开广场暂未开放，个人作品仍可在作品页查看。' icon='gallery' />
       ) : loading ? (
         <PageLoading title='正在加载广场作品' description='正在同步公开作品、精选内容和分类。' />
       ) : error && !works.length ? (

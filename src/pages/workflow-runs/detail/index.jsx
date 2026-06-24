@@ -128,7 +128,7 @@ export default function WorkflowRunDetail() {
   if (!run) {
     return (
       <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index'>
-        <EmptyState title='暂无运行记录' description='没有找到对应的 Workflow run。' icon='center' />
+        <EmptyState title='暂无运行记录' description='没有找到对应的运行记录。' icon='center' />
       </Shell>
     )
   }
@@ -202,7 +202,7 @@ export default function WorkflowRunDetail() {
                   </View>
                 </View>
                 <Text className='tool-desc'>
-                  {node.componentKey || 'workflow-node'} · {node.costPoints || 0} 点 · {node.isIntermediateOutput ? '中间结果' : node.isTerminalOutput ? '最终输出' : '流程节点'}
+                  {node.componentKey || '流程节点'} · {node.costPoints || 0} 点 · {node.isIntermediateOutput ? '中间结果' : node.isTerminalOutput ? '最终输出' : '流程节点'}
                 </Text>
                 {node.generationTaskId ? <Text className='tool-desc'>任务：{compactId(node.generationTaskId)}</Text> : null}
                 {node.workId ? <Text className='tool-desc'>作品：{compactId(node.workId)}</Text> : null}
