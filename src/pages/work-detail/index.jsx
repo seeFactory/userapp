@@ -43,9 +43,9 @@ function isActiveStatus(status) {
 }
 
 function taskStatusCopy(status) {
-  if (status === 'queued') return '任务已进入队列，正在等待 seeFactory 生成工厂领取。'
+  if (status === 'queued') return '任务已进入队列，系统会按顺序开始生成。'
   if (status === 'processing') return '生成服务正在处理素材和提示词，完成后会自动刷新结果。'
-  if (status === 'canceled') return '任务已取消，本次扣点会按后端规则回退。'
+  if (status === 'canceled') return '任务已取消，本次扣点将按平台规则处理。'
   if (status === 'failed') return '任务生成失败，可以查看原因后重新生成。'
   return '任务已完成，可以保存、分享或发布到广场。'
 }
@@ -229,7 +229,7 @@ export default function WorkDetail() {
     if (!work.generationTaskId || !isActiveStatus(work.status)) return
     Taro.showModal({
       title: '取消生成任务',
-      content: '确认取消当前生成任务吗？取消后本次扣点会按后端规则回退，已进入供应商处理的任务可能仍需要等待状态同步。',
+      content: '确认取消当前生成任务吗？取消后本次扣点将按平台规则处理，已进入处理阶段的任务可能仍需等待状态同步。',
       success: async (res) => {
         if (!res.confirm) return
         setCancelingTask(true)

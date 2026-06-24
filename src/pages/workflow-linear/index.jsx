@@ -222,12 +222,12 @@ export default function WorkflowLinear() {
   const [components, setComponents] = useState([])
   const [tools, setTools] = useState([])
   const [steps, setSteps] = useState([])
-  const [title, setTitle] = useState('我的线性 Workflow')
+  const [title, setTitle] = useState('我的 AI 模板')
   const [prompt, setPrompt] = useState('')
   const [publishMode, setPublishMode] = useState('open_free')
   const [publishSummary, setPublishSummary] = useState('')
-  const [publishCategory, setPublishCategory] = useState('小程序线性链')
-  const [publishTags, setPublishTags] = useState('线性链 Workflow')
+  const [publishCategory, setPublishCategory] = useState('AI 模板')
+  const [publishTags, setPublishTags] = useState('AI 模板')
   const [pricePoints, setPricePoints] = useState(35)
   const [trialEnabled, setTrialEnabled] = useState(true)
   const [trialLimitPerUser, setTrialLimitPerUser] = useState(1)
@@ -251,7 +251,7 @@ export default function WorkflowLinear() {
         setError('')
       })
       .catch((err) => {
-        if (mounted) setError(err?.message || '线性组件库暂未同步成功。')
+        if (mounted) setError(err?.message || '模板组件暂未同步成功。')
       })
       .finally(() => mounted && setLoading(false))
     return () => {
@@ -268,7 +268,7 @@ export default function WorkflowLinear() {
   const addComponent = (component) => {
     setSteps((current) => {
       if (current.length >= 8) {
-        Taro.showToast({ title: '小程序线性链最多 8 步', icon: 'none' })
+        Taro.showToast({ title: 'AI 模板最多 8 个步骤', icon: 'none' })
         return current
       }
       const next = createStep(component, tools)
@@ -322,7 +322,7 @@ export default function WorkflowLinear() {
     if (missingTool) {
       Taro.showModal({
         title: '组件未绑定工具',
-        content: `${missingTool.label || missingTool.componentKey} 暂未匹配到可用平台工具，请先在后台配置工具与组件映射。`,
+        content: `${missingTool.label || missingTool.componentKey} 暂未匹配到可用平台工具，请联系平台完善工具配置。`,
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -333,8 +333,8 @@ export default function WorkflowLinear() {
 
   const createValidatedDraft = async () => {
     const payload = {
-      title: title.trim() || '我的线性 Workflow',
-      description: publishSummary.trim() || '由小程序线性拼积木创建，支持顺序运行，不包含自由连线、条件分支或循环。',
+      title: title.trim() || '我的 AI 模板',
+      description: publishSummary.trim() || '由 AI 模板创建，按顺序运行多个生成步骤。',
       coverUrl: '',
       graph,
       editorMode: 'linear'
@@ -367,7 +367,7 @@ export default function WorkflowLinear() {
     } catch (err) {
       Taro.showModal({
         title: shouldRun ? '运行失败' : '保存失败',
-        content: err?.message || '线性 Workflow 暂未处理成功，请稍后重试。',
+        content: err?.message || 'AI 模板暂未处理成功，请稍后重试。',
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -393,7 +393,7 @@ export default function WorkflowLinear() {
       title: '确认发布 Workflow',
       content: publishMode === 'closed_paid'
         ? `将发布为闭源付费模板，售价 ${normalizedPrice} 点。购买者仅获得运行权。`
-        : '将发布为开源免费模板，其他用户可查看 graph、克隆并导出 .seeflow。',
+        : '将发布为开源免费模板，其他用户可查看流程结构、克隆并复用。',
       confirmText: '确认发布',
       cancelText: '再检查'
     })
@@ -403,11 +403,11 @@ export default function WorkflowLinear() {
     try {
       const draft = await createValidatedDraft()
       const result = await publishWorkflowDraftCase(draft.id, {
-        title: title.trim() || '我的线性 Workflow',
-        summary: publishSummary.trim() || '由小程序线性拼积木发布的 Workflow 案例。',
+        title: title.trim() || '我的 AI 模板',
+        summary: publishSummary.trim() || '由 AI 模板发布的创作案例。',
         coverUrl: '',
         tags: splitTags(publishTags),
-        category: publishCategory.trim() || '小程序线性链',
+        category: publishCategory.trim() || 'AI 模板',
         licenseMode: publishMode,
         pricePoints: publishMode === 'closed_paid' ? normalizedPrice : 0,
         runForm: buildLinearRunForm(steps),
@@ -433,7 +433,7 @@ export default function WorkflowLinear() {
 
   if (!loggedIn) {
     return (
-      <Shell title='线性拼积木' showTab={false} backFallback='/pages/create-center/index'>
+      <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
         <EmptyState
           title='请先登录'
           description='登录后可从零创建线性 Workflow，并提交运行。'
@@ -446,13 +446,13 @@ export default function WorkflowLinear() {
   }
 
   return (
-    <Shell title='线性拼积木' showTab={false} backFallback='/pages/create-center/index'>
+    <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
           <View className='brand-title-copy'>
             <Text className='section-kicker'>Linear Workflow</Text>
-            <Text className='section-title'>线性拼积木</Text>
+            <Text className='section-title'>AI模板</Text>
           </View>
         </View>
         <View className='ghost-button glass-button compact' onClick={loadResources}>
@@ -462,7 +462,7 @@ export default function WorkflowLinear() {
       </View>
 
       <InlineNotice>
-        小程序端只支持顺序拼接组件，不开放自由连线、条件分支、循环或 .seeflow 导入导出。
+        当前支持按顺序组合组件，暂不开放分支、循环或文件导入导出。
       </InlineNotice>
 
       <View className='form-panel'>
@@ -494,11 +494,11 @@ export default function WorkflowLinear() {
       </View>
 
       {loading ? (
-        <PageLoading title='正在同步组件库' description='正在读取允许小程序线性拼积木使用的组件。' />
+        <PageLoading title='正在同步组件库' description='正在读取可用于 AI 模板的组件。' />
       ) : error ? (
         <ErrorState title='组件库加载失败' description={error} onRetry={loadResources} />
       ) : !components.length ? (
-        <EmptyState title='暂无线性组件' description='请先在后台启用允许线性链使用的组件。' icon='fusion' />
+        <EmptyState title='暂无可用组件' description='组件上线后会显示在这里。' icon='fusion' />
       ) : (
         <View className='linear-component-grid'>
           {components.map((component) => (
@@ -596,7 +596,7 @@ export default function WorkflowLinear() {
 
       {estimate ? (
         <InlineNotice>
-          预估 {estimate.estimatedPoints || 0} 点，{estimate.nodeEstimates?.length || steps.length} 个生成节点。实际扣点以后端运行结算为准。
+          预估 {estimate.estimatedPoints || 0} 点，{estimate.nodeEstimates?.length || steps.length} 个生成节点。实际扣点以生成完成后的结算为准。
         </InlineNotice>
       ) : null}
 
@@ -649,7 +649,7 @@ export default function WorkflowLinear() {
               <Input
                 type='number'
                 value={String(pricePoints)}
-                placeholder={`${priceMinPoints}-${priceMaxPoints} 点，以后端策略为准`}
+                placeholder={`${priceMinPoints}-${priceMaxPoints} 点，以平台规则为准`}
                 placeholderClass='muted'
                 onInput={(event) => setPricePoints(Number(event.detail.value || 0))}
               />
@@ -684,8 +684,8 @@ export default function WorkflowLinear() {
 
         <InlineNotice tone={publishMode === 'closed_paid' ? 'warning' : 'info'}>
           {publishMode === 'closed_paid'
-            ? '闭源付费发布后购买者只获得运行权，不会看到 graph、节点提示词或 .seeflow 导出。'
-            : '开源免费发布后将公开 graph、节点提示词和公开参数，并允许其他用户克隆。'}
+            ? '闭源付费发布后购买者只获得运行权，不会看到流程结构、节点提示词或导出文件。'
+            : '开源免费发布后将公开流程结构、节点提示词和公开参数，并允许其他用户克隆。'}
         </InlineNotice>
       </View>
 

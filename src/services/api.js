@@ -475,7 +475,7 @@ function readTelegramLoginPayload() {
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
   const initData = webApp?.initData
   if (!initData) {
-    throw new Error('请在 Telegram Mini App 内打开后登录')
+    throw new Error('请在 Telegram 内打开 seeFactory 后登录')
   }
   const user = webApp?.initDataUnsafe?.user || {}
   return {
@@ -488,7 +488,7 @@ function readTelegramLoginPayload() {
 async function readMiniappLoginPayload(runtime) {
   const result = await Taro.login()
   if (!result?.code) {
-    throw new Error('平台登录 code 获取失败，请重试')
+    throw new Error('未能获取登录凭证，请重试')
   }
   const payload = { code: result.code }
   if (runtime === 'alipay-miniapp') {
@@ -509,7 +509,7 @@ async function buildRuntimeLoginPayload(runtime, options = {}) {
   }
   if (runtime === 'h5-x') {
     const { code, codeVerifier, redirectUri, state } = options
-    if (!code || !codeVerifier || !state) throw new Error('请先完成 X OAuth 授权')
+    if (!code || !codeVerifier || !state) throw new Error('请先完成 X 账号授权')
     return { code, codeVerifier, redirectUri, state }
   }
   return {}
