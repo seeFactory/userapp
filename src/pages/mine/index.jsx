@@ -120,7 +120,7 @@ export default function Mine() {
       return
     }
     if (!agentFeatureEnabled) {
-      Taro.showToast({ title: '代理中心已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '代理中心暂未开放', icon: 'none' })
       return
     }
     if (loggedIn) {
@@ -161,7 +161,7 @@ export default function Mine() {
   const createRechargeCryptoOrder = async (route) => {
     if (!rechargePayment?.order?.id || rechargePayment.cryptoCreating) return
     setRechargePayment((current) => current ? { ...current, cryptoCreating: true } : current)
-    Taro.showLoading({ title: '创建 Crypto 订单' })
+    Taro.showLoading({ title: '创建 Crypto 支付' })
     try {
       const cryptoOrder = await createCryptoOrder({
         paymentOrderId: rechargePayment.order.id,
@@ -177,7 +177,7 @@ export default function Mine() {
       Taro.showToast({ title: '打币订单已创建', icon: 'success' })
     } catch (error) {
       setRechargePayment((current) => current ? { ...current, cryptoCreating: false } : current)
-      Taro.showToast({ title: error.message || 'Crypto 订单创建失败', icon: 'none' })
+      Taro.showToast({ title: error.message || 'Crypto 支付创建失败', icon: 'none' })
     } finally {
       Taro.hideLoading()
     }
@@ -197,12 +197,12 @@ export default function Mine() {
       return
     }
     if (!rechargeFeatureEnabled) {
-      Taro.showToast({ title: '充值功能已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '充值功能暂未开放', icon: 'none' })
       return
     }
     if (!requireLogin('/pages/mine/index')) return
     if (rechargePolicy.allowCustomAmount === false) {
-      Taro.showToast({ title: '当前点数充值已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '点数充值暂未开放', icon: 'none' })
       return
     }
     const amount = Number(rechargeAmount)
@@ -324,7 +324,7 @@ export default function Mine() {
               <Text className='section-title'>自填金额充值</Text>
             </View>
             <Text className={rechargeDisabled ? 'status failed' : 'status success'}>
-              {rechargeDisabled ? '后台已关闭' : `1 CNY = ${rechargePolicy.pointRate} 点`}
+              {rechargeDisabled ? '暂未开放' : `1 CNY = ${rechargePolicy.pointRate} 点`}
             </Text>
           </View>
 
@@ -376,7 +376,7 @@ export default function Mine() {
         </View>
         <View className='profile-card' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
-          <Text className='profile-name'>线性拼积木</Text>
+          <Text className='profile-name'>AI模板</Text>
           <Text className='tool-desc'>创建 Workflow</Text>
         </View>
         {!configLoading && agentFeatureEnabled ? (
