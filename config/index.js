@@ -17,8 +17,9 @@ const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || platformRuntimeTa
 module.exports = defineConfig({
   projectName: 'seeFactory',
   date: '2026-06-18',
-  designWidth: 750,
+  designWidth: 390,
   deviceRatio: {
+    390: 750 / 390,
     640: 2.34 / 2,
     750: 1,
     828: 1.81 / 2
@@ -55,7 +56,7 @@ module.exports = defineConfig({
   mini: {
     postcss: {
       pxtransform: {
-        enable: false,
+        enable: true,
         config: {}
       },
       cssModules: {
