@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 const runtimeTarget = process.argv[2] || "h5";
-const allowedTargets = new Set(["h5", "telegram-tma"]);
+const allowedTargets = new Set(["h5", "telegram-tma", "wechat-miniapp"]);
 
 if (!allowedTargets.has(runtimeTarget)) {
   console.error(`Unsupported production runtime target: ${runtimeTarget}`);
@@ -29,6 +29,14 @@ function run(args) {
     }
     process.exit(result.status || 1);
   }
+}
+
+if (runtimeTarget === "wechat-miniapp") {
+  run(["clean:dist"]);
+  run(["exec", "taro", "build", "--type", "weapp"]);
+  run(["prepare:weapp-dist"]);
+  run(["verify:weapp-dist"]);
+  process.exit(0);
 }
 
 run(["prepare:h5-dist"]);

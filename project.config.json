@@ -2,13 +2,17 @@
   "miniprogramRoot": "dist/",
   "projectname": "seeFactory",
   "description": "seeFactory AI creation mini program prototype",
-  "appid": "touristappid",
+  "appid": "wx063e1688aea803fe",
   "setting": {
     "urlCheck": false,
     "es6": true,
     "enhance": true,
     "postcss": true,
-    "minified": true
+    "minified": true,
+    "compileWorklet": false,
+    "skylineRenderEnable": false,
+    "useApiHook": false,
+    "useApiHostProcess": false
   },
   "compileType": "miniprogram"
 }

@@ -38,9 +38,6 @@ taro-scroll-view-core::-webkit-scrollbar {
   display: none;
 }
 
-*,
-*::before,
-*::after,
 view,
 text,
 input,
@@ -1044,15 +1041,33 @@ taro-tabbar {
   animation: scanSweep 5.2s ease-in-out infinite;
 }
 
-.hero > *,
-.tool-card > *,
-.case-card > *,
-.work-card > *,
-.linear-component-card > *,
-.linear-step-card > *,
-.panel > *,
-.profile-card > *,
-.form-panel > * {
+.hero > view,
+.hero > text,
+.hero > image,
+.tool-card > view,
+.tool-card > text,
+.tool-card > image,
+.case-card > view,
+.case-card > text,
+.case-card > image,
+.work-card > view,
+.work-card > text,
+.work-card > image,
+.linear-component-card > view,
+.linear-component-card > text,
+.linear-component-card > image,
+.linear-step-card > view,
+.linear-step-card > text,
+.linear-step-card > image,
+.panel > view,
+.panel > text,
+.panel > image,
+.profile-card > view,
+.profile-card > text,
+.profile-card > image,
+.form-panel > view,
+.form-panel > text,
+.form-panel > image {
   position: relative;
   z-index: 1;
 }
