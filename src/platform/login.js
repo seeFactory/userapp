@@ -1,5 +1,5 @@
-export const LOGIN_BRANCH = 'alipay'
-export const BRANCH_CLIENT_RUNTIME = 'alipay-miniapp'
+export const LOGIN_BRANCH = 'douyin'
+export const BRANCH_CLIENT_RUNTIME = 'douyin-miniapp'
 
 export function isTelegramRuntimeTarget(runtimeTarget = 'h5') {
   return runtimeTarget === 'tma' || runtimeTarget === 'telegram-tma'
