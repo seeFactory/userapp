@@ -30,7 +30,7 @@ export function formatAgreementLegalBlock(legal = {}) {
   ].join('\n')
 }
 
-export function formatAgreementContent(agreement = {}, legal = {}, fallback = '协议正文待后台发布') {
+export function formatAgreementContent(agreement = {}, legal = {}, fallback = '协议内容暂未发布') {
   const body = compact(agreement.contentMarkdown, fallback)
   return `${body}\n\n${formatAgreementLegalBlock(legal)}`
 }

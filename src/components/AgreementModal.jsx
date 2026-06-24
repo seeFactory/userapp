@@ -21,7 +21,7 @@ export default function AgreementModal({ open, title, content, onClose }) {
           </View>
         </View>
         <ScrollView scrollY className='legal-modal-scroll'>
-          <Text className='legal-modal-content'>{content || '协议正文待后台发布'}</Text>
+          <Text className='legal-modal-content'>{content || '协议内容暂未发布'}</Text>
         </ScrollView>
         <View className='primary-button full-width-button legal-modal-action' onClick={onClose}>
           <Text>我知道了</Text>

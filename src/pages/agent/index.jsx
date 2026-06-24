@@ -54,7 +54,7 @@ export default function Agent() {
       if (hasAcceptedAgreement('agent', version)) return true
       const result = await Taro.showModal({
         title: agreement.title || '代理推广协议',
-        content: formatAgreementContent(agreement, config?.legal, '代理推广协议正文待后台发布，请确认后继续访问代理中心。'),
+        content: formatAgreementContent(agreement, config?.legal, '代理推广协议暂未发布，请联系平台确认后再进入代理中心。'),
         cancelText: '暂不进入',
         confirmText: '同意并进入'
       })
@@ -136,7 +136,7 @@ export default function Agent() {
   if (!agentEnabled) {
     return (
       <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index'>
-        <EmptyState title='代理中心已关闭' description='当前后台已关闭代理展示能力，请等待管理员重新开放。' icon='agent' />
+        <EmptyState title='代理中心已关闭' description='代理中心暂未开放，请稍后再试。' icon='agent' />
       </Shell>
     )
   }
@@ -175,11 +175,11 @@ export default function Agent() {
         <View className='panel-brand-row'>
           <BrandLogo size={50} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>代理控制台</Text>
-            <Text className='section-title'>{isAgent ? '推广关系面板' : '人工开通代理'}</Text>
+            <Text className='section-kicker'>推广管理</Text>
+            <Text className='section-title'>{isAgent ? '推广数据' : '联系开通代理'}</Text>
           </View>
         </View>
-        <Text className='tool-desc'>{isAgent ? '邀请码、邀请关系和佣金归因由后台统一配置，用户端仅展示当前状态。' : '代理身份不开放自助申请，请联系管理员完成开通和绑定。'}</Text>
+        <Text className='tool-desc'>{isAgent ? '邀请码、邀请关系和佣金归因由平台统一管理，此处展示当前状态。' : '代理身份暂不支持自助申请，请联系平台完成开通和绑定。'}</Text>
       </View>
 
       {loading ? (
@@ -226,7 +226,7 @@ export default function Agent() {
             <View className='profile-card' onClick={copyCode}>
               <View className='profile-icon'><AppIcon name='copy' size={22} /></View>
               <Text className='profile-name'>邀请码</Text>
-              <Text className='tool-desc'>{inviteCode || '后台配置后显示'}</Text>
+              <Text className='tool-desc'>{inviteCode || '开通后显示'}</Text>
             </View>
             <View className='profile-card'>
               <View className='profile-icon'><AppIcon name='user' size={22} /></View>
@@ -261,7 +261,7 @@ export default function Agent() {
 
           <View className='primary-button' onClick={copyCode}>
             <AppIcon name='copy' size={16} />
-            <Text>{inviteCode ? '复制邀请码' : '等待后台开通'}</Text>
+            <Text>{inviteCode ? '复制邀请码' : '等待平台开通'}</Text>
           </View>
 
           <View className='panel'>

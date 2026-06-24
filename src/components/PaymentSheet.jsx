@@ -58,7 +58,7 @@ function invokePlatformPayment(platformPayment, onRefresh) {
   const params = platformPayment.payParams || {}
   if (platformPayment.invokeType === 'dev-preview') {
     copy(JSON.stringify(params), '支付参数')
-    Taro.showToast({ title: '开发环境支付预览，请刷新状态', icon: 'none' })
+    Taro.showToast({ title: '支付参数预览，请刷新状态', icon: 'none' })
     return Promise.resolve(false)
   }
   return new Promise((resolve) => {
@@ -182,7 +182,7 @@ export default function PaymentSheet({
     if (primaryBusy) return
     if (needsCryptoOrder) {
       if (!cryptoSelectable) {
-        Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 收单暂未配置', icon: 'none' })
+        Taro.showToast({ title: cryptoOptions.unavailableReason || 'Crypto 支付暂不可用', icon: 'none' })
         return
       }
       if (!payment.cryptoRoute?.chain || !payment.cryptoRoute?.token) {
@@ -210,7 +210,7 @@ export default function PaymentSheet({
   const primaryIcon = needsCryptoOrder ? 'wallet' : platformPayment || stars ? 'agent' : 'refresh'
   let primaryText = '刷新状态'
   if (needsCryptoOrder) {
-    primaryText = payment.cryptoCreating ? '创建中...' : '创建 Crypto 订单'
+    primaryText = payment.cryptoCreating ? '创建中...' : '创建 Crypto 支付'
   } else if (invoking) {
     primaryText = platformPayment || stars ? '拉起中...' : '刷新中...'
   } else if (platformPayment) {
@@ -265,7 +265,7 @@ export default function PaymentSheet({
             <Text className={cryptoOptions.acquiringConfigured ? 'modal-note' : 'modal-note danger-note'}>
               {cryptoSelectable
                 ? '创建订单后会展示打币地址、应付数量和过期时间。'
-                : cryptoOptions.unavailableReason || '后台尚未配置可用的 Crypto 收单地址。'}
+                : cryptoOptions.unavailableReason || '当前暂无可用的 Crypto 支付地址。'}
             </Text>
           </View>
         )}
@@ -298,7 +298,7 @@ export default function PaymentSheet({
               <Text>{platformPayment.orderNo || order.orderNo}</Text>
             </View>
             <View className='copy-box' onClick={() => copy(JSON.stringify(platformPayment.payParams || {}), '支付参数')}>
-              <Text>{platformPayment.configured ? '平台支付参数已生成' : '开发环境支付预览'}</Text>
+              <Text>{platformPayment.configured ? '平台支付参数已生成' : '支付参数预览'}</Text>
               <AppIcon name='copy' size={14} />
             </View>
           </View>
