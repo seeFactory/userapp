@@ -5,13 +5,21 @@ const googleClientId = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
 const xRedirectUri = process.env.SEEFACTORY_X_REDIRECT_URI || ''
 const devLoginEnabled = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
-const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
+const platformRuntimeTargets = {
+  weapp: 'wechat-miniapp',
+  alipay: 'alipay-miniapp',
+  tt: 'douyin-miniapp',
+  qq: 'qq-miniapp',
+  h5: 'h5'
+}
+const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || platformRuntimeTargets[process.env.TARO_ENV] || 'h5'
 
 module.exports = defineConfig({
   projectName: 'seeFactory',
   date: '2026-06-18',
-  designWidth: 750,
+  designWidth: 390,
   deviceRatio: {
+    390: 750 / 390,
     640: 2.34 / 2,
     750: 1,
     828: 1.81 / 2

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 const runtimeTarget = process.argv[2] || "h5";
-const allowedTargets = new Set(["h5", "telegram-tma"]);
+const allowedTargets = new Set(["h5", "telegram-tma", "alipay-miniapp"]);
 
 if (!allowedTargets.has(runtimeTarget)) {
   console.error(`Unsupported production runtime target: ${runtimeTarget}`);
@@ -29,6 +29,14 @@ function run(args) {
     }
     process.exit(result.status || 1);
   }
+}
+
+if (runtimeTarget === "alipay-miniapp") {
+  run(["clean:dist"]);
+  run(["exec", "taro", "build", "--type", "alipay"]);
+  run(["prepare:alipay-dist"]);
+  run(["verify:alipay-dist"]);
+  process.exit(0);
 }
 
 run(["prepare:h5-dist"]);

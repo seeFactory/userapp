@@ -38,15 +38,26 @@ taro-scroll-view-core::-webkit-scrollbar {
   display: none;
 }
 
-*,
-*::before,
-*::after,
 view,
+scroll-view,
+swiper,
+swiper-item,
+cover-view,
+cover-image,
+button,
 text,
 input,
 textarea,
 image,
 video,
+form,
+label,
+navigator,
+picker,
+slider,
+switch,
+canvas,
+map,
 taro-view-core,
 taro-text-core,
 taro-scroll-view-core,
@@ -58,11 +69,11 @@ taro-video-core {
 .app-shell,
 .login-wrap {
   position: relative;
-  width: 100vw;
+  width: 100%;
   max-width: none;
   height: 100vh;
   min-height: 844px;
-  margin: 0 auto;
+  margin: 0;
   overflow: hidden;
   isolation: isolate;
   background:
@@ -75,9 +86,10 @@ taro-video-core {
 .login-wrap::before {
   position: fixed;
   top: 0;
-  left: 50%;
+  left: 0;
+  right: 0;
   z-index: 0;
-  width: 100%;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -85,7 +97,7 @@ taro-video-core {
     linear-gradient(180deg, rgba(2, 4, 10, 0.18), rgba(0, 0, 0, 0.86)),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 7px);
   content: "";
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-shell {
@@ -99,9 +111,10 @@ taro-video-core {
 .home-shell::after {
   position: fixed;
   top: 0;
-  left: 50%;
+  left: 0;
+  right: 0;
   z-index: 1;
-  width: 100%;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -110,7 +123,7 @@ taro-video-core {
     radial-gradient(circle at 50% 24%, rgba(255, 49, 174, 0.12), transparent 42%),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.026) 0, rgba(255, 255, 255, 0.026) 1px, transparent 1px, transparent 5px);
   content: "";
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-video-layer,
@@ -118,12 +131,13 @@ taro-video-core {
 .factory-grid {
   position: fixed;
   top: 0;
-  left: 50%;
-  width: 100vw;
+  left: 0;
+  right: 0;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-video-layer {
@@ -222,7 +236,9 @@ taro-video-core {
   position: relative;
   z-index: 2;
   display: block;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   height: 100vh;
   padding: 18px 14px 24px;
   overflow-x: hidden;
@@ -241,11 +257,35 @@ taro-video-core {
 }
 
 .page-content.has-top-back {
-  padding-top: calc(72px + env(safe-area-inset-top) + var(--tg-content-safe-area-top, 0px));
+  padding-top: 72px;
 }
 
 .page-transition {
   animation: pageEnter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.taro-tabbar__container > taro-tabbar,
+taro-tabbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.taro-tabbar__container,
+.taro-tabbar__panel {
+  width: 100%;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  overflow: hidden;
+  background: var(--sf-ink);
+}
+
+.taro-tabbar__container > .taro-tabbar__panel > .taro_page.taro_tabbar_page {
+  height: 100vh !important;
+  max-height: 100vh !important;
 }
 
 .home-shell .page-content {
@@ -254,7 +294,7 @@ taro-video-core {
 
 .page-back-button {
   position: fixed;
-  top: calc(13px + env(safe-area-inset-top) + var(--tg-content-safe-area-top, 0px));
+  top: 13px;
   left: 14px;
   z-index: 32;
   display: flex;
@@ -1016,15 +1056,33 @@ taro-video-core {
   animation: scanSweep 5.2s ease-in-out infinite;
 }
 
-.hero > *,
-.tool-card > *,
-.case-card > *,
-.work-card > *,
-.linear-component-card > *,
-.linear-step-card > *,
-.panel > *,
-.profile-card > *,
-.form-panel > * {
+.hero > view,
+.hero > text,
+.hero > image,
+.tool-card > view,
+.tool-card > text,
+.tool-card > image,
+.case-card > view,
+.case-card > text,
+.case-card > image,
+.work-card > view,
+.work-card > text,
+.work-card > image,
+.linear-component-card > view,
+.linear-component-card > text,
+.linear-component-card > image,
+.linear-step-card > view,
+.linear-step-card > text,
+.linear-step-card > image,
+.panel > view,
+.panel > text,
+.panel > image,
+.profile-card > view,
+.profile-card > text,
+.profile-card > image,
+.form-panel > view,
+.form-panel > text,
+.form-panel > image {
   position: relative;
   z-index: 1;
 }
@@ -1169,6 +1227,10 @@ taro-video-core {
   margin: 20px 0 10px;
 }
 
+.section-head > view {
+  min-width: 0;
+}
+
 .section-title {
   display: block;
   margin-top: 2px;
@@ -1292,6 +1354,7 @@ taro-video-core {
 
 .home-tool-actions {
   display: flex;
+  flex: 1 1 216px;
   min-width: 0;
   max-width: 236px;
   align-items: center;
@@ -1305,7 +1368,9 @@ taro-video-core {
 
 .home-tool-tabs {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   gap: 4px;
   padding: 4px;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -1316,11 +1381,12 @@ taro-video-core {
 
 .home-tool-tab {
   display: flex;
-  min-width: 42px;
+  min-width: 0;
+  flex: 1 1 0;
   height: 28px;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
+  padding: 0 6px;
   border-radius: 999px;
   color: #94a3b8;
   font-size: 11px;
@@ -1338,7 +1404,7 @@ taro-video-core {
 }
 
 .home-search-button {
-  flex: 0 0 auto;
+  flex: 0 0 36px;
   width: 36px;
   height: 36px;
 }
@@ -2102,11 +2168,12 @@ taro-video-core {
 
 .bottom-tabs {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 20;
   display: flex;
-  width: 100vw;
+  width: auto;
   max-width: none;
   min-height: 82px;
   justify-content: space-between;
@@ -2120,10 +2187,9 @@ taro-video-core {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 -16px 34px rgba(0, 0, 0, 0.46);
-  transform: translateX(-50%);
+  transform: none;
   backface-visibility: hidden;
   contain: layout paint;
-  will-change: transform;
   -webkit-backdrop-filter: blur(18px) saturate(1.18);
   backdrop-filter: blur(18px) saturate(1.18);
 }
@@ -2527,10 +2593,10 @@ taro-video-core {
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 20px;
   background:
-    linear-gradient(90deg, var(--sf-cyan) 0 22px, transparent 22px calc(100% - 22px), var(--sf-warm) calc(100% - 22px)) top left / 100% 1px no-repeat,
-    linear-gradient(90deg, var(--sf-warm) 0 22px, transparent 22px calc(100% - 22px), var(--sf-cyan) calc(100% - 22px)) bottom left / 100% 1px no-repeat,
-    linear-gradient(180deg, var(--sf-cyan) 0 22px, transparent 22px calc(100% - 22px), var(--sf-warm) calc(100% - 22px)) top left / 1px 100% no-repeat,
-    linear-gradient(180deg, var(--sf-warm) 0 22px, transparent 22px calc(100% - 22px), var(--sf-cyan) calc(100% - 22px)) top right / 1px 100% no-repeat;
+    linear-gradient(90deg, rgba(92, 231, 255, 0.5), rgba(243, 214, 166, 0.34)) top left / 100% 1px no-repeat,
+    linear-gradient(90deg, rgba(243, 214, 166, 0.34), rgba(92, 231, 255, 0.5)) bottom left / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(92, 231, 255, 0.42), transparent 46%, rgba(243, 214, 166, 0.32)) top left / 1px 100% no-repeat,
+    linear-gradient(180deg, rgba(243, 214, 166, 0.32), transparent 46%, rgba(92, 231, 255, 0.42)) top right / 1px 100% no-repeat;
   content: "";
   opacity: 0.54;
   transform: none;
@@ -3035,7 +3101,7 @@ taro-video-core {
 
 .bottom-tabs {
   min-height: 86px;
-  padding: 9px 10px calc(12px + env(safe-area-inset-bottom));
+  padding: 9px 10px 28px;
   border-top-color: rgba(255, 255, 255, 0.1);
   background:
     linear-gradient(180deg, rgba(19, 23, 34, 0.9), rgba(7, 8, 12, 0.98)),
@@ -3150,31 +3216,6 @@ taro-video-core {
 }
 
 @media (min-width: 391px) {
-  .app-shell,
-  .login-wrap,
-  .app-shell::before,
-  .login-wrap::before,
-  .home-shell::after,
-  .home-video-layer,
-  .home-video-overlay,
-  .factory-grid {
-    max-width: 390px;
-  }
-
-  .bottom-tabs {
-    max-width: 390px;
-  }
-
-  .page-back-button {
-    left: 50%;
-    transform: translateX(-181px);
-  }
-
-  .page-back-button:active,
-  .page-back-button-pressed {
-    transform: translateX(-181px) translateY(1px) scale(0.97);
-  }
-
   .modal-panel {
     max-width: 348px;
   }
@@ -3399,7 +3440,7 @@ taro-video-core {
 
 .linear-submit-bar {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 14px 0 calc(16px + env(safe-area-inset-bottom));
+  padding: 14px 0 30px;
 }
 
 .linear-submit-bar .linear-publish-action {
