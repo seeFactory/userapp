@@ -28,7 +28,7 @@ import {
 } from '../../services/api'
 import { requireLogin } from '../../utils/storage'
 
-const defaultStyles = ['深空电影感', '冷调商业摄影', '品牌漫画', '赛博霓虹']
+const defaultStyles = ['电影质感', '商业摄影', '品牌漫画', '潮流海报']
 const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
 const defaultResolutions = ['1024x1024', '1024x1365', '1024x1792', '1792x1024']
 const defaultDurations = ['5 秒', '8 秒', '12 秒']
@@ -43,7 +43,7 @@ function fallbackTool(id) {
     id: id || 'factory-painter',
     name: 'AI 创作工具',
     label: '工具',
-    desc: '正在同步 Admin 配置的工具参数。',
+    desc: '正在同步工具参数。',
     cost: 0,
     fields: ['prompt', 'style', 'ratio', 'resolution', 'model'],
     options: {}
@@ -382,7 +382,7 @@ export default function ToolPage() {
   if (!generationEnabled) {
     return (
       <Shell title='创作工具' showTab={false}>
-        <EmptyState title='生成服务已关闭' description='当前后台已关闭生成服务，请稍后再试。' icon='wand' />
+        <EmptyState title='生成服务已关闭' description='生成服务暂未开放，请稍后再试。' icon='wand' />
       </Shell>
     )
   }
@@ -445,7 +445,7 @@ export default function ToolPage() {
   const createPaymentCryptoOrder = async (route) => {
     if (!payment?.order?.id || payment.cryptoCreating) return
     setPayment((current) => current ? { ...current, cryptoCreating: true } : current)
-    Taro.showLoading({ title: '创建 Crypto 订单' })
+    Taro.showLoading({ title: '创建 Crypto 支付' })
     try {
       const cryptoOrder = await createCryptoOrder({
         paymentOrderId: payment.order.id,
@@ -461,7 +461,7 @@ export default function ToolPage() {
       Taro.showToast({ title: '打币订单已创建', icon: 'success' })
     } catch (error) {
       setPayment((current) => current ? { ...current, cryptoCreating: false } : current)
-      Taro.showToast({ title: error.message || 'Crypto 订单创建失败', icon: 'none' })
+      Taro.showToast({ title: error.message || 'Crypto 支付创建失败', icon: 'none' })
     } finally {
       Taro.hideLoading()
     }
@@ -630,7 +630,7 @@ export default function ToolPage() {
   const submit = async () => {
     if (busy) return
     if (!generationEnabled) {
-      Taro.showToast({ title: '生成服务已由后台关闭', icon: 'none' })
+      Taro.showToast({ title: '生成服务暂未开放', icon: 'none' })
       return
     }
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
@@ -777,7 +777,7 @@ export default function ToolPage() {
 
       <View className='form-panel'>
         {!tool.fields?.length ? (
-          <InlineNotice tone='danger'>当前工具缺少可用字段配置，请联系管理员检查工具配置。</InlineNotice>
+          <InlineNotice tone='danger'>当前工具暂不可用，请稍后再试或联系客服。</InlineNotice>
         ) : null}
         {availableModes.length > 1 ? (
           <>

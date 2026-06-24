@@ -250,7 +250,7 @@ export default function WorkflowPurchases() {
                   </View>
                 </View>
                 <Text className='tool-desc'>作者 {templateCreatorName(item)} · {templateLastRunText(item)}</Text>
-                {item.hasReplacementModel || item.replacementAvailable ? <Text className='tool-desc'>存在可替代模型，运行时按后台映射处理。</Text> : null}
+                {item.hasReplacementModel || item.replacementAvailable ? <Text className='tool-desc'>平台已准备替代模型，运行时会自动选择可用方案。</Text> : null}
                 <Text className='tool-desc'>{workflowLifecycleLabel(item)}</Text>
                 {workflowLifecycleNote(item) ? (
                   <InlineNotice tone={!canRunWorkflowPurchase(item) ? 'danger' : 'info'}>{workflowLifecycleNote(item)}</InlineNotice>

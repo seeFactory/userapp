@@ -31,7 +31,7 @@ const REQUIRED_AGREEMENTS = [
 const runtimeMeta = {
   'telegram-tma': {
     title: 'Telegram Mini App 登录',
-    subtitle: '使用 Telegram initData 完成安全登录',
+    subtitle: '通过 Telegram 授权进入 seeFactory',
     action: '继续使用 Telegram',
     icon: 'login'
   },
@@ -91,7 +91,7 @@ function randomBase64Url(byteLength = 48) {
 
 async function sha256Base64Url(value) {
   if (typeof window === 'undefined' || !window.crypto?.subtle) {
-    throw new Error('当前浏览器不支持安全 OAuth 登录')
+    throw new Error('当前浏览器不支持安全授权登录')
   }
   const bytes = new TextEncoder().encode(value)
   const digest = await window.crypto.subtle.digest('SHA-256', bytes)
@@ -340,7 +340,7 @@ export default function Login() {
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>
         <Text className='hero-kicker'>seeFactory</Text>
-        <Text className='hero-title'>AI 创作工厂</Text>
+        <Text className='hero-title'>seeFactory</Text>
         <Text className='hero-subtitle'>{meta.subtitle}。案例完整提示词无需登录。</Text>
 
         <View className='platform-panel'>
@@ -349,7 +349,7 @@ export default function Login() {
             <Text>{meta.title}</Text>
           </View>
           {isTelegram && (
-            <Text className='platform-hint'>请在 Telegram 内打开本页面。登录时只会提交 Telegram initData 原始字符串。</Text>
+            <Text className='platform-hint'>请在 Telegram 内打开 seeFactory，授权信息仅用于完成登录。</Text>
           )}
           {!isH5 && (
             <View className={loading ? 'primary-button disabled' : 'primary-button'} onClick={handleRuntimeLogin}>
@@ -362,13 +362,13 @@ export default function Login() {
               <View id={googleHostId.current} className='google-button-host' />
               {!loginConfig.googleClientId && (
                 <View className='login-warning'>
-                  <Text>Google 登录需配置 SEEFACTORY_GOOGLE_CLIENT_ID。</Text>
+                  <Text>Google 登录暂未开放。</Text>
                 </View>
               )}
               {loginConfig.googleClientId && !googleReady && (
                 <View className='ghost-button glass-button'>
                   <AppIcon name='refresh' size={16} />
-                  <Text>加载 Google 登录</Text>
+                  <Text>准备 Google 登录</Text>
                 </View>
               )}
               <View className={loading ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={handleXLogin}>
@@ -385,7 +385,7 @@ export default function Login() {
             <Input className='text-input' value={account} onInput={(event) => setAccount(event.detail.value)} />
             <View className='ghost-button glass-button block-gap' onClick={handleDevLogin}>
               <AppIcon name='lock' size={16} />
-              <Text>开发环境账号登录</Text>
+              <Text>账号登录</Text>
             </View>
           </View>
         )}

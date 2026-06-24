@@ -52,7 +52,7 @@ export default function CustomerModal({ open, onClose }) {
 
   const openQrCode = () => {
     if (!service.qrCodeUrl || qrError) {
-      Taro.showToast({ title: service.qrCodeUrl ? '二维码加载失败，请复制客服微信号' : '请在后台配置客服二维码', icon: 'none' })
+      Taro.showToast({ title: service.qrCodeUrl ? '二维码加载失败，请复制客服微信号' : '客服二维码暂未配置', icon: 'none' })
       return
     }
     Taro.previewImage({
@@ -93,7 +93,7 @@ export default function CustomerModal({ open, onClose }) {
               ))}
             </View>
           )}
-          <Text>{loading ? '加载客服二维码' : service.qrCodeUrl && !qrError ? '点击放大客服二维码' : '二维码待后台配置'}</Text>
+          <Text>{loading ? '加载客服二维码' : service.qrCodeUrl && !qrError ? '点击放大客服二维码' : '二维码暂未配置'}</Text>
         </View>
         <View className='copy-row'>
           <View>
