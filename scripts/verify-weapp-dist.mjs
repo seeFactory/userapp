@@ -32,8 +32,11 @@ assert.ok(fs.existsSync(projectConfigPath), "WeApp dist/project.config.json must
 const appWxss = fs.readFileSync(appWxssPath, "utf8");
 assert.ok(!appWxss.includes("*"), "WeApp app.wxss must not include universal selectors; WeChat WXSS rejects them.");
 assert.ok(!/\d+(?:\.\d+)?rpx\b/.test(appWxss), "WeApp app.wxss must keep the app/TMA px layout scale and not emit rpx.");
+assert.ok(!appWxss.includes("max-width:390px"), "WeApp layout must not keep the H5/TMA 390px shell.");
+assert.ok(!appWxss.includes("width:100vw"), "WeApp layout must use the mini program viewport width instead of 100vw.");
+assert.ok(!appWxss.includes("translateX(-181px)"), "WeApp back button must not use the old centered 390px shell offset.");
 
-for (const token of ["min-height:844px", "max-width:390px", "font-size:14px"]) {
+for (const token of ["min-height:844px", "font-size:14px"]) {
   assert.ok(appWxss.includes(token), `WeApp app.wxss must preserve ${token}.`);
 }
 
@@ -57,6 +60,7 @@ for (const pattern of forbiddenApiPatterns) {
 console.log(JSON.stringify({
   checked: [
     "WeApp WXSS keeps app/TMA px layout scale",
+    "WeApp layout fills the mini program viewport",
     "WeApp WXSS excludes universal selectors",
     "WeApp runtime target is wechat-miniapp",
     "WeApp production API base is embedded",

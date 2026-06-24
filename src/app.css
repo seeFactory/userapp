@@ -55,11 +55,11 @@ taro-video-core {
 .app-shell,
 .login-wrap {
   position: relative;
-  width: 100vw;
+  width: 100%;
   max-width: none;
   height: 100vh;
   min-height: 844px;
-  margin: 0 auto;
+  margin: 0;
   overflow: hidden;
   isolation: isolate;
   background:
@@ -72,9 +72,10 @@ taro-video-core {
 .login-wrap::before {
   position: fixed;
   top: 0;
-  left: 50%;
+  left: 0;
+  right: 0;
   z-index: 0;
-  width: 100%;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -82,7 +83,7 @@ taro-video-core {
     linear-gradient(180deg, rgba(2, 4, 10, 0.18), rgba(0, 0, 0, 0.86)),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 7px);
   content: "";
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-shell {
@@ -96,9 +97,10 @@ taro-video-core {
 .home-shell::after {
   position: fixed;
   top: 0;
-  left: 50%;
+  left: 0;
+  right: 0;
   z-index: 1;
-  width: 100%;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -107,7 +109,7 @@ taro-video-core {
     radial-gradient(circle at 50% 24%, rgba(255, 49, 174, 0.12), transparent 42%),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.026) 0, rgba(255, 255, 255, 0.026) 1px, transparent 1px, transparent 5px);
   content: "";
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-video-layer,
@@ -115,12 +117,13 @@ taro-video-core {
 .factory-grid {
   position: fixed;
   top: 0;
-  left: 50%;
-  width: 100vw;
+  left: 0;
+  right: 0;
+  width: auto;
   max-width: none;
   height: 100vh;
   pointer-events: none;
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .home-video-layer {
@@ -2141,11 +2144,12 @@ taro-tabbar {
 
 .bottom-tabs {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 20;
   display: flex;
-  width: 100vw;
+  width: auto;
   max-width: none;
   min-height: 82px;
   justify-content: space-between;
@@ -2159,7 +2163,7 @@ taro-tabbar {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 -8px 18px rgba(0, 0, 0, 0.34);
-  transform: translateX(-50%);
+  transform: none;
   backface-visibility: hidden;
   contain: layout paint;
   will-change: transform;
@@ -3239,31 +3243,6 @@ taro-tabbar {
 }
 
 @media (min-width: 391px) {
-  .app-shell,
-  .login-wrap,
-  .app-shell::before,
-  .login-wrap::before,
-  .home-shell::after,
-  .home-video-layer,
-  .home-video-overlay,
-  .factory-grid {
-    max-width: 390px;
-  }
-
-  .bottom-tabs {
-    max-width: 390px;
-  }
-
-  .page-back-button {
-    left: 50%;
-    transform: translateX(-181px);
-  }
-
-  .page-back-button:active,
-  .page-back-button-pressed {
-    transform: translateX(-181px) translateY(1px) scale(0.97);
-  }
-
   .modal-panel {
     max-width: 348px;
   }
