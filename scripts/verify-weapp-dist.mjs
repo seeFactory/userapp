@@ -37,6 +37,7 @@ assert.ok(!appWxss.includes("max-width:390px"), "WeApp layout must not keep the 
 assert.ok(!appWxss.includes("width:100vw"), "WeApp layout must use the mini program viewport width instead of 100vw.");
 assert.ok(!appWxss.includes("translateX(-181px)"), "WeApp back button must not use the old centered 390px shell offset.");
 assert.ok(!appWxss.includes("translateX(-348.07692rpx)"), "WeApp back button must not use the transformed centered shell offset.");
+assert.ok(/\.page-content\{[^}]*box-sizing:border-box/.test(appWxss), "WeApp ScrollView page-content must use border-box so padding cannot expand past the viewport.");
 
 for (const token of ["min-height:1623.07692rpx", "font-size:26.92308rpx"]) {
   assert.ok(appWxss.includes(token), `WeApp app.wxss must preserve ${token}.`);
@@ -64,6 +65,7 @@ console.log(JSON.stringify({
     "WeApp WXSS keeps the 390px source design scale before rpx conversion",
     "WeApp WXSS uses 390px-to-750rpx adaptive conversion",
     "WeApp layout fills the mini program viewport",
+    "WeApp ScrollView padding stays inside the viewport",
     "WeApp WXSS excludes universal selectors",
     "WeApp runtime target is wechat-miniapp",
     "WeApp production API base is embedded",
