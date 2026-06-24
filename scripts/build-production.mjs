@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 const runtimeTarget = process.argv[2] || "h5";
-const allowedTargets = new Set(["h5", "telegram-tma"]);
+const allowedTargets = new Set(["h5", "telegram-tma", "android-apk"]);
 
 if (!allowedTargets.has(runtimeTarget)) {
   console.error(`Unsupported production runtime target: ${runtimeTarget}`);
@@ -38,4 +38,7 @@ run(["verify:h5-size"]);
 run(["verify:production-api"]);
 if (runtimeTarget === "telegram-tma") {
   run(["verify:tma-dist"]);
+}
+if (runtimeTarget === "android-apk") {
+  run(["verify:apk-dist"]);
 }

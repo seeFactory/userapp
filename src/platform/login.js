@@ -1,4 +1,4 @@
-export const LOGIN_BRANCH = 'main'
+export const LOGIN_BRANCH = 'apk'
 export const BRANCH_CLIENT_RUNTIME = 'h5-google'
 
 export function isTelegramRuntimeTarget(runtimeTarget = 'h5') {
