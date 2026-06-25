@@ -7,6 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const indexPath = path.join(root, "dist", "index.html");
 const capacitorConfigPath = path.join(root, "capacitor.config.json");
 const manifestPath = path.join(root, "android", "app", "src", "main", "AndroidManifest.xml");
+const mainActivityPath = path.join(root, "android", "app", "src", "main", "java", "xyz", "seefactory", "app", "MainActivity.java");
+const externalAuthPluginPath = path.join(root, "android", "app", "src", "main", "java", "xyz", "seefactory", "app", "ExternalAuthPlugin.java");
 const androidAssetIndexPath = path.join(root, "android", "app", "src", "main", "assets", "public", "index.html");
 
 assert.ok(existsSync(indexPath), "APK web dist/index.html must exist.");
@@ -49,6 +51,14 @@ if (existsSync(manifestPath)) {
   assert.ok(manifest.includes('android:pathPrefix="/telegram/callback"'), "APK AndroidManifest must register Telegram callback deep link path.");
 }
 
+assert.ok(existsSync(mainActivityPath), "APK MainActivity must exist.");
+assert.ok(existsSync(externalAuthPluginPath), "APK ExternalAuthPlugin must exist.");
+const mainActivity = readFileSync(mainActivityPath, "utf8");
+const externalAuthPlugin = readFileSync(externalAuthPluginPath, "utf8");
+assert.ok(mainActivity.includes("registerPlugin(ExternalAuthPlugin.class)"), "APK MainActivity must register ExternalAuthPlugin.");
+assert.ok(externalAuthPlugin.includes('Intent.ACTION_VIEW'), "APK ExternalAuthPlugin must open auth URLs via Android ACTION_VIEW.");
+assert.ok(externalAuthPlugin.includes('@CapacitorPlugin(name = "ExternalAuth")'), "APK ExternalAuthPlugin must expose the ExternalAuth bridge.");
+
 if (existsSync(androidAssetIndexPath)) {
   const androidIndex = readFileSync(androidAssetIndexPath, "utf8");
   assert.equal(androidIndex, index, "Android synced index.html must match dist/index.html.");
@@ -62,6 +72,7 @@ console.log(JSON.stringify({
     "APK appId, appName, webDir and Android scheme are stable",
     "APK AndroidManifest disables backup and cleartext traffic when present",
     "APK AndroidManifest registers seeFactory Google, Telegram and X auth deep links when present",
+    "APK native ExternalAuth plugin opens authorization URLs through Android ACTION_VIEW",
     "APK Android synced assets match dist when present"
   ],
   appId: config.appId,

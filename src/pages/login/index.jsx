@@ -156,6 +156,11 @@ function loadScript(src) {
   })
 }
 
+function authLaunchError(error, fallback) {
+  if (error?.message === 'AUTH_BROWSER_OPEN_TIMEOUT') return '授权页打开超时，请检查系统浏览器后重试'
+  return error?.message || fallback
+}
+
 export default function Login() {
   const router = getCurrentInstance().router || {}
   const params = router.params || {}
@@ -400,9 +405,11 @@ export default function Login() {
       Taro.setStorageSync(GOOGLE_REDIRECT_URI_KEY, googleRedirectUri)
       Taro.setStorageSync(GOOGLE_RETURN_TO_KEY, target)
       Taro.setStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      Taro.hideLoading()
+      setLoading(false)
       await openExternalAuthUrl(result.authorizeUrl)
     } catch (error) {
-      Taro.showToast({ title: error.message || 'Google 授权启动失败', icon: 'none' })
+      Taro.showToast({ title: authLaunchError(error, 'Google 授权启动失败'), icon: 'none' })
     } finally {
       Taro.hideLoading()
       setLoading(false)
@@ -424,9 +431,11 @@ export default function Login() {
       const acceptedAgreements = await ensureLoginAgreements()
       Taro.setStorageSync(TELEGRAM_RETURN_TO_KEY, target)
       Taro.setStorageSync(TELEGRAM_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      Taro.hideLoading()
+      setLoading(false)
       await openExternalAuthUrl(loginConfig.telegramLoginUrl)
     } catch (error) {
-      Taro.showToast({ title: error.message || 'Telegram 授权启动失败', icon: 'none' })
+      Taro.showToast({ title: authLaunchError(error, 'Telegram 授权启动失败'), icon: 'none' })
     } finally {
       Taro.hideLoading()
       setLoading(false)
@@ -453,9 +462,11 @@ export default function Login() {
       Taro.setStorageSync(X_REDIRECT_URI_KEY, xRedirectUri)
       Taro.setStorageSync(X_RETURN_TO_KEY, target)
       Taro.setStorageSync(X_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      Taro.hideLoading()
+      setLoading(false)
       await openExternalAuthUrl(result.authorizeUrl)
     } catch (error) {
-      Taro.showToast({ title: error.message || 'X 授权启动失败', icon: 'none' })
+      Taro.showToast({ title: authLaunchError(error, 'X 授权启动失败'), icon: 'none' })
     } finally {
       Taro.hideLoading()
       setLoading(false)
