@@ -9,6 +9,7 @@ const capacitorConfigPath = path.join(root, "capacitor.config.json");
 const manifestPath = path.join(root, "android", "app", "src", "main", "AndroidManifest.xml");
 const mainActivityPath = path.join(root, "android", "app", "src", "main", "java", "xyz", "seefactory", "app", "MainActivity.java");
 const externalAuthPluginPath = path.join(root, "android", "app", "src", "main", "java", "xyz", "seefactory", "app", "ExternalAuthPlugin.java");
+const externalAuthBridgePath = path.join(root, "android", "app", "src", "main", "java", "xyz", "seefactory", "app", "ExternalAuthBridge.java");
 const androidAssetIndexPath = path.join(root, "android", "app", "src", "main", "assets", "public", "index.html");
 
 assert.ok(existsSync(indexPath), "APK web dist/index.html must exist.");
@@ -53,11 +54,16 @@ if (existsSync(manifestPath)) {
 
 assert.ok(existsSync(mainActivityPath), "APK MainActivity must exist.");
 assert.ok(existsSync(externalAuthPluginPath), "APK ExternalAuthPlugin must exist.");
+assert.ok(existsSync(externalAuthBridgePath), "APK ExternalAuthBridge must exist.");
 const mainActivity = readFileSync(mainActivityPath, "utf8");
 const externalAuthPlugin = readFileSync(externalAuthPluginPath, "utf8");
+const externalAuthBridge = readFileSync(externalAuthBridgePath, "utf8");
 assert.ok(mainActivity.includes("registerPlugin(ExternalAuthPlugin.class)"), "APK MainActivity must register ExternalAuthPlugin.");
+assert.ok(mainActivity.includes('addJavascriptInterface(new ExternalAuthBridge(this), "SeeFactoryExternalAuth")'), "APK MainActivity must expose SeeFactoryExternalAuth JavascriptInterface.");
 assert.ok(externalAuthPlugin.includes('Intent.ACTION_VIEW'), "APK ExternalAuthPlugin must open auth URLs via Android ACTION_VIEW.");
 assert.ok(externalAuthPlugin.includes('@CapacitorPlugin(name = "ExternalAuth")'), "APK ExternalAuthPlugin must expose the ExternalAuth bridge.");
+assert.ok(externalAuthBridge.includes("@JavascriptInterface"), "APK ExternalAuthBridge must expose a JavascriptInterface method.");
+assert.ok(externalAuthBridge.includes("activity.startActivity(intent)"), "APK ExternalAuthBridge must start external authorization from Activity context.");
 
 if (existsSync(androidAssetIndexPath)) {
   const androidIndex = readFileSync(androidAssetIndexPath, "utf8");
@@ -73,6 +79,7 @@ console.log(JSON.stringify({
     "APK AndroidManifest disables backup and cleartext traffic when present",
     "APK AndroidManifest registers seeFactory Google, Telegram and X auth deep links when present",
     "APK native ExternalAuth plugin opens authorization URLs through Android ACTION_VIEW",
+    "APK SeeFactoryExternalAuth JavascriptInterface opens authorization URLs from Activity context",
     "APK Android synced assets match dist when present"
   ],
   appId: config.appId,

@@ -40,8 +40,19 @@ function withTimeout(promise, ms = 2500) {
   })
 }
 
+function openWithJavascriptInterface(url) {
+  if (RUNTIME_TARGET !== 'android-apk' || typeof window === 'undefined') return false
+  const bridge = window.SeeFactoryExternalAuth
+  if (!bridge?.open) return false
+
+  bridge.open(url)
+  return true
+}
+
 export async function openExternalAuthUrl(url) {
   if (!url) throw new Error('授权地址无效')
+
+  if (openWithJavascriptInterface(url)) return
 
   const ExternalAuth = await nativeExternalAuth()
   if (ExternalAuth?.open) {

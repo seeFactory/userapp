@@ -9,4 +9,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ExternalAuthPlugin.class);
         super.onCreate(savedInstanceState);
     }
+
+    @Override
+    protected void load() {
+        super.load();
+        if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().addJavascriptInterface(new ExternalAuthBridge(this), "SeeFactoryExternalAuth");
+        }
+    }
 }
