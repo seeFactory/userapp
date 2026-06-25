@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "seeFactory",
   "description": "seeFactory AI creation mini program prototype",
-  "appid": "touristappid",
+  "appid": "2021006162649015",
   "setting": {
     "urlCheck": false,
     "es6": true,
