@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,6 +17,18 @@ assert.ok(existsSync(capacitorConfigPath), "capacitor.config.json must exist.");
 
 const index = readFileSync(indexPath, "utf8");
 const config = JSON.parse(readFileSync(capacitorConfigPath, "utf8"));
+
+function walk(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    return entry.isDirectory() ? walk(fullPath) : [fullPath];
+  });
+}
+
+const distText = walk(path.join(root, "dist"))
+  .filter((file) => /\.(html|js|css|json)$/i.test(file))
+  .map((file) => readFileSync(file, "utf8"))
+  .join("\n");
 
 assert.equal(config.appId, "xyz.seefactory.app", "APK appId must be xyz.seefactory.app.");
 assert.equal(config.appName, "seeFactory", "APK appName must be seeFactory.");
@@ -39,6 +51,11 @@ const forbiddenMarkers = [
 for (const marker of forbiddenMarkers) {
   assert.ok(!index.includes(marker), `APK index.html must not include ${marker}.`);
 }
+
+assert.ok(distText.includes("https://api.seefactory.xyz/api/v1/auth/h5/google-callback"), "APK Google OAuth redirect must use the API HTTPS callback bridge.");
+assert.ok(distText.includes("https://api.seefactory.xyz/api/v1/auth/h5/x-callback"), "APK X OAuth redirect must use the API HTTPS callback bridge.");
+assert.ok(!distText.includes("seefactory://auth/google/callback"), "APK Google OAuth redirect must not use a custom scheme directly.");
+assert.ok(!distText.includes("seefactory://auth/x/callback"), "APK X OAuth redirect must not use a custom scheme directly.");
 
 if (existsSync(manifestPath)) {
   const manifest = readFileSync(manifestPath, "utf8");
