@@ -6,7 +6,9 @@ import { resolveClientRuntime } from '../platform/login'
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
 const GOOGLE_CLIENT_ID = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
+const GOOGLE_REDIRECT_URI = process.env.SEEFACTORY_GOOGLE_REDIRECT_URI || ''
 const X_REDIRECT_URI = process.env.SEEFACTORY_X_REDIRECT_URI || ''
+const TELEGRAM_LOGIN_URL = process.env.SEEFACTORY_TELEGRAM_LOGIN_URL || ''
 const DEV_LOGIN_ENABLED = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 const CLIENT_VERSION = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
 const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
@@ -128,7 +130,10 @@ export function getClientRuntime() {
 export function getFrontendLoginConfig() {
   return {
     googleClientId: GOOGLE_CLIENT_ID,
+    googleRedirectUri: GOOGLE_REDIRECT_URI,
     xRedirectUri: X_REDIRECT_URI,
+    telegramLoginUrl: TELEGRAM_LOGIN_URL,
+    runtimeTarget: RUNTIME_TARGET,
     devLoginEnabled: DEV_LOGIN_ENABLED
   }
 }
@@ -346,6 +351,14 @@ export async function createXAuthorizeUrl(params) {
   return request(`/auth/h5/x/authorize-url?${query.toString()}`, { noAuth: true })
 }
 
+export async function createGoogleAuthorizeUrl(params) {
+  const query = new URLSearchParams({
+    codeChallenge: params.codeChallenge
+  })
+  if (params.redirectUri) query.set('redirectUri', params.redirectUri)
+  return request(`/auth/h5/google/authorize-url?${query.toString()}`, { noAuth: true })
+}
+
 export async function fetchWorks(params = {}) {
   const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
@@ -560,6 +573,7 @@ const AUTH_ENDPOINTS = {
   'douyin-miniapp': '/auth/douyin-miniapp-login',
   'qq-miniapp': '/auth/qq-miniapp-login',
   'h5-google': '/auth/h5/google-login',
+  'h5-telegram': '/auth/h5/telegram-login',
   'h5-x': '/auth/h5/x-login',
   dev: '/auth/dev-account-login'
 }
@@ -606,9 +620,19 @@ async function buildRuntimeLoginPayload(runtime, options = {}) {
     return readMiniappLoginPayload(runtime)
   }
   if (runtime === 'h5-google') {
+    if (options.code) {
+      const { code, codeVerifier, redirectUri, state } = options
+      if (!code || !codeVerifier || !state) throw new Error('请先完成 Google 授权')
+      return { code, codeVerifier, redirectUri, state }
+    }
     const idToken = options.idToken || (typeof window !== 'undefined' ? window.__SEEFACTORY_GOOGLE_ID_TOKEN__ : '')
     if (!idToken) throw new Error('请先完成 Google 授权')
     return { idToken }
+  }
+  if (runtime === 'h5-telegram') {
+    const telegramAuth = options.telegramAuth || {}
+    if (!telegramAuth.id || !telegramAuth.hash || !telegramAuth.auth_date) throw new Error('请先完成 Telegram 授权')
+    return { telegramAuth }
   }
   if (runtime === 'h5-x') {
     const { code, codeVerifier, redirectUri, state } = options

@@ -6,6 +6,8 @@ const devLoginEnabled = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
 const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
 const xRedirectUri = process.env.SEEFACTORY_X_REDIRECT_URI || (runtimeTarget === 'android-apk' ? 'seefactory://auth/x/callback' : '')
+const googleRedirectUri = process.env.SEEFACTORY_GOOGLE_REDIRECT_URI || (runtimeTarget === 'android-apk' ? 'seefactory://auth/google/callback' : '')
+const telegramLoginUrl = process.env.SEEFACTORY_TELEGRAM_LOGIN_URL || (runtimeTarget === 'android-apk' ? `${apiBase.replace(/\/+$/, '')}/auth/h5/telegram-bridge?returnTo=${encodeURIComponent('seefactory://auth/telegram/callback')}` : '')
 
 module.exports = defineConfig({
   projectName: 'seeFactory',
@@ -33,7 +35,9 @@ module.exports = defineConfig({
   defineConstants: {
     'process.env.SEEFACTORY_API_BASE': JSON.stringify(apiBase),
     'process.env.SEEFACTORY_GOOGLE_CLIENT_ID': JSON.stringify(googleClientId),
+    'process.env.SEEFACTORY_GOOGLE_REDIRECT_URI': JSON.stringify(googleRedirectUri),
     'process.env.SEEFACTORY_X_REDIRECT_URI': JSON.stringify(xRedirectUri),
+    'process.env.SEEFACTORY_TELEGRAM_LOGIN_URL': JSON.stringify(telegramLoginUrl),
     'process.env.SEEFACTORY_DEV_LOGIN_ENABLED': JSON.stringify(devLoginEnabled ? 'true' : 'false'),
     'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion),
     'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)

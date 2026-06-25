@@ -5,11 +5,13 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
+import { openExternalAuthUrl } from '../../platform/externalAuth'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { formatAgreementContent } from '../../utils/agreement'
 import { goTab } from '../../utils/navigation'
 import { acceptAgreement, saveAuth } from '../../utils/storage'
 import {
+  createGoogleAuthorizeUrl,
   createXAuthorizeUrl,
   fetchAgreement,
   getClientRuntime,
@@ -22,6 +24,12 @@ const X_CODE_VERIFIER_KEY = 'seeFactoryXCodeVerifier'
 const X_REDIRECT_URI_KEY = 'seeFactoryXRedirectUri'
 const X_RETURN_TO_KEY = 'seeFactoryXReturnTo'
 const X_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryXAcceptedAgreements'
+const GOOGLE_CODE_VERIFIER_KEY = 'seeFactoryGoogleCodeVerifier'
+const GOOGLE_REDIRECT_URI_KEY = 'seeFactoryGoogleRedirectUri'
+const GOOGLE_RETURN_TO_KEY = 'seeFactoryGoogleReturnTo'
+const GOOGLE_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryGoogleAcceptedAgreements'
+const TELEGRAM_RETURN_TO_KEY = 'seeFactoryTelegramReturnTo'
+const TELEGRAM_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryTelegramAcceptedAgreements'
 const AgreementModal = lazy(() => import('../../components/AgreementModal'))
 const REQUIRED_AGREEMENTS = [
   { type: 'user', label: '用户协议' },
@@ -78,6 +86,29 @@ function readWindowParams() {
     state: params.get('state') || hashQuery?.get('state') || '',
     error: params.get('error') || hashQuery?.get('error') || ''
   }
+}
+
+function readCallbackParams(routeParams = {}) {
+  const windowParams = readWindowParams()
+  return Object.keys(routeParams || {}).reduce((next, key) => {
+    if (routeParams[key] !== undefined) next[key] = routeParams[key]
+    return next
+  }, { ...windowParams })
+}
+
+function readTelegramAuth(callback = {}) {
+  const keys = ['id', 'first_name', 'last_name', 'username', 'photo_url', 'auth_date', 'hash']
+  return keys.reduce((next, key) => {
+    if (callback[key]) next[key] = String(callback[key])
+    return next
+  }, {})
+}
+
+function acceptedAgreementSnapshot(agreements) {
+  return agreements.map((agreement) => ({
+    type: agreement.type,
+    version: agreement.version || agreement.id || agreement.updatedAt
+  }))
 }
 
 function randomBase64Url(byteLength = 48) {
@@ -142,6 +173,7 @@ export default function Login() {
   const target = redirect ? decodeURIComponent(redirect) : '/pages/index/index'
   const meta = runtimeMeta[runtime] || runtimeMeta['h5-google']
   const isH5 = runtime === 'h5-google'
+  const isAndroidApk = loginConfig.runtimeTarget === 'android-apk'
   const isTelegram = runtime === 'telegram-tma'
   const isDevLoginVisible = loginConfig.devLoginEnabled
 
@@ -150,6 +182,12 @@ export default function Login() {
     if (typeof window === 'undefined') return ''
     return `${window.location.origin}${window.location.pathname}`
   }, [loginConfig.xRedirectUri])
+
+  const googleRedirectUri = useMemo(() => {
+    if (loginConfig.googleRedirectUri) return loginConfig.googleRedirectUri
+    if (typeof window === 'undefined') return ''
+    return `${window.location.origin}${window.location.pathname}`
+  }, [loginConfig.googleRedirectUri])
 
   useEffect(() => {
     captureInviteFromParams(params || {})
@@ -215,11 +253,53 @@ export default function Login() {
   }
 
   useEffect(() => {
-    const callback = readWindowParams()
+    const callback = readCallbackParams(params)
     if (callback.error) {
       Taro.showToast({ title: 'X 授权已取消或失败', icon: 'none' })
       return
     }
+    const authProvider = callback.authProvider || ''
+    const telegramAuth = readTelegramAuth(callback)
+    if ((authProvider === 'telegram' || telegramAuth.hash) && telegramAuth.id && telegramAuth.hash) {
+      const returnTo = Taro.getStorageSync(TELEGRAM_RETURN_TO_KEY) || target
+      const acceptedAgreements = Taro.getStorageSync(TELEGRAM_ACCEPTED_AGREEMENTS_KEY) || []
+      Taro.removeStorageSync(TELEGRAM_RETURN_TO_KEY)
+      Taro.removeStorageSync(TELEGRAM_ACCEPTED_AGREEMENTS_KEY)
+      setAgreed(true)
+      completeLogin(() => loginRuntime({
+        clientRuntime: 'h5-telegram',
+        telegramAuth,
+        nickname: [telegramAuth.first_name, telegramAuth.last_name].filter(Boolean).join(' ') || telegramAuth.username,
+        avatarUrl: telegramAuth.photo_url,
+        appId: 'telegram'
+      }), returnTo, { skipAgreement: true, acceptedAgreements })
+      return
+    }
+
+    if (authProvider === 'google' && callback.code && callback.state) {
+      const googleCodeVerifier = Taro.getStorageSync(GOOGLE_CODE_VERIFIER_KEY)
+      const googleStoredRedirectUri = Taro.getStorageSync(GOOGLE_REDIRECT_URI_KEY) || googleRedirectUri
+      const googleReturnTo = Taro.getStorageSync(GOOGLE_RETURN_TO_KEY) || target
+      const googleAcceptedAgreements = Taro.getStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY) || []
+      if (!googleCodeVerifier) {
+        Taro.showToast({ title: 'Google 登录状态已过期，请重新授权', icon: 'none' })
+        return
+      }
+      Taro.removeStorageSync(GOOGLE_CODE_VERIFIER_KEY)
+      Taro.removeStorageSync(GOOGLE_REDIRECT_URI_KEY)
+      Taro.removeStorageSync(GOOGLE_RETURN_TO_KEY)
+      Taro.removeStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY)
+      setAgreed(true)
+      completeLogin(() => loginRuntime({
+        clientRuntime: 'h5-google',
+        code: callback.code,
+        state: callback.state,
+        codeVerifier: googleCodeVerifier,
+        redirectUri: googleStoredRedirectUri
+      }), googleReturnTo, { skipAgreement: true, acceptedAgreements: googleAcceptedAgreements })
+      return
+    }
+
     if (!callback.code || !callback.state) return
     const codeVerifier = Taro.getStorageSync(X_CODE_VERIFIER_KEY)
     const redirectUri = Taro.getStorageSync(X_REDIRECT_URI_KEY) || xRedirectUri
@@ -244,7 +324,7 @@ export default function Login() {
   }, [])
 
   useEffect(() => {
-    if (!isH5 || !loginConfig.googleClientId) return
+    if (!isH5 || isAndroidApk || !loginConfig.googleClientId) return
     let cancelled = false
     loadScript('https://accounts.google.com/gsi/client?hl=zh-CN')
       .then(() => {
@@ -280,7 +360,7 @@ export default function Login() {
     return () => {
       cancelled = true
     }
-  }, [isH5, loginConfig.googleClientId, agreed])
+  }, [isH5, isAndroidApk, loginConfig.googleClientId, agreed])
 
   const handleRuntimeLogin = () => {
     if (isTelegram && typeof window !== 'undefined') {
@@ -298,6 +378,59 @@ export default function Login() {
       return
     }
     completeLogin(() => loginDev(account))
+  }
+
+  const handleGoogleLogin = async () => {
+    if (!agreed) {
+      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作条款', icon: 'none' })
+      return
+    }
+    if (!googleRedirectUri) {
+      Taro.showToast({ title: '请先配置 Google 登录回调地址', icon: 'none' })
+      return
+    }
+    setLoading(true)
+    Taro.showLoading({ title: '准备 Google 授权' })
+    try {
+      const acceptedAgreements = await ensureLoginAgreements()
+      const codeVerifier = randomBase64Url()
+      const codeChallenge = await sha256Base64Url(codeVerifier)
+      const result = await createGoogleAuthorizeUrl({ codeChallenge, redirectUri: googleRedirectUri })
+      Taro.setStorageSync(GOOGLE_CODE_VERIFIER_KEY, codeVerifier)
+      Taro.setStorageSync(GOOGLE_REDIRECT_URI_KEY, googleRedirectUri)
+      Taro.setStorageSync(GOOGLE_RETURN_TO_KEY, target)
+      Taro.setStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      await openExternalAuthUrl(result.authorizeUrl)
+    } catch (error) {
+      Taro.showToast({ title: error.message || 'Google 授权启动失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+      setLoading(false)
+    }
+  }
+
+  const handleTelegramLogin = async () => {
+    if (!agreed) {
+      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作条款', icon: 'none' })
+      return
+    }
+    if (!loginConfig.telegramLoginUrl) {
+      Taro.showToast({ title: '请先配置 Telegram 登录入口', icon: 'none' })
+      return
+    }
+    setLoading(true)
+    Taro.showLoading({ title: '准备 Telegram 授权' })
+    try {
+      const acceptedAgreements = await ensureLoginAgreements()
+      Taro.setStorageSync(TELEGRAM_RETURN_TO_KEY, target)
+      Taro.setStorageSync(TELEGRAM_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      await openExternalAuthUrl(loginConfig.telegramLoginUrl)
+    } catch (error) {
+      Taro.showToast({ title: error.message || 'Telegram 授权启动失败', icon: 'none' })
+    } finally {
+      Taro.hideLoading()
+      setLoading(false)
+    }
   }
 
   const handleXLogin = async () => {
@@ -319,13 +452,8 @@ export default function Login() {
       Taro.setStorageSync(X_CODE_VERIFIER_KEY, codeVerifier)
       Taro.setStorageSync(X_REDIRECT_URI_KEY, xRedirectUri)
       Taro.setStorageSync(X_RETURN_TO_KEY, target)
-      Taro.setStorageSync(X_ACCEPTED_AGREEMENTS_KEY, acceptedAgreements.map((agreement) => ({
-        type: agreement.type,
-        version: agreement.version || agreement.id || agreement.updatedAt
-      })))
-      if (typeof window !== 'undefined') {
-        window.location.href = result.authorizeUrl
-      }
+      Taro.setStorageSync(X_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      await openExternalAuthUrl(result.authorizeUrl)
     } catch (error) {
       Taro.showToast({ title: error.message || 'X 授权启动失败', icon: 'none' })
     } finally {
@@ -359,6 +487,20 @@ export default function Login() {
           )}
           {isH5 && (
             <View className='h5-login-stack'>
+              {isAndroidApk && (
+                <View className={loading ? 'primary-button disabled' : 'primary-button'} onClick={handleGoogleLogin}>
+                  <AppIcon name='login' size={16} />
+                  <Text>使用 Google 账户登录</Text>
+                </View>
+              )}
+              {loginConfig.telegramLoginUrl && (
+                <View className={loading ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={handleTelegramLogin}>
+                  <AppIcon name='login' size={16} />
+                  <Text>使用 Telegram 登录</Text>
+                </View>
+              )}
+              {!isAndroidApk && (
+                <>
               <View id={googleHostId.current} className='google-button-host' />
               {!loginConfig.googleClientId && (
                 <View className='login-warning'>
@@ -370,6 +512,8 @@ export default function Login() {
                   <AppIcon name='refresh' size={16} />
                   <Text>准备 Google 登录</Text>
                 </View>
+              )}
+                </>
               )}
               <View className={loading ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={handleXLogin}>
                 <AppIcon name='login' size={16} />

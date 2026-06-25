@@ -45,6 +45,8 @@ if (existsSync(manifestPath)) {
   assert.ok(manifest.includes('android:scheme="seefactory"'), "APK AndroidManifest must register seeFactory deep link scheme.");
   assert.ok(manifest.includes('android:host="auth"'), "APK AndroidManifest must register auth deep link host.");
   assert.ok(manifest.includes('android:pathPrefix="/x/callback"'), "APK AndroidManifest must register X callback deep link path.");
+  assert.ok(manifest.includes('android:pathPrefix="/google/callback"'), "APK AndroidManifest must register Google callback deep link path.");
+  assert.ok(manifest.includes('android:pathPrefix="/telegram/callback"'), "APK AndroidManifest must register Telegram callback deep link path.");
 }
 
 if (existsSync(androidAssetIndexPath)) {
@@ -59,7 +61,7 @@ console.log(JSON.stringify({
     "APK H5 entry excludes Telegram launch markers and local API bases",
     "APK appId, appName, webDir and Android scheme are stable",
     "APK AndroidManifest disables backup and cleartext traffic when present",
-    "APK AndroidManifest registers seeFactory auth deep link when present",
+    "APK AndroidManifest registers seeFactory Google, Telegram and X auth deep links when present",
     "APK Android synced assets match dist when present"
   ],
   appId: config.appId,
