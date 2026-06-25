@@ -11,6 +11,7 @@
 - 支付首版按 H5/Crypto 路线处理，不接入微信、支付宝、抖音、QQ 或 Telegram Stars。
 - API 固定指向生产地址：`https://api.seefactory.xyz/api/v1`。
 - 不加载 Telegram Mini App SDK，不保留 TMA 启动参数桥接。
+- 支持 Android Deep Link：`seefactory://auth/x/callback`，用于 X 外部授权完成后回跳 APK。
 
 ## 目录说明
 
@@ -65,4 +66,5 @@ pnpm build:apk
 - Android 包名是否继续使用 `xyz.seefactory.app`。
 - APK 正式签名证书、别名、密码与 keystore 管理方式。
 - 是否上架 Google Play；如上架，支付是否改接 Google Play Billing。
-- Google/X 登录是否使用系统浏览器回跳 APK，还是继续使用 WebView 内页面。
+- X 登录回调地址需要在 X 开发者后台和后端环境中登记为 `seefactory://auth/x/callback`。
+- Google 登录当前仍使用 H5 Google ID Token 组件；如需改成系统浏览器外部授权回跳 APK，需要新增 Google OAuth redirect 链路和对应 Deep Link 回调。

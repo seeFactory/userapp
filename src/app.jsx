@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { shouldLoadTelegramSdk, telegramSdkUrl } from './platform/login'
+import { initAndroidDeepLinks } from './platform/deeplink'
 import './app.css'
 
 const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
@@ -122,6 +123,24 @@ function initTelegramMiniApp() {
 }
 
 export default function App({ children }) {
+  useEffect(() => {
+    let cleanup
+    let disposed = false
+
+    initAndroidDeepLinks().then((nextCleanup) => {
+      if (disposed) {
+        nextCleanup?.()
+        return
+      }
+      cleanup = nextCleanup
+    })
+
+    return () => {
+      disposed = true
+      cleanup?.()
+    }
+  }, [])
+
   useEffect(() => {
     let cleanup
     let disposed = false

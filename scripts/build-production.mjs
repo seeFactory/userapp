@@ -39,6 +39,3 @@ run(["verify:production-api"]);
 if (runtimeTarget === "telegram-tma") {
   run(["verify:tma-dist"]);
 }
-if (runtimeTarget === "android-apk") {
-  run(["verify:apk-dist"]);
-}
