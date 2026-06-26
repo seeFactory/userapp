@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import Taro, { getCurrentInstance, usePullDownRefresh } from '@tarojs/taro'
+import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
 import { captureInviteFromParams } from '../platform/invite'
 import { isFeatureEnabled, useAppConfig } from '../hooks/useAppConfig'
@@ -90,9 +90,6 @@ export default function Shell({ active, children, showTab = true, showBack, back
     }
   }
 
-  usePullDownRefresh(() => {
-    triggerRefresh()
-  })
 
   const handleScroll = (event) => {
     scrollTopRef.current = Number(event?.detail?.scrollTop || 0)
