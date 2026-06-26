@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: 'seeFactory'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: 'seeFactory'
 })

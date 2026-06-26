@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '作品广场'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '作品广场'
 })

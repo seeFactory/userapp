@@ -1,10 +1,11 @@
 const { defineConfig } = require('@tarojs/cli')
 
-const apiBase = process.env.SEEFACTORY_API_BASE || 'http://127.0.0.1:10087/api/v1'
 const googleClientId = process.env.SEEFACTORY_GOOGLE_CLIENT_ID || ''
 const xRedirectUri = process.env.SEEFACTORY_X_REDIRECT_URI || ''
 const devLoginEnabled = process.env.SEEFACTORY_DEV_LOGIN_ENABLED === 'true'
 const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'
+const localApiBase = 'http://127.0.0.1:10087/api/v1'
+const domesticMiniappApiBase = 'https://seefactory-api.sidcloud.cn/api/v1'
 const platformRuntimeTargets = {
   weapp: 'wechat-miniapp',
   alipay: 'alipay-miniapp',
@@ -13,6 +14,8 @@ const platformRuntimeTargets = {
   h5: 'h5'
 }
 const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || platformRuntimeTargets[process.env.TARO_ENV] || 'h5'
+const domesticMiniappTargets = new Set(['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp'])
+const apiBase = process.env.SEEFACTORY_API_BASE || (domesticMiniappTargets.has(runtimeTarget) ? domesticMiniappApiBase : localApiBase)
 
 module.exports = defineConfig({
   projectName: 'seeFactory',

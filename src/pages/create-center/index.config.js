@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '创作中心'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '创作中心'
 })

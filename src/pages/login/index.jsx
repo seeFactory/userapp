@@ -1,13 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, ScrollView } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { formatAgreementContent } from '../../utils/agreement'
-import { goTab } from '../../utils/navigation'
+import { goPage, goTab } from '../../utils/navigation'
 import { acceptAgreement, saveAuth } from '../../utils/storage'
 import {
   createXAuthorizeUrl,
@@ -205,7 +205,7 @@ export default function Login() {
         acceptAgreement(agreement?.type, version)
       })
       Taro.showToast({ title: '登录成功', icon: 'success' })
-      Taro.redirectTo({ url: successTarget })
+      goPage(successTarget, { replace: true })
     } catch (error) {
       Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
     } finally {
@@ -335,7 +335,18 @@ export default function Login() {
   }
 
   return (
-    <View className='login-wrap page-transition'>
+    <ScrollView
+      className='login-wrap page-transition'
+      scrollY
+      enhanced
+      showScrollbar={false}
+      enableFlex
+      refresherEnabled
+      refresherTriggered={refreshing}
+      refresherDefaultStyle='white'
+      refresherBackground='transparent'
+      onRefresherRefresh={refreshLoginPage}
+    >
       <PageBackButton fallbackUrl='/pages/index/index' />
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>

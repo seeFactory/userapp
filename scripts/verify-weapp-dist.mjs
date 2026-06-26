@@ -5,7 +5,7 @@ import path from "node:path";
 const distDir = path.resolve("dist");
 const appWxssPath = path.join(distDir, "app.wxss");
 const projectConfigPath = path.join(distDir, "project.config.json");
-const requiredApiBase = "https://api.seefactory.xyz/api/v1";
+const requiredApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
 const forbiddenApiPatterns = [
   "http://127.0.0.1",
   "https://127.0.0.1",
@@ -48,6 +48,7 @@ assert.notEqual(projectConfig.appid, "touristappid", "WeApp project appid must n
 assert.equal(projectConfig.setting?.skylineRenderEnable, false, "WeApp Skyline rendering must stay disabled for this Taro build.");
 assert.equal(projectConfig.setting?.useApiHook, false, "WeApp DevTools API hook must stay disabled.");
 assert.equal(projectConfig.setting?.useApiHostProcess, false, "WeApp DevTools API host process must stay disabled.");
+assert.equal(projectConfig.appid, "wx4a8213e3dfa88565", "WeApp project appid must match the WeChat public platform AppID.");
 
 const textFiles = walk(distDir).filter((file) => /\.(wxml|wxss|js|json)$/i.test(file));
 assert.ok(textFiles.length, "WeApp dist must contain text build artifacts.");
@@ -69,6 +70,7 @@ console.log(JSON.stringify({
     "WeApp WXSS excludes universal selectors",
     "WeApp runtime target is wechat-miniapp",
     "WeApp production API base is embedded",
+    "WeApp project AppID matches the WeChat public platform",
     "WeApp DevTools compatibility flags are disabled"
   ],
   appWxss: appWxssPath,

@@ -1,18 +1,42 @@
 {
-  "miniprogramRoot": "dist/",
-  "projectname": "seeFactory",
-  "description": "seeFactory AI creation mini program prototype",
-  "appid": "wx063e1688aea803fe",
-  "setting": {
-    "urlCheck": false,
-    "es6": true,
-    "enhance": true,
-    "postcss": true,
-    "minified": true,
-    "compileWorklet": false,
-    "skylineRenderEnable": false,
-    "useApiHook": false,
-    "useApiHostProcess": false
-  },
-  "compileType": "miniprogram"
+    "miniprogramRoot": "dist/",
+    "projectname": "seeFactory",
+    "description": "seeFactory AI creation mini program prototype",
+    "appid": "wx4a8213e3dfa88565",
+    "setting": {
+        "urlCheck": false,
+        "es6": true,
+        "enhance": true,
+        "postcss": true,
+        "minified": true,
+        "compileWorklet": false,
+        "skylineRenderEnable": false,
+        "useApiHook": false,
+        "useApiHostProcess": false,
+        "uglifyFileName": false,
+        "uploadWithSourceMap": true,
+        "packNpmManually": false,
+        "packNpmRelationList": [],
+        "minifyWXSS": true,
+        "minifyWXML": true,
+        "localPlugins": false,
+        "disableUseStrict": false,
+        "useCompilerPlugins": false,
+        "condition": false,
+        "swc": false,
+        "disableSWC": true,
+        "babelSetting": {
+            "ignore": [],
+            "disablePlugins": [],
+            "outputPath": ""
+        }
+    },
+    "compileType": "miniprogram",
+    "libVersion": "3.15.0",
+    "simulatorPluginLibVersion": {},
+    "packOptions": {
+        "ignore": [],
+        "include": []
+    },
+    "editorSetting": {}
 }

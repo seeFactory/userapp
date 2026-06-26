@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: 'Workflow 案例'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: 'Workflow 案例'
 })
