@@ -49,8 +49,8 @@ assert.deepEqual(
 );
 assert.equal(
   env.get("SEEFACTORY_API_BASE"),
-  "http://127.0.0.1:10087/api/v1",
-  "SEEFACTORY_API_BASE must default to the local public API prefix."
+  "https://seefactory-api.sidcloud.cn/api/v1",
+  "SEEFACTORY_API_BASE must default to the ICP-filed domestic miniapp API prefix."
 );
 assert.match(
   env.get("SEEFACTORY_CLIENT_VERSION") || "",
@@ -82,7 +82,8 @@ for (const pattern of [
 
 for (const pattern of [
   "const clientVersion = process.env.SEEFACTORY_CLIENT_VERSION || '0.1.0'",
-  "const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'",
+  "platformRuntimeTargets[process.env.TARO_ENV]",
+  "domesticMiniappApiBase = 'https://seefactory-api.sidcloud.cn/api/v1'",
   "'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion)",
   "'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)"
 ]) {
@@ -97,7 +98,7 @@ console.log(JSON.stringify({
   checked: [
     "User app .env.example syntax",
     "User app runtime key allow-list",
-    "local API base default",
+    "domestic miniapp API base default",
     "semver-like client version",
     "OAuth placeholders kept empty",
     "development login disabled by default",
