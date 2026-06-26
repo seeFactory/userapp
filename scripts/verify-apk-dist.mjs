@@ -54,8 +54,10 @@ for (const marker of forbiddenMarkers) {
 
 assert.ok(distText.includes("https://api.seefactory.xyz/api/v1/auth/h5/google-callback"), "APK Google OAuth redirect must use the API HTTPS callback bridge.");
 assert.ok(distText.includes("https://api.seefactory.xyz/api/v1/auth/h5/x-callback"), "APK X OAuth redirect must use the API HTTPS callback bridge.");
+assert.ok(distText.includes("https://seefactory.xyz/auth/telegram-bridge.html"), "APK Telegram OAuth bridge must use the BotFather-bound seefactory.xyz domain.");
 assert.ok(!distText.includes("seefactory://auth/google/callback"), "APK Google OAuth redirect must not use a custom scheme directly.");
 assert.ok(!distText.includes("seefactory://auth/x/callback"), "APK X OAuth redirect must not use a custom scheme directly.");
+assert.ok(!distText.includes("https://api.seefactory.xyz/api/v1/auth/h5/telegram-bridge"), "APK Telegram OAuth bridge must not use api.seefactory.xyz because BotFather is bound to seefactory.xyz.");
 
 if (existsSync(manifestPath)) {
   const manifest = readFileSync(manifestPath, "utf8");
