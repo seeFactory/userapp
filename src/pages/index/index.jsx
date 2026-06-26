@@ -145,7 +145,7 @@ export default function Index() {
   }, [groupedTools, searchKeyword, tools])
 
   return (
-    <Shell active='home' title='首页'>
+    <Shell active='home' title='首页' onRefresh={loadTools}>
       <View className='hero'>
         <View className='hero-logo-line'>
           <View className='hero-orbit-icon'>

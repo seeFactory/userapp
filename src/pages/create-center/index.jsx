@@ -87,7 +87,7 @@ export default function CreateCenter() {
   }
 
   return (
-    <Shell active='center' title='创作中心'>
+    <Shell active='center' title='创作中心' onRefresh={loadCenter}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

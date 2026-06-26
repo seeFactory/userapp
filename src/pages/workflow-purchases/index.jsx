@@ -190,7 +190,7 @@ export default function WorkflowPurchases() {
 
   if (!loggedIn) {
     return (
-      <Shell title='已购模板库' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='已购模板库' showTab={false} backFallback='/pages/mine/index' onRefresh={loadPurchases}>
         <EmptyState
           title='请先登录'
           description='登录后可查看已购买的闭源 Workflow 模板。'
@@ -203,7 +203,7 @@ export default function WorkflowPurchases() {
   }
 
   return (
-    <Shell title='已购模板库' showTab={false} backFallback='/pages/mine/index'>
+    <Shell title='已购模板库' showTab={false} backFallback='/pages/mine/index' onRefresh={loadPurchases}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, ScrollView } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
@@ -617,7 +617,18 @@ export default function Login() {
   }
 
   return (
-    <View className='login-wrap page-transition'>
+    <ScrollView
+      className='login-wrap page-transition'
+      scrollY
+      enhanced
+      showScrollbar={false}
+      enableFlex
+      refresherEnabled
+      refresherTriggered={refreshing}
+      refresherDefaultStyle='white'
+      refresherBackground='transparent'
+      onRefresherRefresh={refreshLoginPage}
+    >
       <PageBackButton fallbackUrl='/pages/index/index' />
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>

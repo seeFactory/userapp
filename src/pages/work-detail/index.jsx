@@ -385,7 +385,7 @@ export default function WorkDetail() {
   if (!work) {
     const fallbackUrl = source === 'gallery' ? '/pages/gallery/index' : '/pages/works/index'
     return (
-      <Shell title='作品详情' showTab={false} backFallback={fallbackUrl}>
+      <Shell title='作品详情' showTab={false} backFallback={fallbackUrl} onRefresh={work?.generationTaskId && isActiveStatus(work.status) ? (() => refreshTaskStatus(true)) : loadWorkDetail}>
         {loading ? (
           <PageLoading title='正在同步作品' description='正在读取作品结果、任务状态和保存权限。' />
         ) : (
@@ -409,7 +409,7 @@ export default function WorkDetail() {
   const backFallback = isGalleryDetail ? '/pages/gallery/index' : '/pages/works/index'
 
   return (
-    <Shell title='作品详情' showTab={false} backFallback={backFallback}>
+    <Shell title='作品详情' showTab={false} backFallback={backFallback} onRefresh={work?.generationTaskId && isActiveStatus(work.status) ? (() => refreshTaskStatus(true)) : loadWorkDetail}>
       {media && mediaKind === 'video' ? (
         <Video className='detail-image' src={media} poster={preview} controls />
       ) : (
