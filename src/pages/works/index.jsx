@@ -103,7 +103,7 @@ export default function Works() {
 
   if (!loggedIn) {
     return (
-      <Shell active='works' title='我的作品'>
+      <Shell active='works' title='我的作品' onRefresh={loggedIn ? loadWorks : () => Promise.resolve()}>
         <EmptyState
           title='请先登录'
           description='登录后可查看生成记录、失败任务和已发布作品。'
@@ -116,7 +116,7 @@ export default function Works() {
   }
 
   return (
-    <Shell active='works' title='我的作品'>
+    <Shell active='works' title='我的作品' onRefresh={loggedIn ? loadWorks : () => Promise.resolve()}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

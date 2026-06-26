@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '代理中心'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '代理中心'
 })

@@ -34,7 +34,7 @@ function displayPoints(order, crypto, stars) {
 
 function displayRate(order, crypto, stars) {
   const sourceCurrency = stars ? 'Stars' : crypto?.sourceCurrency || order.sourceCurrency || order.currency || 'CNY'
-  const rate = stars ? '10 Stars = 1 点' : `${sourceCurrency} 汇率 ${crypto?.pointRate ?? order.pointRate ?? 1} 点`
+  const rate = stars ? '2 Stars = 1 点' : `${sourceCurrency} 汇率 ${crypto?.pointRate ?? order.pointRate ?? 1} 点`
   const rounding = crypto?.roundingMode || order.roundingMode || stars?.roundingMode
   return rounding === 'floor' ? `${rate}，向下取整` : rate
 }
@@ -278,7 +278,7 @@ export default function PaymentSheet({
             </View>
             <View className='payment-row'>
               <Text>固定换算</Text>
-              <Text>10 Stars = 1 点</Text>
+              <Text>2 Stars = 1 点</Text>
             </View>
             <View className='copy-box' onClick={() => copy(stars.invoiceLink, 'Stars 支付链接')}>
               <Text>{stars.invoiceLink || 'Stars 支付链接生成中'}</Text>

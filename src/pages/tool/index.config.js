@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '创作工具'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '创作工具'
 })

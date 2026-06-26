@@ -29,7 +29,7 @@ function makeError(response, body) {
 }
 
 function shouldRefresh(response, body) {
-  return response.statusCode === 401 && ['TOKEN_INVALID', 'AUTH_REQUIRED'].includes(body.code)
+  return response.statusCode === 401 && ['TOKEN_INVALID', 'AUTH_REQUIRED', 'SESSION_INVALID', 'REFRESH_TOKEN_REVOKED'].includes(body.code)
 }
 
 function redirectLogin() {
@@ -142,6 +142,10 @@ export async function request(path, options = {}) {
         }
         throw makeError(response, retryBody)
       }
+      redirectLogin()
+    }
+    if (response.statusCode === 401 || body.action === 'login') {
+      logout()
       redirectLogin()
     }
     throw makeError(response, body)
@@ -486,14 +490,36 @@ function readTelegramLoginPayload() {
 }
 
 async function readMiniappLoginPayload(runtime) {
+  if (runtime === 'alipay-miniapp') {
+    const authCode = await new Promise((resolve, reject) => {
+      const alipay = typeof my !== 'undefined' ? my : null
+      if (!alipay?.getAuthCode) {
+        reject(new Error('请在支付宝小程序内登录'))
+        return
+      }
+      alipay.getAuthCode({
+        scopes: 'auth_base',
+        success: (result) => {
+          const code = result?.authCode || result?.code
+          if (code) {
+            resolve(code)
+            return
+          }
+          reject(new Error('未能获取支付宝授权码，请重试'))
+        },
+        fail: (error) => {
+          reject(new Error(error?.errorMessage || error?.message || '支付宝授权失败，请重试'))
+        }
+      })
+    })
+    return { code: authCode, authCode }
+  }
   const result = await Taro.login()
-  if (!result?.code) {
+  const loginCode = result?.code || result?.authCode
+  if (!loginCode) {
     throw new Error('未能获取登录凭证，请重试')
   }
-  const payload = { code: result.code }
-  if (runtime === 'alipay-miniapp') {
-    payload.authCode = result.authCode || result.code
-  }
+  const payload = { code: loginCode }
   return payload
 }
 

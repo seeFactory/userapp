@@ -5,7 +5,8 @@ import path from "node:path";
 const distDir = path.resolve("dist");
 const appAcssPath = path.join(distDir, "app.acss");
 const projectConfigPath = path.join(distDir, "project.config.json");
-const requiredApiBase = "https://api.seefactory.xyz/api/v1";
+const miniProjectConfigPath = path.join(distDir, "mini.project.json");
+const requiredApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
 const forbiddenApiPatterns = [
   "http://127.0.0.1",
   "https://127.0.0.1",
@@ -28,6 +29,7 @@ function walk(dir) {
 
 assert.ok(fs.existsSync(appAcssPath), "Alipay dist/app.acss must exist.");
 assert.ok(fs.existsSync(projectConfigPath), "Alipay dist/project.config.json must exist.");
+assert.ok(fs.existsSync(miniProjectConfigPath), "Alipay dist/mini.project.json must exist.");
 
 const appAcss = fs.readFileSync(appAcssPath, "utf8");
 assert.ok(!appAcss.includes("*"), "Alipay app.acss must not include universal selectors.");
@@ -45,6 +47,11 @@ for (const token of ["min-height:1623.07692rpx", "font-size:26.92308rpx"]) {
 
 const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, "utf8"));
 assert.equal(projectConfig.compileType, "miniprogram", "Alipay project config must use mini program compile type.");
+assert.equal(projectConfig.appid, "2021006162649015", "Alipay project config must use the production AppID.");
+assert.equal(projectConfig.miniprogramRoot, "./", "Alipay dist project config must point at the dist directory itself.");
+
+const miniProjectConfig = JSON.parse(fs.readFileSync(miniProjectConfigPath, "utf8"));
+assert.equal(miniProjectConfig.format, 2, "Alipay mini.project.json must keep format 2.");
 
 const textFiles = walk(distDir).filter((file) => /\.(axml|acss|js|json)$/i.test(file));
 assert.ok(textFiles.length, "Alipay dist must contain text build artifacts.");
@@ -65,8 +72,10 @@ console.log(JSON.stringify({
     "Alipay ScrollView padding stays inside the viewport",
     "Alipay ACSS excludes universal selectors",
     "Alipay runtime target is alipay-miniapp",
-    "Alipay production API base is embedded"
+    "Alipay production API base is embedded",
+    "Alipay AppID and direct-open dist project config are ready"
   ],
   appAcss: appAcssPath,
-  projectConfig: projectConfigPath
+  projectConfig: projectConfigPath,
+  miniProjectConfig: miniProjectConfigPath
 }, null, 2));

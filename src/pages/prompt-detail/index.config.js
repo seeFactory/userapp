@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '提示词详情'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '提示词详情'
 })

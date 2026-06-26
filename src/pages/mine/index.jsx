@@ -240,6 +240,10 @@ export default function Mine() {
         icon: 'none'
       })
     } catch (error) {
+      if (error?.action === 'login' || error?.statusCode === 401) {
+        Taro.showToast({ title: '请重新登录后再创建订单', icon: 'none' })
+        return
+      }
       Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
     } finally {
       Taro.hideLoading()
@@ -281,7 +285,7 @@ export default function Mine() {
   const maxRecharge = money(rechargePolicy.maxAmountCents / 100)
 
   return (
-    <Shell active='mine' title='我的'>
+    <Shell active='mine' title='我的' onRefresh={loggedIn ? reloadBalance : () => Promise.resolve()}>
       <View className='panel'>
         <View className='panel-brand-row'>
           <BrandLogo size={54} />

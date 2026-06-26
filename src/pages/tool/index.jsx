@@ -381,7 +381,7 @@ export default function ToolPage() {
 
   if (!generationEnabled) {
     return (
-      <Shell title='创作工具' showTab={false}>
+      <Shell title='创作工具' showTab={false} onRefresh={loadTool}>
         <EmptyState title='生成服务已关闭' description='生成服务暂未开放，请稍后再试。' icon='wand' />
       </Shell>
     )
@@ -389,7 +389,7 @@ export default function ToolPage() {
 
   if (toolLoading) {
     return (
-      <Shell title='创作工具' showTab={false}>
+      <Shell title='创作工具' showTab={false} onRefresh={loadTool}>
         <PageLoading title='正在同步工具配置' description='正在读取工具字段、模型、比例和素材规则。' />
       </Shell>
     )
@@ -397,7 +397,7 @@ export default function ToolPage() {
 
   if (toolError) {
     return (
-      <Shell title='创作工具' showTab={false}>
+      <Shell title='创作工具' showTab={false} onRefresh={loadTool}>
         <ErrorState title='工具配置加载失败' description={toolError} onRetry={loadTool} />
       </Shell>
     )
@@ -593,6 +593,10 @@ export default function ToolPage() {
         icon: 'none'
       })
     } catch (error) {
+      if (error?.action === 'login' || error?.statusCode === 401) {
+        Taro.showToast({ title: '请重新登录后再创建订单', icon: 'none' })
+        return
+      }
       Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
     } finally {
       Taro.hideLoading()
@@ -763,7 +767,7 @@ export default function ToolPage() {
   }
 
   return (
-    <Shell title={tool.name} showTab={false}>
+    <Shell title={tool.name} showTab={false} onRefresh={loadTool}>
       <View className='panel'>
         <View className='panel-brand-row'>
           <BrandLogo size={50} />
