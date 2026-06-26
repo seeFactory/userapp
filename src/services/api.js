@@ -352,10 +352,10 @@ export async function createXAuthorizeUrl(params) {
 }
 
 export async function createGoogleAuthorizeUrl(params) {
-  const query = new URLSearchParams({
-    codeChallenge: params.codeChallenge
-  })
+  const query = new URLSearchParams()
+  if (params.codeChallenge) query.set('codeChallenge', params.codeChallenge)
   if (params.redirectUri) query.set('redirectUri', params.redirectUri)
+  if (params.responseType) query.set('responseType', params.responseType)
   return request(`/auth/h5/google/authorize-url?${query.toString()}`, { noAuth: true })
 }
 
@@ -627,7 +627,11 @@ async function buildRuntimeLoginPayload(runtime, options = {}) {
     }
     const idToken = options.idToken || (typeof window !== 'undefined' ? window.__SEEFACTORY_GOOGLE_ID_TOKEN__ : '')
     if (!idToken) throw new Error('请先完成 Google 授权')
-    return { idToken }
+    return {
+      idToken,
+      ...(options.state ? { state: options.state } : {}),
+      ...(options.redirectUri ? { redirectUri: options.redirectUri } : {})
+    }
   }
   if (runtime === 'h5-telegram') {
     const telegramAuth = options.telegramAuth || {}

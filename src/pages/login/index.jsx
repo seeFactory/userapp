@@ -33,6 +33,9 @@ const GOOGLE_CODE_VERIFIER_KEY = 'seeFactoryGoogleCodeVerifier'
 const GOOGLE_REDIRECT_URI_KEY = 'seeFactoryGoogleRedirectUri'
 const GOOGLE_RETURN_TO_KEY = 'seeFactoryGoogleReturnTo'
 const GOOGLE_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryGoogleAcceptedAgreements'
+const GOOGLE_STATE_KEY = 'seeFactoryGoogleState'
+const GOOGLE_OAUTH_SESSION_PREFIX = 'seeFactoryGoogleOAuthSession'
+const OAUTH_SESSION_MAX_AGE_MS = 10 * 60 * 1000
 const TELEGRAM_RETURN_TO_KEY = 'seeFactoryTelegramReturnTo'
 const TELEGRAM_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryTelegramAcceptedAgreements'
 const AgreementModal = lazy(() => import('../../components/AgreementModal'))
@@ -124,6 +127,52 @@ function acceptedAgreementSnapshot(agreements) {
     type: agreement.type,
     version: agreement.version || agreement.id || agreement.updatedAt
   }))
+}
+
+function readStorageJson(key, fallback = null) {
+  try {
+    const raw = Taro.getStorageSync(key)
+    if (!raw) return fallback
+    if (typeof raw === 'string') return JSON.parse(raw)
+    return raw
+  } catch (_) {
+    return fallback
+  }
+}
+
+function googleOAuthSessionKey(state) {
+  return state ? `${GOOGLE_OAUTH_SESSION_PREFIX}:${state}` : ''
+}
+
+function saveGoogleOAuthSession(state, session) {
+  const key = googleOAuthSessionKey(state)
+  if (!key) return
+  Taro.setStorageSync(key, JSON.stringify({
+    ...session,
+    createdAt: Date.now()
+  }))
+}
+
+function readGoogleOAuthSession(state) {
+  const key = googleOAuthSessionKey(state)
+  if (!key) return null
+  const session = readStorageJson(key)
+  if (!session) return null
+  if (session.createdAt && Date.now() - Number(session.createdAt) > OAUTH_SESSION_MAX_AGE_MS) {
+    Taro.removeStorageSync(key)
+    return null
+  }
+  return session
+}
+
+function clearGoogleOAuthSession(state) {
+  const key = googleOAuthSessionKey(state)
+  if (key) Taro.removeStorageSync(key)
+  Taro.removeStorageSync(GOOGLE_CODE_VERIFIER_KEY)
+  Taro.removeStorageSync(GOOGLE_REDIRECT_URI_KEY)
+  Taro.removeStorageSync(GOOGLE_RETURN_TO_KEY)
+  Taro.removeStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY)
+  Taro.removeStorageSync(GOOGLE_STATE_KEY)
 }
 
 function randomBase64Url(byteLength = 48) {
@@ -304,27 +353,53 @@ export default function Login() {
       return true
     }
 
+    const googleIdToken = callback.idToken || callback.id_token
+    if (authProvider === 'google' && googleIdToken && callback.state) {
+      const googleSession = readGoogleOAuthSession(callback.state)
+      const storedGoogleState = Taro.getStorageSync(GOOGLE_STATE_KEY)
+      const googleStoredRedirectUri = googleSession?.redirectUri || Taro.getStorageSync(GOOGLE_REDIRECT_URI_KEY) || googleRedirectUri
+      const googleReturnTo = googleSession?.returnTo || Taro.getStorageSync(GOOGLE_RETURN_TO_KEY) || target
+      const googleAcceptedAgreements = googleSession?.acceptedAgreements || Taro.getStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY) || []
+      if (!googleSession && storedGoogleState !== callback.state && !Taro.getStorageSync(GOOGLE_CODE_VERIFIER_KEY)) {
+        Taro.showToast({ title: 'Google 登录状态已过期，请重新授权', icon: 'none' })
+        return true
+      }
+      setAgreed(true)
+      completeLogin(async () => {
+        const data = await loginRuntime({
+          clientRuntime: 'h5-google',
+          idToken: googleIdToken,
+          state: callback.state,
+          redirectUri: googleStoredRedirectUri
+        })
+        clearGoogleOAuthSession(callback.state)
+        return data
+      }, googleReturnTo, { skipAgreement: true, acceptedAgreements: googleAcceptedAgreements })
+      return true
+    }
+
     if (authProvider === 'google' && callback.code && callback.state) {
-      const googleCodeVerifier = Taro.getStorageSync(GOOGLE_CODE_VERIFIER_KEY)
-      const googleStoredRedirectUri = Taro.getStorageSync(GOOGLE_REDIRECT_URI_KEY) || googleRedirectUri
-      const googleReturnTo = Taro.getStorageSync(GOOGLE_RETURN_TO_KEY) || target
-      const googleAcceptedAgreements = Taro.getStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY) || []
+      const googleSession = readGoogleOAuthSession(callback.state)
+      const googleCodeVerifier = googleSession?.codeVerifier || Taro.getStorageSync(GOOGLE_CODE_VERIFIER_KEY)
+      const googleStoredRedirectUri = googleSession?.redirectUri || Taro.getStorageSync(GOOGLE_REDIRECT_URI_KEY) || googleRedirectUri
+      const googleReturnTo = googleSession?.returnTo || Taro.getStorageSync(GOOGLE_RETURN_TO_KEY) || target
+      const googleAcceptedAgreements = googleSession?.acceptedAgreements || Taro.getStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY) || []
       if (!googleCodeVerifier) {
         Taro.showToast({ title: 'Google 登录状态已过期，请重新授权', icon: 'none' })
         return true
       }
-      Taro.removeStorageSync(GOOGLE_CODE_VERIFIER_KEY)
-      Taro.removeStorageSync(GOOGLE_REDIRECT_URI_KEY)
-      Taro.removeStorageSync(GOOGLE_RETURN_TO_KEY)
-      Taro.removeStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY)
       setAgreed(true)
-      completeLogin(() => loginRuntime({
-        clientRuntime: 'h5-google',
-        code: callback.code,
-        state: callback.state,
-        codeVerifier: googleCodeVerifier,
-        redirectUri: googleStoredRedirectUri
-      }), googleReturnTo, { skipAgreement: true, acceptedAgreements: googleAcceptedAgreements })
+      completeLogin(async () => {
+        const data = await loginRuntime({
+          clientRuntime: 'h5-google',
+          code: callback.code,
+          state: callback.state,
+          codeVerifier: googleCodeVerifier,
+          redirectUri: googleStoredRedirectUri
+        })
+        clearGoogleOAuthSession(callback.state)
+        return data
+      }, googleReturnTo, { skipAgreement: true, acceptedAgreements: googleAcceptedAgreements })
       return true
     }
 
@@ -456,11 +531,23 @@ export default function Login() {
       const acceptedAgreements = await ensureLoginAgreements()
       const codeVerifier = randomBase64Url()
       const codeChallenge = await sha256Base64Url(codeVerifier)
-      const result = await createGoogleAuthorizeUrl({ codeChallenge, redirectUri: googleRedirectUri })
+      const googleResponseType = isAndroidApk ? 'id_token' : 'code'
+      const result = await createGoogleAuthorizeUrl({ codeChallenge, redirectUri: googleRedirectUri, responseType: googleResponseType })
+      const agreementSnapshot = acceptedAgreementSnapshot(acceptedAgreements)
+      const googleSession = {
+        codeVerifier,
+        redirectUri: googleRedirectUri,
+        returnTo: target,
+        acceptedAgreements: agreementSnapshot
+      }
+      if (result.state) {
+        Taro.setStorageSync(GOOGLE_STATE_KEY, result.state)
+        saveGoogleOAuthSession(result.state, googleSession)
+      }
       Taro.setStorageSync(GOOGLE_CODE_VERIFIER_KEY, codeVerifier)
       Taro.setStorageSync(GOOGLE_REDIRECT_URI_KEY, googleRedirectUri)
       Taro.setStorageSync(GOOGLE_RETURN_TO_KEY, target)
-      Taro.setStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY, acceptedAgreementSnapshot(acceptedAgreements))
+      Taro.setStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY, agreementSnapshot)
       Taro.hideLoading()
       setLoading(false)
       await openExternalAuthUrl(result.authorizeUrl)
