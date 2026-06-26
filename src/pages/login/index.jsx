@@ -13,8 +13,8 @@ import {
 } from '../../platform/deeplink'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { formatAgreementContent } from '../../utils/agreement'
-import { goTab } from '../../utils/navigation'
-import { acceptAgreement, saveAuth } from '../../utils/storage'
+import { goAuthTarget, goTab } from '../../utils/navigation'
+import { acceptAgreement, getAuthToken, saveAuth } from '../../utils/storage'
 import {
   createGoogleAuthorizeUrl,
   createXAuthorizeUrl,
@@ -257,14 +257,20 @@ export default function Login() {
     try {
       const acceptedAgreements = options.skipAgreement ? [] : await ensureLoginAgreements()
       const data = await runner()
+      if (!data?.accessToken) {
+        throw new Error('登录凭证未返回，请重新授权')
+      }
       saveAuth(data)
+      if (!getAuthToken()) {
+        throw new Error('登录凭证写入失败，请重新登录')
+      }
       const agreementsToStore = options.acceptedAgreements || acceptedAgreements
       agreementsToStore.forEach((agreement) => {
         const version = agreement?.version || agreement?.id || agreement?.updatedAt
         acceptAgreement(agreement?.type, version)
       })
       Taro.showToast({ title: '登录成功', icon: 'success' })
-      goTab(successTarget)
+      goAuthTarget(successTarget)
     } catch (error) {
       Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
     } finally {

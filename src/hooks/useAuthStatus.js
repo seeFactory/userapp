@@ -14,7 +14,10 @@ export function useAuthStatus() {
   const [auth, setAuth] = useState(() => authSnapshot())
 
   useEffect(() => {
+    let disposed = false
+    let appResumeListener
     const refresh = (eventOrDetail = {}) => {
+      if (disposed) return
       const detail = eventOrDetail?.detail || eventOrDetail || {}
       setAuth(authSnapshot(detail))
     }
@@ -30,6 +33,7 @@ export function useAuthStatus() {
     if (typeof window !== 'undefined') {
       window.addEventListener(AUTH_CHANGED_EVENT, refresh)
       window.addEventListener('focus', refreshFromStorage)
+      window.addEventListener('pageshow', refreshFromStorage)
     }
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', refreshOnVisible)
@@ -37,13 +41,33 @@ export function useAuthStatus() {
 
     refreshFromStorage()
 
+    Promise.all([
+      import('@capacitor/app'),
+      import('@capacitor/core')
+    ])
+      .then(([{ App }, { Capacitor }]) => {
+        if (disposed || !Capacitor.isNativePlatform?.()) return
+        return App.addListener('resume', refreshFromStorage)
+      })
+      .then((listener) => {
+        if (disposed) {
+          listener?.remove?.()
+          return
+        }
+        appResumeListener = listener
+      })
+      .catch(() => {})
+
     return () => {
+      disposed = true
+      appResumeListener?.remove?.()
       try {
         Taro.eventCenter?.off?.(AUTH_CHANGED_EVENT, refresh)
       } catch (_) {}
       if (typeof window !== 'undefined') {
         window.removeEventListener(AUTH_CHANGED_EVENT, refresh)
         window.removeEventListener('focus', refreshFromStorage)
+        window.removeEventListener('pageshow', refreshFromStorage)
       }
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', refreshOnVisible)
