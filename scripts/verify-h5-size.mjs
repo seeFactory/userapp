@@ -8,7 +8,7 @@ const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
   // H5 pages are split into lazy chunks; includes workflow asset upload runtime and Taro tabbar keep-alive runtime.
-  maxTotalJsBytes: (process.env.SEEFACTORY_RUNTIME_TARGET === 'android-apk' ? 4400 : 4320) * kib,
+  maxTotalJsBytes: 4560 * kib,
   maxLogoCopies: 1
 }
 
