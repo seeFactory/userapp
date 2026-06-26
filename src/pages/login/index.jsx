@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Input, ScrollView } from '@tarojs/components'
+import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
@@ -236,6 +236,7 @@ export default function Login() {
   const [agreementCache, setAgreementCache] = useState({})
   const [agreementModal, setAgreementModal] = useState(null)
   const googleHostId = useRef(`google-login-${Date.now()}`)
+  const loginPullStartYRef = useRef(0)
   const processedAuthCallbacks = useRef(new Set())
   const { config } = useAppConfig()
   const runtime = getClientRuntime()
@@ -585,6 +586,18 @@ export default function Login() {
     }
   }
 
+  const handleLoginTouchStart = (event) => {
+    loginPullStartYRef.current = Number(event?.touches?.[0]?.clientY || 0)
+  }
+
+  const handleLoginTouchEnd = (event) => {
+    if (!loginPullStartYRef.current) return
+    const endY = Number(event?.changedTouches?.[0]?.clientY || loginPullStartYRef.current)
+    const pulledDistance = endY - loginPullStartYRef.current
+    loginPullStartYRef.current = 0
+    if (pulledDistance >= 72) refreshLoginPage()
+  }
+
   const handleXLogin = async () => {
     if (!agreed) {
       Taro.showToast({ title: '请先同意用户协议、隐私政策和创作与生成服务条款', icon: 'none' })
@@ -617,18 +630,7 @@ export default function Login() {
   }
 
   return (
-    <ScrollView
-      className='login-wrap page-transition'
-      scrollY
-      enhanced
-      showScrollbar={false}
-      enableFlex
-      refresherEnabled
-      refresherTriggered={refreshing}
-      refresherDefaultStyle='white'
-      refresherBackground='transparent'
-      onRefresherRefresh={refreshLoginPage}
-    >
+    <View className='login-wrap page-transition' onTouchStart={handleLoginTouchStart} onTouchEnd={handleLoginTouchEnd}>
       <PageBackButton fallbackUrl='/pages/index/index' />
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>
