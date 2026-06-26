@@ -5,9 +5,9 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useAuthStatus } from '../../hooks/useAuthStatus'
 import { fetchTools } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
-import { isLoggedIn } from '../../utils/storage'
 
 const HOME_TOOL_TABS = [
   { key: 'recommended', label: '推荐' },
@@ -59,7 +59,7 @@ function toolSearchText(tool) {
 }
 
 export default function Index() {
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthStatus()
   const { config, loading: configLoading } = useAppConfig()
   const generationEnabled = isFeatureEnabled(config, 'generation')
   const [tools, setTools] = useState([])

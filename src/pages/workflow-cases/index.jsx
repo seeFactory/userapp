@@ -6,6 +6,7 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import WorkflowRunFormFields, { buildWorkflowRunPayload, initialWorkflowRunValues } from '../../components/WorkflowRunFormFields'
+import { useAuthStatus } from '../../hooks/useAuthStatus'
 import {
   fetchWorkflowCase,
   fetchWorkflowCasePurchaseStatus,
@@ -14,7 +15,7 @@ import {
   runWorkflowCase,
   trialRunWorkflowCase
 } from '../../services/api'
-import { requireLogin, isLoggedIn } from '../../utils/storage'
+import { requireLogin } from '../../utils/storage'
 import { goPage } from '../../utils/navigation'
 
 const fallbackCover = 'https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&w=900&q=80'
@@ -87,7 +88,7 @@ function canTrialRun(status, item) {
 
 export default function WorkflowCases() {
   const routeCaseId = String(getCurrentInstance().router?.params?.id || '')
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthStatus()
   const [list, setList] = useState([])
   const [selectedId, setSelectedId] = useState(routeCaseId)
   const [detail, setDetail] = useState(null)

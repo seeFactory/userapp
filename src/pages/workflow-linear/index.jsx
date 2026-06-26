@@ -15,8 +15,9 @@ import {
   validateWorkflowDraft
 } from '../../services/api'
 import { useAppConfig } from '../../hooks/useAppConfig'
+import { useAuthStatus } from '../../hooks/useAuthStatus'
 import { goPage } from '../../utils/navigation'
-import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { requireLogin } from '../../utils/storage'
 
 function unique(values) {
   return [...new Set([].concat(values || []).map((value) => String(value || '').trim()).filter(Boolean))]
@@ -213,7 +214,7 @@ function splitTags(text) {
 }
 
 export default function WorkflowLinear() {
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthStatus()
   const { config } = useAppConfig()
   const workflowPolicy = config?.workflowPolicy || {}
   const priceMinPoints = Number(workflowPolicy.priceMinPoints || 7)
