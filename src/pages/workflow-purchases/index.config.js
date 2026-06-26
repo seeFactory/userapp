@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: '已购模板库'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: '已购模板库'
 })

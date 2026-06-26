@@ -62,7 +62,7 @@ export default function Gallery() {
   const gridWorks = featured ? filtered.slice(1) : filtered
 
   return (
-    <Shell active='gallery' title='作品广场'>
+    <Shell active='gallery' title='作品广场' onRefresh={loadGallery}>
       <View className='gallery-hero'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={46} />

@@ -59,6 +59,7 @@ export default function Mine() {
   const currentUser = getCurrentUser()
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
+  const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
 
   const loadAccount = async (options = {}) => {
     const [creditData, walletData, rechargeData] = await Promise.all([
@@ -265,7 +266,7 @@ export default function Mine() {
   const maxRecharge = money(rechargePolicy.maxAmountCents / 100)
 
   return (
-    <Shell active='mine' title='我的'>
+    <Shell active='mine' title='我的' onRefresh={loggedIn ? reloadBalance : () => Promise.resolve()}>
       <View className='panel'>
         <View className='panel-brand-row'>
           <BrandLogo size={54} />

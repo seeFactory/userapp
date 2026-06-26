@@ -91,7 +91,7 @@ export default function Wallet() {
 
   if (!loggedIn) {
     return (
-      <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index' onRefresh={loadWallet}>
         <EmptyState
           title='请先登录'
           description='登录后可查看历史钱包余额和历史提现记录。'
@@ -104,7 +104,7 @@ export default function Wallet() {
   }
 
   return (
-    <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
+    <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index' onRefresh={loadWallet}>
       <View className='panel wallet-hero'>
         <View className='panel-brand-row'>
           <BrandLogo size={52} />
@@ -115,7 +115,7 @@ export default function Wallet() {
         </View>
         <Text className='tool-desc'>当前充值统一购买点数，提现通道已关闭。这里仅保留历史钱包余额、流水和提现记录展示。</Text>
         {!configLoading && !rechargeFeatureEnabled ? (
-          <InlineNotice tone='warning'>充值功能暂未开放</InlineNotice>
+          <InlineNotice tone='warning'>充值功能已由后台关闭</InlineNotice>
         ) : null}
         <InlineNotice tone='warning'>历史钱包余额不会自动兑换为点数，也不能继续发起提现。</InlineNotice>
         <View className='wallet-balance-grid'>
