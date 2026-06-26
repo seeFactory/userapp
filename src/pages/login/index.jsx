@@ -6,6 +6,11 @@ import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
 import { openExternalAuthUrl } from '../../platform/externalAuth'
+import {
+  ANDROID_AUTH_CALLBACK_EVENT,
+  clearPendingAndroidAuthCallback,
+  consumePendingAndroidAuthCallback
+} from '../../platform/deeplink'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { formatAgreementContent } from '../../utils/agreement'
 import { goTab } from '../../utils/navigation'
@@ -104,6 +109,16 @@ function readTelegramAuth(callback = {}) {
   }, {})
 }
 
+function hasAuthCallback(callback = {}) {
+  return Boolean(callback.authProvider || callback.code || callback.hash || callback.error)
+}
+
+function authCallbackKey(callback = {}) {
+  const provider = callback.authProvider || (callback.hash ? 'telegram' : callback.code ? 'oauth' : 'unknown')
+  const primary = callback.hash || callback.code || callback.error || callback.id || ''
+  return `${provider}:${primary}:${callback.state || ''}`
+}
+
 function acceptedAgreementSnapshot(agreements) {
   return agreements.map((agreement) => ({
     type: agreement.type,
@@ -172,6 +187,7 @@ export default function Login() {
   const [agreementCache, setAgreementCache] = useState({})
   const [agreementModal, setAgreementModal] = useState(null)
   const googleHostId = useRef(`google-login-${Date.now()}`)
+  const processedAuthCallbacks = useRef(new Set())
   const { config } = useAppConfig()
   const runtime = getClientRuntime()
   const loginConfig = getFrontendLoginConfig()
@@ -248,7 +264,7 @@ export default function Login() {
         acceptAgreement(agreement?.type, version)
       })
       Taro.showToast({ title: '登录成功', icon: 'success' })
-      Taro.redirectTo({ url: successTarget })
+      goTab(successTarget)
     } catch (error) {
       Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
     } finally {
@@ -257,11 +273,12 @@ export default function Login() {
     }
   }
 
-  useEffect(() => {
-    const callback = readCallbackParams(params)
+  const handleAuthCallback = (callback = {}) => {
+    if (!hasAuthCallback(callback)) return false
+
     if (callback.error) {
-      Taro.showToast({ title: 'X 授权已取消或失败', icon: 'none' })
-      return
+      Taro.showToast({ title: '授权已取消或失败，请重试', icon: 'none' })
+      return true
     }
     const authProvider = callback.authProvider || ''
     const telegramAuth = readTelegramAuth(callback)
@@ -278,7 +295,7 @@ export default function Login() {
         avatarUrl: telegramAuth.photo_url,
         appId: 'telegram'
       }), returnTo, { skipAgreement: true, acceptedAgreements })
-      return
+      return true
     }
 
     if (authProvider === 'google' && callback.code && callback.state) {
@@ -288,7 +305,7 @@ export default function Login() {
       const googleAcceptedAgreements = Taro.getStorageSync(GOOGLE_ACCEPTED_AGREEMENTS_KEY) || []
       if (!googleCodeVerifier) {
         Taro.showToast({ title: 'Google 登录状态已过期，请重新授权', icon: 'none' })
-        return
+        return true
       }
       Taro.removeStorageSync(GOOGLE_CODE_VERIFIER_KEY)
       Taro.removeStorageSync(GOOGLE_REDIRECT_URI_KEY)
@@ -302,17 +319,17 @@ export default function Login() {
         codeVerifier: googleCodeVerifier,
         redirectUri: googleStoredRedirectUri
       }), googleReturnTo, { skipAgreement: true, acceptedAgreements: googleAcceptedAgreements })
-      return
+      return true
     }
 
-    if (!callback.code || !callback.state) return
+    if (!callback.code || !callback.state) return false
     const codeVerifier = Taro.getStorageSync(X_CODE_VERIFIER_KEY)
     const redirectUri = Taro.getStorageSync(X_REDIRECT_URI_KEY) || xRedirectUri
     const returnTo = Taro.getStorageSync(X_RETURN_TO_KEY) || target
     const acceptedAgreements = Taro.getStorageSync(X_ACCEPTED_AGREEMENTS_KEY) || []
     if (!codeVerifier) {
       Taro.showToast({ title: 'X 登录状态已过期，请重新授权', icon: 'none' })
-      return
+      return true
     }
     Taro.removeStorageSync(X_CODE_VERIFIER_KEY)
     Taro.removeStorageSync(X_REDIRECT_URI_KEY)
@@ -326,6 +343,39 @@ export default function Login() {
       codeVerifier,
       redirectUri
     }), returnTo, { skipAgreement: true, acceptedAgreements })
+    return true
+  }
+
+  useEffect(() => {
+    const processCallback = (callback = {}) => {
+      if (!hasAuthCallback(callback)) return
+      const key = authCallbackKey(callback)
+      if (processedAuthCallbacks.current.has(key)) return
+      const handled = handleAuthCallback(callback)
+      if (handled) processedAuthCallbacks.current.add(key)
+    }
+
+    const handleAndroidAuthCallback = (event) => {
+      clearPendingAndroidAuthCallback()
+      processCallback(event?.detail?.callback || {})
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(ANDROID_AUTH_CALLBACK_EVENT, handleAndroidAuthCallback)
+    }
+
+    processCallback(readCallbackParams(params))
+
+    const pendingAuthCallback = consumePendingAndroidAuthCallback()
+    if (pendingAuthCallback?.callback) {
+      processCallback(pendingAuthCallback.callback)
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(ANDROID_AUTH_CALLBACK_EVENT, handleAndroidAuthCallback)
+      }
+    }
   }, [])
 
   useEffect(() => {
