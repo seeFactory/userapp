@@ -5,7 +5,7 @@ import path from "node:path";
 const distDir = path.resolve("dist");
 const appAcssPath = path.join(distDir, "app.acss");
 const projectConfigPath = path.join(distDir, "project.config.json");
-const requiredApiBase = "https://api.seefactory.xyz/api/v1";
+const requiredApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
 const forbiddenApiPatterns = [
   "http://127.0.0.1",
   "https://127.0.0.1",

@@ -65,7 +65,7 @@ export default function PromptDetail() {
 
   if (!item) {
     return (
-      <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index'>
+      <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index' onRefresh={loadPromptDetail}>
         {loading ? (
           <PageLoading title='正在同步案例详情' description='正在读取完整提示词、封面和同款创作入口。' />
         ) : (
@@ -76,7 +76,7 @@ export default function PromptDetail() {
   }
 
   return (
-    <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index'>
+    <Shell title='提示词详情' showTab={false} backFallback='/pages/create-center/index' onRefresh={loadPromptDetail}>
       <Image className='detail-image' src={item.image} mode='aspectFill' />
 
       <View className='section-head'>

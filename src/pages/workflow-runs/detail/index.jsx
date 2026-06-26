@@ -111,7 +111,7 @@ export default function WorkflowRunDetail() {
 
   if (loading) {
     return (
-      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index'>
+      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index' onRefresh={() => loadDetail(true)}>
         <PageLoading title='正在同步运行记录' description='正在读取 Workflow 节点状态和生成任务。' />
       </Shell>
     )
@@ -119,7 +119,7 @@ export default function WorkflowRunDetail() {
 
   if (error && !detail) {
     return (
-      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index'>
+      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index' onRefresh={() => loadDetail(true)}>
         <ErrorState title='运行记录加载失败' description={error} onRetry={() => loadDetail()} />
       </Shell>
     )
@@ -127,14 +127,14 @@ export default function WorkflowRunDetail() {
 
   if (!run) {
     return (
-      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index'>
+      <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index' onRefresh={() => loadDetail(true)}>
         <EmptyState title='暂无运行记录' description='没有找到对应的运行记录。' icon='center' />
       </Shell>
     )
   }
 
   return (
-    <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index'>
+    <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index' onRefresh={() => loadDetail(true)}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

@@ -9,9 +9,12 @@ if (!allowedTargets.has(runtimeTarget)) {
 }
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const globalApiBase = "https://api.seefactory.xyz/api/v1";
+const domesticMiniappApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
+const domesticMiniappTargets = new Set(["wechat-miniapp", "alipay-miniapp", "douyin-miniapp", "qq-miniapp"]);
 const env = {
   ...process.env,
-  SEEFACTORY_API_BASE: process.env.SEEFACTORY_API_BASE || "https://api.seefactory.xyz/api/v1",
+  SEEFACTORY_API_BASE: process.env.SEEFACTORY_API_BASE || (domesticMiniappTargets.has(runtimeTarget) ? domesticMiniappApiBase : globalApiBase),
   SEEFACTORY_CLIENT_VERSION: process.env.SEEFACTORY_CLIENT_VERSION || "0.1.0",
   SEEFACTORY_DEV_LOGIN_ENABLED: "false",
   SEEFACTORY_RUNTIME_TARGET: runtimeTarget

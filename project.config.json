@@ -1,14 +1,14 @@
 {
-  "miniprogramRoot": "dist/",
-  "projectname": "seeFactory",
-  "description": "seeFactory AI creation mini program prototype",
-  "appid": "touristappid",
-  "setting": {
-    "urlCheck": false,
-    "es6": true,
-    "enhance": true,
-    "postcss": true,
-    "minified": true
-  },
-  "compileType": "miniprogram"
+    "miniprogramRoot": "dist/",
+    "projectname": "seeFactory",
+    "description": "seeFactory AI creation mini program prototype",
+    "appid": "tt346b42d6aa0f5f1701",
+    "setting": {
+        "urlCheck": false,
+        "es6": true,
+        "enhance": true,
+        "postcss": true,
+        "minified": true
+    },
+    "compileType": "miniprogram"
 }

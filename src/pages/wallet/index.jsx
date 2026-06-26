@@ -91,7 +91,7 @@ export default function Wallet() {
 
   if (!loggedIn) {
     return (
-      <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index' onRefresh={loadWallet}>
         <EmptyState
           title='请先登录'
           description='登录后可查看历史钱包余额和历史提现记录。'
@@ -104,7 +104,7 @@ export default function Wallet() {
   }
 
   return (
-    <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index'>
+    <Shell title='历史钱包' showTab={false} backFallback='/pages/mine/index' onRefresh={loadWallet}>
       <View className='panel wallet-hero'>
         <View className='panel-brand-row'>
           <BrandLogo size={52} />
