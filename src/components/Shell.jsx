@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import Taro, { getCurrentInstance } from '@tarojs/taro'
+import { useEffect, useRef, useState } from 'react'
+import Taro, { getCurrentInstance, usePullDownRefresh } from '@tarojs/taro'
 import { View, Text, Video, ScrollView } from '@tarojs/components'
 import { captureInviteFromParams } from '../platform/invite'
 import { isFeatureEnabled, useAppConfig } from '../hooks/useAppConfig'
@@ -29,7 +29,7 @@ function normalizeOpacity(value, fallback) {
   return Math.min(Math.max(parsed, 0), 1)
 }
 
-export default function Shell({ active, children, showTab = true, showBack, backFallback, transitionKey }) {
+export default function Shell({ active, children, showTab = true, showBack, backFallback, transitionKey, onRefresh }) {
   const { config } = useAppConfig()
   const homeConfig = config?.home || {}
   const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
@@ -53,6 +53,66 @@ export default function Shell({ active, children, showTab = true, showBack, back
     hasTopBack ? 'has-top-back' : '',
     'page-transition'
   ].filter(Boolean).join(' ')
+
+  const refreshEnabled = typeof onRefresh === 'function'
+  const [refreshing, setRefreshing] = useState(false)
+  const mountedRef = useRef(true)
+  const scrollTopRef = useRef(0)
+  const pullStartYRef = useRef(0)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  const finishRefresh = () => {
+    setTimeout(() => {
+      if (mountedRef.current) setRefreshing(false)
+    }, 180)
+  }
+
+  const triggerRefresh = async () => {
+    if (!refreshEnabled || refreshing) {
+      Taro.stopPullDownRefresh?.()
+      return
+    }
+    setRefreshing(true)
+    Taro.showNavigationBarLoading?.()
+    try {
+      await Promise.resolve(onRefresh())
+    } catch (error) {
+      Taro.showToast({ title: error?.message || '刷新失败', icon: 'none' })
+    } finally {
+      Taro.hideNavigationBarLoading?.()
+      Taro.stopPullDownRefresh?.()
+      finishRefresh()
+    }
+  }
+
+  usePullDownRefresh(() => {
+    triggerRefresh()
+  })
+
+  const handleScroll = (event) => {
+    scrollTopRef.current = Number(event?.detail?.scrollTop || 0)
+  }
+
+  const handleTouchStart = (event) => {
+    if (!refreshEnabled || scrollTopRef.current > 2) return
+    pullStartYRef.current = Number(event?.touches?.[0]?.clientY || 0)
+  }
+
+  const handleTouchEnd = (event) => {
+    if (!refreshEnabled || !pullStartYRef.current || scrollTopRef.current > 2) {
+      pullStartYRef.current = 0
+      return
+    }
+    const endY = Number(event?.changedTouches?.[0]?.clientY || pullStartYRef.current)
+    const pulledDistance = endY - pullStartYRef.current
+    pullStartYRef.current = 0
+    if (pulledDistance >= 72) triggerRefresh()
+  }
 
   useEffect(() => {
     captureInviteFromParams(getCurrentInstance()?.router?.params || {})
@@ -137,6 +197,14 @@ export default function Shell({ active, children, showTab = true, showBack, back
         enhanced
         showScrollbar={false}
         enableFlex
+        refresherEnabled={refreshEnabled}
+        refresherTriggered={refreshing}
+        refresherDefaultStyle='white'
+        refresherBackground='transparent'
+        onRefresherRefresh={triggerRefresh}
+        onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {children}
       </ScrollView>

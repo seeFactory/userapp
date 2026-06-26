@@ -258,7 +258,7 @@ export default function WorkflowCases() {
   }, [selected, status])
 
   return (
-    <Shell title='Workflow 案例' showTab={false} backFallback='/pages/create-center/index'>
+    <Shell title='Workflow 案例' showTab={false} backFallback='/pages/create-center/index' onRefresh={loadCases}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

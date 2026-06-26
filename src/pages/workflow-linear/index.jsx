@@ -433,7 +433,7 @@ export default function WorkflowLinear() {
 
   if (!loggedIn) {
     return (
-      <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
+      <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index' onRefresh={loadResources}>
         <EmptyState
           title='请先登录'
           description='登录后可从零创建线性 Workflow，并提交运行。'
@@ -446,7 +446,7 @@ export default function WorkflowLinear() {
   }
 
   return (
-    <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index'>
+    <Shell title='AI模板' showTab={false} backFallback='/pages/create-center/index' onRefresh={loadResources}>
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />

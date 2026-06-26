@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: 'Workflow 运行'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: 'Workflow 运行'
 })

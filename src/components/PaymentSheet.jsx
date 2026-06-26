@@ -34,7 +34,7 @@ function displayPoints(order, crypto, stars) {
 
 function displayRate(order, crypto, stars) {
   const sourceCurrency = stars ? 'Stars' : crypto?.sourceCurrency || order.sourceCurrency || order.currency || 'CNY'
-  const rate = stars ? '10 Stars = 1 点' : `${sourceCurrency} 汇率 ${crypto?.pointRate ?? order.pointRate ?? 1} 点`
+  const rate = stars ? '2 Stars = 1 点' : `${sourceCurrency} 汇率 ${crypto?.pointRate ?? order.pointRate ?? 1} 点`
   const rounding = crypto?.roundingMode || order.roundingMode || stars?.roundingMode
   return rounding === 'floor' ? `${rate}，向下取整` : rate
 }
@@ -118,16 +118,59 @@ function invokePlatformPayment(platformPayment, onRefresh) {
   })
 }
 
+function telegramVersionAtLeast(webApp, requiredVersion) {
+  if (!webApp) return false
+  if (typeof webApp.isVersionAtLeast === 'function') {
+    return webApp.isVersionAtLeast(requiredVersion)
+  }
+  const current = String(webApp.version || '0').split('.').map((part) => Number(part) || 0)
+  const required = String(requiredVersion || '0').split('.').map((part) => Number(part) || 0)
+  const length = Math.max(current.length, required.length)
+  for (let index = 0; index < length; index += 1) {
+    const left = current[index] || 0
+    const right = required[index] || 0
+    if (left > right) return true
+    if (left < right) return false
+  }
+  return true
+}
+
+function openTelegramInvoiceFallback(webApp, invoiceLink, onRefresh) {
+  const link = String(invoiceLink || '')
+  copy(link, 'Stars 支付链接')
+  try {
+    if (webApp?.openTelegramLink && /^https:\/\/t\.me\//i.test(link)) {
+      webApp.openTelegramLink(link)
+      Taro.showToast({ title: '已打开 Stars 支付，完成后返回刷新', icon: 'none' })
+      setTimeout(() => onRefresh?.(), 2500)
+      return true
+    }
+    if (webApp?.openLink) {
+      webApp.openLink(link)
+      Taro.showToast({ title: '已打开 Stars 支付，完成后返回刷新', icon: 'none' })
+      setTimeout(() => onRefresh?.(), 2500)
+      return true
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = link
+      Taro.showToast({ title: '已打开 Stars 支付，完成后返回刷新', icon: 'none' })
+      return true
+    }
+  } catch (error) {
+    console.warn('Stars invoice fallback failed', error)
+  }
+  Taro.showToast({ title: '已复制 Stars 支付链接，请在 Telegram 内打开', icon: 'none' })
+  return false
+}
+
 function invokeTelegramStarsPayment(stars, onRefresh) {
   if (!stars?.invoiceLink) {
     Taro.showToast({ title: 'Stars 支付链接暂未生成', icon: 'none' })
     return Promise.resolve(false)
   }
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
-  if (!webApp?.openInvoice) {
-    copy(stars.invoiceLink, 'Stars 支付链接')
-    Taro.showToast({ title: '请在 Telegram 内打开并完成支付', icon: 'none' })
-    return Promise.resolve(false)
+  if (!webApp?.openInvoice || !telegramVersionAtLeast(webApp, '6.1')) {
+    return Promise.resolve(openTelegramInvoiceFallback(webApp, stars.invoiceLink, onRefresh))
   }
   return new Promise((resolve) => {
     try {
@@ -151,6 +194,11 @@ function invokeTelegramStarsPayment(stars, onRefresh) {
         resolve(false)
       })
     } catch (error) {
+      const message = String(error?.message || error || '')
+      if (message.includes('WebAppMethodUnsupported') || message.includes('MethodUnsupported')) {
+        resolve(openTelegramInvoiceFallback(webApp, stars.invoiceLink, onRefresh))
+        return
+      }
       Taro.showToast({ title: error.message || 'Stars 支付拉起失败', icon: 'none' })
       resolve(false)
     }
@@ -278,7 +326,7 @@ export default function PaymentSheet({
             </View>
             <View className='payment-row'>
               <Text>固定换算</Text>
-              <Text>10 Stars = 1 点</Text>
+              <Text>2 Stars = 1 点</Text>
             </View>
             <View className='copy-box' onClick={() => copy(stars.invoiceLink, 'Stars 支付链接')}>
               <Text>{stars.invoiceLink || 'Stars 支付链接生成中'}</Text>

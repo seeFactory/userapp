@@ -127,7 +127,7 @@ export default function Agent() {
 
   if (configLoading) {
     return (
-      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index' onRefresh={loadAgent}>
         <PageLoading title='正在同步应用配置' description='正在确认代理中心是否开放。' />
       </Shell>
     )
@@ -135,15 +135,15 @@ export default function Agent() {
 
   if (!agentEnabled) {
     return (
-      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index'>
-        <EmptyState title='代理中心已关闭' description='代理中心暂未开放，请稍后再试。' icon='agent' />
+      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index' onRefresh={loadAgent}>
+        <EmptyState title='代理中心已关闭' description='当前后台已关闭代理展示能力，请等待管理员重新开放。' icon='agent' />
       </Shell>
     )
   }
 
   if (!loggedIn) {
     return (
-      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index'>
+      <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index' onRefresh={loadAgent}>
         <EmptyState
           title='请先登录'
           description='登录后可查看代理身份、邀请码和佣金统计。'
@@ -170,7 +170,7 @@ export default function Agent() {
   const statusText = isAgent ? (profile?.profile?.status === 'disabled' ? '已停用' : '已开通') : '未开通'
 
   return (
-    <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index'>
+    <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index' onRefresh={loadAgent}>
       <View className='panel'>
         <View className='panel-brand-row'>
           <BrandLogo size={50} />

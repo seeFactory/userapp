@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: 'AI模板'
+  
+  enablePullDownRefresh: true,navigationBarTitleText: 'AI模板'
 })
