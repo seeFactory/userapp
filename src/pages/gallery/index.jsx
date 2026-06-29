@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import WorkMedia from '../../components/WorkMedia'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
@@ -100,7 +101,7 @@ export default function Gallery() {
         <>
           {featured && (
             <View className='gallery-featured-card' onClick={() => goPage(`/pages/work-detail/index?id=${featured.id}&source=gallery`)}>
-              <Image className='gallery-featured-image' src={featured.image} mode='aspectFill' />
+              <WorkMedia item={featured} className='gallery-featured-image' />
               <View className='gallery-featured-mask' />
               <View className='gallery-featured-body'>
                 <Text className='tool-chip'>精选</Text>
@@ -121,7 +122,7 @@ export default function Gallery() {
                 className='gallery-card'
                 onClick={() => goPage(`/pages/work-detail/index?id=${item.id}&source=gallery`)}
               >
-                <Image className='gallery-image' src={item.image} mode='aspectFill' />
+                <WorkMedia item={item} className='gallery-image' />
                 <View className='gallery-card-body'>
                   <Text className='case-title'>{item.title}</Text>
                   <View className='gallery-meta'>
