@@ -42,16 +42,49 @@ function redirectLogin() {
   }
 }
 
-export function toApiWork(item) {
+function isVideoUrl(url = '') {
+  return /\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(String(url))
+}
+
+function isImageUrl(url = '') {
+  return /\.(jpg|jpeg|png|webp|gif|bmp|avif)(\?|#|$)/i.test(String(url))
+}
+
+export function inferWorkMediaKind(item = {}, url = '') {
+  const text = `${item.category || ''} ${item.type || ''} ${item.toolKey || ''} ${item.mimeType || ''} ${url}`.toLowerCase()
+  if (isVideoUrl(url) || text.includes('video') || text.includes('视频') || text.includes('video/')) return 'video'
+  if (isImageUrl(url) || text.includes('image') || text.includes('图像') || text.includes('图片') || text.includes('image/')) return 'image'
+  return 'file'
+}
+
+export function normalizeWorkMedia(item = {}) {
+  const resultUrls = item.resultUrls || []
+  const resultUrl = resultUrls[0] || item.resultUrl || item.outputUrl || ''
+  const sourceImage = item.image || ''
+  const mediaUrl = resultUrl || (!isImageUrl(sourceImage) && isVideoUrl(sourceImage) ? sourceImage : '') || item.coverUrl || sourceImage
+  const mediaKind = item.mediaKind || inferWorkMediaKind(item, mediaUrl)
+  const previewUrl = item.coverUrl || (isImageUrl(sourceImage) ? sourceImage : '') || (mediaKind === 'image' ? mediaUrl : '')
   return {
+    ...item,
+    category: item.category === 'image' && mediaKind === 'video' ? 'video' : item.category,
+    mediaKind,
+    mediaUrl,
+    previewUrl,
+    image: previewUrl
+  }
+}
+
+export function toApiWork(item) {
+  const category = item.type || item.category || 'image'
+  return normalizeWorkMedia({
     id: item.id,
     title: item.galleryTitle || item.title || item.prompt?.slice(0, 18) || 'seeFactory 作品',
-    category: item.type || item.category || 'image',
+    category,
     toolName: item.toolName || item.toolKey || 'AI 工具',
     toolKey: item.toolKey,
     status: item.status || 'success',
     date: item.galleryPublishedAt || item.createdAt || '',
-    image: item.coverUrl || item.resultUrls?.[0] || item.image,
+    image: item.image,
     coverUrl: item.coverUrl,
     resultUrls: item.resultUrls || [],
     generationTaskId: item.generationTaskId,
@@ -64,7 +97,7 @@ export function toApiWork(item) {
     galleryStatus: item.galleryStatus,
     shareTicket: item.shareTicket,
     author: item.author
-  }
+  })
 }
 
 export function getClientRuntime() {
