@@ -14,6 +14,7 @@ import {
   fetchSharedWork,
   fetchWork,
   getDownloadUrl,
+  normalizeWorkMedia,
   publishGalleryWork,
   retryGenerationTask,
   unpublishGalleryWork
@@ -52,7 +53,7 @@ function taskStatusCopy(status) {
 
 function mergeTask(work, task) {
   if (!work) return work
-  return {
+  return normalizeWorkMedia({
     ...work,
     status: task.status,
     resultUrls: task.resultUrls || work.resultUrls || [],
@@ -62,7 +63,7 @@ function mergeTask(work, task) {
     failReason: task.failureReason || work.failReason,
     providerAttempts: task.providerAttempts || work.providerAttempts,
     finishedAt: task.finishedAt || work.finishedAt
-  }
+  })
 }
 
 function inferMediaKind(work, url = '') {
@@ -395,9 +396,9 @@ export default function WorkDetail() {
     )
   }
 
-  const media = work.resultUrls?.[0] || work.image || work.coverUrl || ''
-  const preview = work.coverUrl || work.image || media
-  const mediaKind = inferMediaKind(work, media || preview)
+  const media = work.mediaUrl || work.resultUrls?.[0] || work.image || work.coverUrl || ''
+  const mediaKind = work.mediaKind || inferMediaKind(work, media)
+  const preview = work.previewUrl || work.coverUrl || (mediaKind === 'image' ? (work.image || media) : '')
   const pending = isActiveStatus(work?.status)
   const failed = ['failed', 'canceled'].includes(work?.status)
   const isSharedDetail = detailMode === 'share'

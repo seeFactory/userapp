@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Image } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import WorkMedia from '../../components/WorkMedia'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { useAuthStatus } from '../../hooks/useAuthStatus'
 import { requireLogin } from '../../utils/storage'
@@ -156,7 +157,7 @@ export default function Works() {
         <View className='case-grid'>
           {filtered.map((item) => (
             <View key={item.id} className='work-card' onClick={() => goPage(`/pages/work-detail/index?id=${item.id}`)}>
-              <Image className='work-image' src={item.image || 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'} mode='aspectFill' />
+              <WorkMedia item={item} className='work-image' />
               <View className='work-body'>
                 <Text className='work-title'>{item.title}</Text>
                 <View className='meta-row'>
