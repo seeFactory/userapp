@@ -38,26 +38,15 @@ taro-scroll-view-core::-webkit-scrollbar {
   display: none;
 }
 
+*,
+*::before,
+*::after,
 view,
-scroll-view,
-swiper,
-swiper-item,
-cover-view,
-cover-image,
-button,
 text,
 input,
 textarea,
 image,
 video,
-form,
-label,
-navigator,
-picker,
-slider,
-switch,
-canvas,
-map,
 taro-view-core,
 taro-text-core,
 taro-scroll-view-core,
@@ -70,10 +59,10 @@ taro-video-core {
 .login-wrap {
   position: relative;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   height: 100vh;
   min-height: 844px;
-  margin: 0;
+  margin: 0 auto;
   overflow: hidden;
   isolation: isolate;
   background:
@@ -86,10 +75,9 @@ taro-video-core {
 .login-wrap::before {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
   z-index: 0;
-  width: auto;
+  width: 100%;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -97,7 +85,7 @@ taro-video-core {
     linear-gradient(180deg, rgba(2, 4, 10, 0.18), rgba(0, 0, 0, 0.86)),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 7px);
   content: "";
-  transform: none;
+  transform: translateX(-50%);
 }
 
 .home-shell {
@@ -111,10 +99,9 @@ taro-video-core {
 .home-shell::after {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
   z-index: 1;
-  width: auto;
+  width: 100%;
   max-width: none;
   height: 100vh;
   pointer-events: none;
@@ -123,7 +110,7 @@ taro-video-core {
     radial-gradient(circle at 50% 24%, rgba(255, 49, 174, 0.12), transparent 42%),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.026) 0, rgba(255, 255, 255, 0.026) 1px, transparent 1px, transparent 5px);
   content: "";
-  transform: none;
+  transform: translateX(-50%);
 }
 
 .home-video-layer,
@@ -131,13 +118,12 @@ taro-video-core {
 .factory-grid {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
-  width: auto;
+  left: 50%;
+  width: 100vw;
   max-width: none;
   height: 100vh;
   pointer-events: none;
-  transform: none;
+  transform: translateX(-50%);
 }
 
 .home-video-layer {
@@ -236,7 +222,7 @@ taro-video-core {
   position: relative;
   z-index: 2;
   display: block;
-  box-sizing: border-box;
+  min-width: 0;
   width: 100%;
   max-width: 100%;
   height: 100vh;
@@ -256,8 +242,12 @@ taro-video-core {
   padding-bottom: 112px;
 }
 
+.page-content.tab-page-content {
+  animation: none;
+}
+
 .page-content.has-top-back {
-  padding-top: 72px;
+  padding-top: calc(72px + env(safe-area-inset-top) + var(--tg-content-safe-area-top, 0px));
 }
 
 .page-transition {
@@ -294,7 +284,7 @@ taro-tabbar {
 
 .page-back-button {
   position: fixed;
-  top: 13px;
+  top: calc(13px + env(safe-area-inset-top) + var(--tg-content-safe-area-top, 0px));
   left: 14px;
   z-index: 32;
   display: flex;
@@ -1056,33 +1046,15 @@ taro-tabbar {
   animation: scanSweep 5.2s ease-in-out infinite;
 }
 
-.hero > view,
-.hero > text,
-.hero > image,
-.tool-card > view,
-.tool-card > text,
-.tool-card > image,
-.case-card > view,
-.case-card > text,
-.case-card > image,
-.work-card > view,
-.work-card > text,
-.work-card > image,
-.linear-component-card > view,
-.linear-component-card > text,
-.linear-component-card > image,
-.linear-step-card > view,
-.linear-step-card > text,
-.linear-step-card > image,
-.panel > view,
-.panel > text,
-.panel > image,
-.profile-card > view,
-.profile-card > text,
-.profile-card > image,
-.form-panel > view,
-.form-panel > text,
-.form-panel > image {
+.hero > *,
+.tool-card > *,
+.case-card > *,
+.work-card > *,
+.linear-component-card > *,
+.linear-step-card > *,
+.panel > *,
+.profile-card > *,
+.form-panel > * {
   position: relative;
   z-index: 1;
 }
@@ -1159,6 +1131,7 @@ taro-tabbar {
 .hero-actions > .primary-button,
 .hero-actions > .ghost-button,
 .hero-actions > .danger-button {
+  min-width: 0;
   flex: 1;
 }
 
@@ -1167,6 +1140,8 @@ taro-tabbar {
 .danger-button {
   position: relative;
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   min-height: 46px;
   align-items: center;
   justify-content: center;
@@ -1178,6 +1153,15 @@ taro-tabbar {
   font-weight: 800;
   line-height: 1;
   text-align: center;
+}
+
+.primary-button text,
+.ghost-button text,
+.danger-button text {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .primary-button {
@@ -1221,23 +1205,32 @@ taro-tabbar {
 
 .section-head {
   display: flex;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
   margin: 20px 0 10px;
 }
 
-.section-head > view {
+.section-head > view,
+.section-head > taro-view-core {
   min-width: 0;
 }
 
 .section-title {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 2px;
   color: #f8fafc;
   font-size: 18px;
   font-weight: 850;
   line-height: 1.22;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .muted {
@@ -1256,6 +1249,9 @@ taro-tabbar {
 .case-grid,
 .profile-grid {
   display: grid;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
@@ -1274,6 +1270,8 @@ taro-tabbar {
 .linear-component-card,
 .linear-step-card,
 .profile-card {
+  min-width: 0;
+  max-width: 100%;
   width: auto;
   margin-bottom: 0;
 }
@@ -1345,16 +1343,19 @@ taro-tabbar {
 
 .tool-desc {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 6px;
   overflow: hidden;
   color: #b9c8dc;
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .home-tool-actions {
   display: flex;
-  flex: 1 1 216px;
   min-width: 0;
   max-width: 236px;
   align-items: center;
@@ -1368,9 +1369,7 @@ taro-tabbar {
 
 .home-tool-tabs {
   display: flex;
-  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
   gap: 4px;
   padding: 4px;
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -1381,12 +1380,11 @@ taro-tabbar {
 
 .home-tool-tab {
   display: flex;
-  min-width: 0;
-  flex: 1 1 0;
+  min-width: 42px;
   height: 28px;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 999px;
   color: #94a3b8;
   font-size: 11px;
@@ -1404,7 +1402,7 @@ taro-tabbar {
 }
 
 .home-search-button {
-  flex: 0 0 36px;
+  flex: 0 0 auto;
   width: 36px;
   height: 36px;
 }
@@ -1496,6 +1494,9 @@ taro-tabbar {
 
 .filter-row {
   display: flex;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   min-height: 56px;
   gap: 9px;
   align-items: center;
@@ -1535,6 +1536,7 @@ taro-tabbar {
 .option-chip {
   flex: 0 0 auto;
   display: inline-flex;
+  max-width: 100%;
   min-height: 42px;
   align-items: center;
   justify-content: center;
@@ -1561,6 +1563,9 @@ taro-tabbar {
 
 .search-box {
   display: flex;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
   min-height: 58px;
@@ -1569,6 +1574,7 @@ taro-tabbar {
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 26px;
   background: rgba(11, 18, 36, 0.78);
+  overflow: hidden;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 12px 26px rgba(0, 0, 0, 0.2);
@@ -1576,6 +1582,7 @@ taro-tabbar {
 
 .search-input {
   flex: 1;
+  min-width: 0;
   height: 40px;
   color: #f8fafc;
   font-size: 13px;
@@ -1583,6 +1590,8 @@ taro-tabbar {
 
 .case-card,
 .work-card {
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -1668,6 +1677,8 @@ taro-tabbar {
 
 .meta-row {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   min-height: 20px;
   align-items: center;
   justify-content: space-between;
@@ -1694,11 +1705,19 @@ taro-tabbar {
 
 .status {
   flex: 0 0 auto;
+  max-width: 100%;
   padding: 4px 7px;
   border: 1px solid rgba(74, 222, 128, 0.18);
   border-radius: 999px;
   color: #bbf7d0;
   background: rgba(20, 83, 45, 0.18);
+}
+
+.status text {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .status.failed {
@@ -1810,6 +1829,9 @@ taro-tabbar {
 
 .option-row {
   display: flex;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   flex-wrap: wrap;
   gap: 9px;
   padding: 6px;
@@ -2164,23 +2186,19 @@ taro-tabbar {
 }
 
 .gallery-grid {
-  column-count: 2;
-  column-gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .gallery-card {
-  display: inline-block;
+  display: block;
   width: 100%;
-  margin: 0 0 10px;
-  break-inside: avoid;
+  min-width: 0;
 }
 
 .gallery-card .gallery-image {
   height: 164px;
-}
-
-.gallery-card.tall .gallery-image {
-  height: 218px;
 }
 
 .gallery-card-body {
@@ -2209,12 +2227,11 @@ taro-tabbar {
 
 .bottom-tabs {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
   bottom: 0;
   z-index: 20;
   display: flex;
-  width: auto;
+  width: 100vw;
   max-width: none;
   min-height: 82px;
   justify-content: space-between;
@@ -2227,12 +2244,13 @@ taro-tabbar {
     #0a0a0d;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 -16px 34px rgba(0, 0, 0, 0.46);
-  transform: none;
+    0 -8px 18px rgba(0, 0, 0, 0.34);
+  transform: translateX(-50%);
   backface-visibility: hidden;
   contain: layout paint;
-  -webkit-backdrop-filter: blur(18px) saturate(1.18);
-  backdrop-filter: blur(18px) saturate(1.18);
+  will-change: transform;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .tab-item {
@@ -2314,6 +2332,56 @@ taro-tabbar {
   border-radius: 16px;
   color: #e2e8f0;
   background: rgba(15, 23, 42, 0.52);
+}
+
+.legal-modal-mask {
+  z-index: 80;
+  align-items: flex-end;
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+}
+
+.legal-modal-panel {
+  display: flex;
+  max-height: 76vh;
+  min-height: 420px;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.legal-modal-head {
+  flex: 0 0 auto;
+  align-items: flex-start;
+}
+
+.legal-close-btn {
+  flex: 0 0 auto;
+}
+
+.legal-modal-scroll {
+  flex: 1 1 auto;
+  height: 48vh;
+  max-height: 480px;
+  min-height: 0;
+  margin: 14px 0 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 18px;
+  background: rgba(3, 7, 18, 0.58);
+}
+
+.legal-modal-content {
+  display: block;
+  color: #dbeafe;
+  font-size: 12px;
+  line-height: 1.68;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.legal-modal-action {
+  flex: 0 0 auto;
 }
 
 .modal-note {
@@ -2634,10 +2702,10 @@ taro-tabbar {
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 20px;
   background:
-    linear-gradient(90deg, rgba(92, 231, 255, 0.5), rgba(243, 214, 166, 0.34)) top left / 100% 1px no-repeat,
-    linear-gradient(90deg, rgba(243, 214, 166, 0.34), rgba(92, 231, 255, 0.5)) bottom left / 100% 1px no-repeat,
-    linear-gradient(180deg, rgba(92, 231, 255, 0.42), transparent 46%, rgba(243, 214, 166, 0.32)) top left / 1px 100% no-repeat,
-    linear-gradient(180deg, rgba(243, 214, 166, 0.32), transparent 46%, rgba(92, 231, 255, 0.42)) top right / 1px 100% no-repeat;
+    linear-gradient(90deg, var(--sf-cyan) 0 22px, transparent 22px calc(100% - 22px), var(--sf-warm) calc(100% - 22px)) top left / 100% 1px no-repeat,
+    linear-gradient(90deg, var(--sf-warm) 0 22px, transparent 22px calc(100% - 22px), var(--sf-cyan) calc(100% - 22px)) bottom left / 100% 1px no-repeat,
+    linear-gradient(180deg, var(--sf-cyan) 0 22px, transparent 22px calc(100% - 22px), var(--sf-warm) calc(100% - 22px)) top left / 1px 100% no-repeat,
+    linear-gradient(180deg, var(--sf-warm) 0 22px, transparent 22px calc(100% - 22px), var(--sf-cyan) calc(100% - 22px)) top right / 1px 100% no-repeat;
   content: "";
   opacity: 0.54;
   transform: none;
@@ -3383,6 +3451,9 @@ taro-tabbar {
 .tool-option-grid,
 .tool-ratio-grid {
   display: grid;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   gap: 10px;
 }
 
@@ -3392,6 +3463,7 @@ taro-tabbar {
 
 .tool-mode-card {
   display: flex;
+  min-width: 0;
   min-height: 52px;
   align-items: center;
   justify-content: center;
@@ -3502,6 +3574,7 @@ taro-tabbar {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.95fr);
   gap: 12px;
+  min-width: 0;
   width: 100%;
   max-width: 390px;
   margin: 0 auto;
@@ -3517,6 +3590,7 @@ taro-tabbar {
 .tool-generate-button {
   display: flex;
   min-width: 0;
+  max-width: 100%;
   min-height: 58px;
   align-items: center;
   justify-content: center;
@@ -3527,6 +3601,16 @@ taro-tabbar {
   font-weight: 900;
   line-height: 1.2;
   text-align: center;
+}
+
+.tool-history-button text,
+.tool-generate-button text,
+.tool-mode-card text,
+.tool-option-grid .option-chip text {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .tool-history-button {
@@ -3622,7 +3706,7 @@ taro-tabbar {
 
 .bottom-tabs {
   min-height: 86px;
-  padding: 9px 10px 28px;
+  padding: 9px 10px calc(12px + env(safe-area-inset-bottom));
   border-top-color: rgba(255, 255, 255, 0.1);
   background:
     linear-gradient(180deg, rgba(19, 23, 34, 0.9), rgba(7, 8, 12, 0.98)),
@@ -3737,6 +3821,31 @@ taro-tabbar {
 }
 
 @media (min-width: 391px) {
+  .app-shell,
+  .login-wrap,
+  .app-shell::before,
+  .login-wrap::before,
+  .home-shell::after,
+  .home-video-layer,
+  .home-video-overlay,
+  .factory-grid {
+    max-width: 390px;
+  }
+
+  .bottom-tabs {
+    max-width: 390px;
+  }
+
+  .page-back-button {
+    left: 50%;
+    transform: translateX(-181px);
+  }
+
+  .page-back-button:active,
+  .page-back-button-pressed {
+    transform: translateX(-181px) translateY(1px) scale(0.97);
+  }
+
   .modal-panel {
     max-width: 348px;
   }
@@ -3961,7 +4070,7 @@ taro-tabbar {
 
 .linear-submit-bar {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 14px 0 30px;
+  padding: 14px 0 calc(16px + env(safe-area-inset-bottom));
 }
 
 .linear-submit-bar .linear-publish-action {
@@ -4086,7 +4195,28 @@ taro-tabbar {
 .workflow-run-summary-card,
 .workflow-node-card {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+}
+
+.workflow-case-search,
+.workflow-case-detail-panel,
+.workflow-purchase-card,
+.workflow-case-card,
+.workflow-run-summary-card,
+.workflow-node-card,
+.workflow-run-form,
+.linear-component-card,
+.linear-step-card,
+.linear-submit-bar {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.workflow-case-search .ghost-button,
+.section-head .ghost-button.compact {
+  flex: 0 1 auto;
 }
 
 .workflow-case-card .work-image,
@@ -4188,6 +4318,7 @@ taro-tabbar {
 
 .workflow-case-detail-panel .hero-actions,
 .workflow-case-detail-panel .stacked-actions {
+  min-width: 0;
   width: 100%;
   flex-direction: column;
   gap: 9px;
@@ -4264,7 +4395,21 @@ taro-tabbar {
 }
 
 .linear-step-actions {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.linear-step-actions > view,
+.linear-step-actions > taro-view-core,
+.linear-submit-bar > view,
+.linear-submit-bar > taro-view-core,
+.hero-actions > view,
+.hero-actions > taro-view-core,
+.stacked-actions > view,
+.stacked-actions > taro-view-core {
+  min-width: 0;
 }
 
 .linear-step-actions .danger-button {
