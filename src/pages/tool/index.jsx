@@ -4,6 +4,7 @@ import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import ModelLogo from '../../components/ModelLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
@@ -64,6 +65,26 @@ function fallbackTool(id) {
 function optionList(tool, key, fallback) {
   const list = tool?.options?.[key]
   return Array.isArray(list) && list.length ? list : fallback
+}
+
+function modelMetaOf(tool, modelKey) {
+  const key = String(modelKey || '')
+  const options = tool?.options || {}
+  return options.modelMeta?.[key] || tool?.modelMeta?.[key] || {}
+}
+
+function modelLabelOf(tool, modelKey) {
+  const key = String(modelKey || '')
+  const options = tool?.options || {}
+  const meta = modelMetaOf(tool, key)
+  return meta.label || options.modelLabels?.[key] || key
+}
+
+function modelLogoOf(tool, modelKey) {
+  const key = String(modelKey || '')
+  const options = tool?.options || {}
+  const meta = modelMetaOf(tool, key)
+  return meta.logoUrl || options.modelLogos?.[key] || tool?.modelLogos?.[key] || tool?.defaultModelLogoUrl || tool?.logoUrl || ''
 }
 
 function normalizeResolution(value = '') {
@@ -1053,11 +1074,12 @@ export default function ToolPage() {
             <Text className='input-label'>模型</Text>
             <View className={fieldError(formErrors, 'model') ? 'tool-option-grid has-error' : 'tool-option-grid'}>
               {modelOptions.map((item) => (
-                <View key={item} className={model === item ? 'option-chip active' : 'option-chip'} onClick={() => {
+                <View key={item} className={model === item ? 'option-chip model-option-chip active' : 'option-chip model-option-chip'} onClick={() => {
                   clearFieldError('model')
                   setModel(item)
                 }}>
-                  {item}
+                  <ModelLogo src={modelLogoOf(activeTool, item)} icon={activeTool?.icon || tool?.icon || 'sparkles'} size={28} className='model-option-logo' />
+                  <Text className='model-option-name'>{modelLabelOf(activeTool, item)}</Text>
                 </View>
               ))}
             </View>
