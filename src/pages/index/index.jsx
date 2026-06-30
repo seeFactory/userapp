@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
+import ModelLogo from '../../components/ModelLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { fetchTools } from '../../services/api'
@@ -56,6 +57,24 @@ function toolSearchText(tool) {
     ...arrayOf(tool.homeTabs),
     ...arrayOf(tool.modes).flatMap((mode) => [mode.label, mode.name, mode.description, mode.outputType])
   ].map(textOf).join(' ')
+}
+
+function defaultModelKeyOf(tool) {
+  const options = tool?.options || {}
+  return String(
+    tool?.defaultModelKey ||
+    options.defaultModelKey ||
+    arrayOf(options.models)[0] ||
+    arrayOf(tool?.modes).map((mode) => mode?.defaultModelKey || arrayOf(mode?.allowedModels)[0] || arrayOf(mode?.options?.models)[0]).find(Boolean) ||
+    ''
+  )
+}
+
+function modelLogoOf(tool) {
+  const key = defaultModelKeyOf(tool)
+  const options = tool?.options || {}
+  const meta = key ? (options.modelMeta?.[key] || tool?.modelMeta?.[key]) : null
+  return tool?.logoUrl || tool?.defaultModelLogoUrl || meta?.logoUrl || (key ? (options.modelLogos?.[key] || tool?.modelLogos?.[key]) : '') || ''
 }
 
 export default function Index() {
@@ -205,9 +224,7 @@ export default function Index() {
               onClick={() => openTool(tool)}
             >
               <Text className='tool-chip'>{tool.label}</Text>
-              <View className='tool-icon'>
-                <AppIcon name={tool.icon} size={20} />
-              </View>
+              <ModelLogo src={modelLogoOf(tool)} icon={tool.icon} size={tool.featured ? 46 : 40} className='tool-card-model-logo' />
               <Text className='tool-name'>{tool.name}</Text>
               <Text className='tool-desc'>{tool.desc}</Text>
             </View>
@@ -258,9 +275,7 @@ export default function Index() {
                       setSearchOpen(false)
                       openTool(tool)
                     }}>
-                      <View className='tool-icon compact-tool-icon'>
-                        <AppIcon name={tool.icon} size={17} />
-                      </View>
+                      <ModelLogo src={modelLogoOf(tool)} icon={tool.icon} size={34} className='compact-tool-icon' />
                       <View className='search-result-copy'>
                         <Text className='tool-name'>{tool.name}</Text>
                         <Text className='tool-desc'>{tool.desc}</Text>
