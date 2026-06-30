@@ -34,6 +34,16 @@ const defaultRatios = ['1:1', '3:4', '9:16', '16:9']
 const defaultResolutions = ['1024x1024', '1024x1365', '1024x1792', '1792x1024']
 const defaultDurations = ['5 秒', '8 秒', '12 秒']
 const defaultModels = []
+const fallbackImagePromptTemplates = [
+  { title: '质感商品海报', prompt: '一张高级商业海报，主体清晰，黑色玻璃质感背景，霓虹边缘光，细节丰富，适合社交媒体发布。' },
+  { title: '写实宠物写真', prompt: '一只可爱的猫咪坐在柔软沙发上，暖色自然光，浅景深，真实摄影质感，画面干净温柔。' },
+  { title: '赛博人物形象', prompt: '科幻赛博朋克人物形象，深色城市夜景，粉紫霓虹光，电影级构图，面部清晰，服装细节精致。' }
+]
+const fallbackVideoPromptTemplates = [
+  { title: '宠物短视频', prompt: '一只可爱的小猫在沙滩上追逐贝壳，镜头缓慢推进，主体清晰，画面自然流畅。' },
+  { title: '产品动态展示', prompt: '产品在黑色玻璃台面上缓慢旋转，霓虹边缘光扫过，镜头平稳推进，质感高级。' },
+  { title: '城市氛围片', prompt: '夜晚城市街头，霓虹灯反射在雨后的地面，镜头缓慢前移，氛围电影感。' }
+]
 
 function firstValue(list) {
   return list[0]
@@ -116,6 +126,12 @@ function resolutionOptionsForRatio(tool, ratio, fallback) {
   }))
 }
 
+function ratioResolutionLabel(tool, ratio, fallback) {
+  const list = resolutionOptionsForRatio(tool, ratio, fallback)
+  if (!list.length) return ''
+  return list[list.length - 1] || list[0]
+}
+
 function nextSelected(tool, key, fallback, current) {
   const list = optionList(tool, key, fallback)
   return list.includes(current) ? current : firstValue(list)
@@ -134,6 +150,21 @@ function isVideoTool(tool) {
   const category = String(tool?.category || '').toLowerCase()
   if (category === 'video') return true
   return optionList(tool, 'resolutions', []).some((item) => /^[0-9]+p$/i.test(String(item).trim()))
+}
+
+function outputTypeOf(tool, mode) {
+  const outputTypes = [].concat(tool?.outputTypes || tool?.outputType || []).map((item) => String(item || '').toLowerCase())
+  return String(mode?.outputType || outputTypes[0] || tool?.category || '').toLowerCase()
+}
+
+function isImageTool(tool, mode) {
+  const type = outputTypeOf(tool, mode)
+  const text = `${tool?.category || ''} ${tool?.id || ''} ${tool?.name || ''} ${type}`.toLowerCase()
+  return type === 'image' || text.includes('image') || text.includes('图像') || text.includes('生图')
+}
+
+function isCreativeMediaTool(tool, mode) {
+  return isImageTool(tool, mode) || isVideoTool({ ...tool, category: outputTypeOf(tool, mode) || tool?.category })
 }
 
 function inferUploadConfig(tool) {
@@ -263,6 +294,41 @@ function slotUploadConfig(slot) {
   }
 }
 
+function optionalReferenceUploadConfig(tool, mode) {
+  const isVideo = isVideoTool({ ...tool, category: outputTypeOf(tool, mode) || tool?.category })
+  return {
+    acceptTypes: ['image'],
+    maxCount: 1,
+    minCount: 0,
+    label: '参考图片（可选）',
+    actionText: isVideo ? '上传 1 张参考图片' : '添加图片',
+    tip: isVideo
+      ? '支持 JPG / PNG / WebP，建议图片比例与视频比例一致'
+      : '支持 JPG / PNG / WebP，可用于参考构图、主体或风格'
+  }
+}
+
+function promptTemplatesForTool(tool, mode) {
+  const options = tool?.options || {}
+  const candidates = options.promptTemplates || options.templates || options.promptExamples || options.examples
+  const normalized = Array.isArray(candidates)
+    ? candidates.map((item, index) => {
+      if (typeof item === 'string') return { title: `模板 ${index + 1}`, prompt: item }
+      return {
+        title: item.title || item.name || `模板 ${index + 1}`,
+        prompt: item.prompt || item.value || item.text || '',
+        image: item.image || item.coverUrl || item.cover || ''
+      }
+    }).filter((item) => item.prompt)
+    : []
+  if (normalized.length) return normalized.slice(0, 10)
+  return (isVideoTool({ ...tool, category: outputTypeOf(tool, mode) || tool?.category }) ? fallbackVideoPromptTemplates : fallbackImagePromptTemplates)
+}
+
+function fieldLabelWithRequired(label, required = false) {
+  return required ? `${label} *` : label
+}
+
 function fieldError(errors, field) {
   if (!errors) return ''
   if (errors[field]) return errors[field]
@@ -357,6 +423,12 @@ export default function ToolPage() {
   const assetSlots = slotsForMode(tool, activeMode)
   const usesAssetSlots = assetSlots.length > 0
   const needs = (field) => activeFields.includes(field)
+  const toolOutputType = outputTypeOf(tool, activeMode)
+  const videoMode = isVideoTool({ ...activeTool, category: toolOutputType || activeTool?.category })
+  const imageMode = isImageTool(activeTool, activeMode)
+  const mediaMode = isCreativeMediaTool(activeTool, activeMode)
+  const canUseOptionalReferenceUpload = mediaMode && !usesAssetSlots && !needs('upload') && !needs('multiUpload')
+  const shouldRenderLegacyUpload = !usesAssetSlots && (needs('upload') || needs('multiUpload') || canUseOptionalReferenceUpload)
   const styleOptions = optionList(activeTool, 'styles', defaultStyles)
   const ratioOptions = optionList(activeTool, 'ratios', defaultRatios)
   const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)
@@ -365,8 +437,10 @@ export default function ToolPage() {
   const normalizedResolution = normalizeResolution(resolution)
   const selectedResolution = resolutionOptions.includes(normalizedResolution) ? normalizedResolution : ''
   const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution
-  const resolutionLabel = isVideoTool(activeTool) ? '精度' : '分辨率'
-  const uploadConfig = inferUploadConfig(activeTool)
+  const resolutionLabel = videoMode ? '视频精度' : '输出尺寸'
+  const uploadConfig = canUseOptionalReferenceUpload ? optionalReferenceUploadConfig(activeTool, activeMode) : inferUploadConfig(activeTool)
+  const templateOptions = promptTemplatesForTool(activeTool, activeMode)
+  const submitCost = Number(activeTool?.cost ?? tool?.cost ?? 0) || 0
   const inputAssets = usesAssetSlots
     ? Object.fromEntries(assetSlots.map((slot) => [
       slot.slotKey,
@@ -379,11 +453,22 @@ export default function ToolPage() {
   const uploaded = usesAssetSlots
     ? assetSlots.every((slot) => (inputAssets[slot.slotKey] || []).length >= slotMinCount(slot))
     : assetIds.length > 0
+  const referenceRequired = usesAssetSlots
+    ? assetSlots.some((slot) => slotMinCount(slot) > 0)
+    : needs('upload') || needs('multiUpload')
+  const promptLabel = videoMode ? '视频创意描述' : '提示词'
+  const promptPlaceholder = videoMode
+    ? '请描述你想要的视频效果，例如：一只可爱的小猫在沙滩上抓螃蟹，镜头缓慢推进，主体清晰，画面自然流畅'
+    : '请输入绘图提示词，描述你想要生成的图片、主体、风格、构图和氛围'
+  const helperCopy = videoMode
+    ? (referenceRequired ? '当前模式需要先上传参考图片，再根据描述生成视频。' : '可上传参考图片辅助画面构图，也可以只输入描述生成视频。')
+    : (referenceRequired ? '当前模式会结合参考图片与提示词生成新图片。' : '可上传参考图片辅助构图、主体或风格，也可以只输入提示词生成。')
+  const submitLabel = videoMode ? '生成视频' : '生成图片'
 
   if (!generationEnabled) {
     return (
       <Shell title='创作工具' showTab={false} onRefresh={loadTool}>
-        <EmptyState title='生成服务已关闭' description='生成服务暂未开放，请稍后再试。' icon='wand' />
+        <EmptyState title='生成服务已关闭' description='当前后台已关闭生成服务，请稍后再试。' icon='wand' />
       </Shell>
     )
   }
@@ -706,16 +791,19 @@ export default function ToolPage() {
     }
   }
 
-  const renderUploadBlock = ({ blockKey = '', label, config, items, errorKey, onClick }) => {
+  const renderUploadBlock = ({ blockKey = '', label, config, items, errorKey, onClick, required = false }) => {
     const readyIds = items.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
     const hasReady = readyIds.length > 0
     return (
       <>
-        <Text className='input-label'>{label || config.label}</Text>
-        <View className={`${uploading ? 'upload-box uploading' : 'upload-box'}${fieldError(formErrors, errorKey) ? ' has-error' : ''}`} onClick={onClick}>
-          <AppIcon name={hasReady ? 'badge' : uploadLimits[config.acceptTypes[0]]?.icon || 'image'} size={18} />
-          <View className='upload-copy'>
-            <Text>{hasReady ? `已添加 ${readyIds.length} 个素材` : uploading ? '素材上传中...' : config.actionText}</Text>
+        <View className='tool-field-head'>
+          <Text className='input-label'>{fieldLabelWithRequired(label || config.label, required)}</Text>
+          {hasReady ? <Text className='tool-field-action' onClick={onClick}>重新选择</Text> : null}
+        </View>
+        <View className={`${uploading ? 'upload-box tool-upload-box uploading' : 'upload-box tool-upload-box'}${fieldError(formErrors, errorKey) ? ' has-error' : ''}`} onClick={onClick}>
+          <View className='tool-upload-empty'>
+            <Text className='tool-upload-plus'>+</Text>
+            <Text className='tool-upload-title'>{hasReady ? `已添加 ${readyIds.length} 个素材` : uploading ? '素材上传中...' : config.actionText}</Text>
             <Text className='upload-hint'>{config.tip}</Text>
           </View>
         </View>
@@ -765,31 +853,34 @@ export default function ToolPage() {
 
   return (
     <Shell title={tool.name} showTab={false} onRefresh={loadTool}>
-      <View className='panel'>
-        <View className='panel-brand-row'>
-          <BrandLogo size={50} />
-          <View>
-            <Text className='section-kicker'>{tool.label} · 消耗 {tool.cost} 点额度</Text>
-            <Text className='section-title'>{tool.name}</Text>
+      <View className='tool-compose-page'>
+        <View className='tool-compose-hero'>
+          <View className='tool-compose-title-row'>
+            <View className='tool-mini-logo'>
+              <BrandLogo size={28} />
+            </View>
+            <View className='tool-compose-title-copy'>
+              <Text className='section-title'>{tool.name}</Text>
+              <Text className='tool-desc'>{tool.desc || helperCopy}</Text>
+            </View>
           </View>
+          <Text className='tool-compose-helper'>{helperCopy}</Text>
         </View>
-        <Text className='tool-desc'>{tool.desc}</Text>
-      </View>
 
-      <View className='form-panel'>
+        <View className='form-panel tool-form-panel'>
         {!tool.fields?.length ? (
           <InlineNotice tone='danger'>当前工具暂不可用，请稍后再试或联系客服。</InlineNotice>
         ) : null}
         {availableModes.length > 1 ? (
           <>
             <Text className='input-label'>生成模式</Text>
-            <View className='option-row'>
+            <View className='tool-mode-grid'>
               {availableModes.map((mode) => {
                 const key = modeKeyOf(mode)
                 return (
                   <View
                     key={key}
-                    className={activeMode && modeKeyOf(activeMode) === key ? 'option-chip active' : 'option-chip'}
+                    className={activeMode && modeKeyOf(activeMode) === key ? 'tool-mode-card active' : 'tool-mode-card'}
                     onClick={() => {
                       setActiveModeKey(key)
                       setUploadItems([])
@@ -813,35 +904,82 @@ export default function ToolPage() {
               config: slotUploadConfig(slot),
               items: slotUploadItems[slot.slotKey] || [],
               errorKey: `inputAssets.${slot.slotKey}`,
-              onClick: () => chooseUpload(slot)
+              onClick: () => chooseUpload(slot),
+              required: slotMinCount(slot) > 0
             }))}
           </>
-        ) : (needs('upload') || needs('multiUpload')) ? (
+        ) : shouldRenderLegacyUpload ? (
           renderUploadBlock({
             config: uploadConfig,
             items: uploadItems,
             errorKey: 'inputAssetIds',
-            onClick: () => chooseUpload()
+            onClick: () => chooseUpload(),
+            required: referenceRequired
           })
         ) : null}
-        <Text className='input-label'>提示词</Text>
+        <View className='tool-field-head'>
+          <View className='tool-label-with-icon'>
+            <AppIcon name='wand' size={15} />
+            <Text className='input-label'>{fieldLabelWithRequired(promptLabel, true)}</Text>
+          </View>
+          <Text className='tool-ai-chip'>{imageMode ? 'AI 图片反推' : 'AI 视频优化'}</Text>
+        </View>
         <Textarea
-          className={fieldError(formErrors, 'prompt') ? 'text-area has-error' : 'text-area'}
+          className={fieldError(formErrors, 'prompt') ? 'text-area tool-prompt-area has-error' : 'text-area tool-prompt-area'}
           value={prompt}
           maxlength={500}
-          placeholder='描述你想生成的画面、镜头、风格或营销场景'
+          placeholder={promptPlaceholder}
           placeholderClass='muted'
           onInput={(event) => {
             clearFieldError('prompt')
             setPrompt(event.detail.value)
           }}
         />
+        <View className='tool-prompt-footer'>
+          <Text>{prompt.length} 字</Text>
+          <View className='tool-clear-action' onClick={() => {
+            clearFieldError('prompt')
+            setPrompt('')
+          }}>
+            <AppIcon name='trash' size={13} />
+            <Text>清空</Text>
+          </View>
+        </View>
         {fieldError(formErrors, 'prompt') ? <Text className='field-error'>{fieldError(formErrors, 'prompt')}</Text> : null}
+
+        {templateOptions.length ? (
+          <View className='tool-template-section'>
+            <View className='tool-section-row'>
+              <Text className='input-label'>快速选择模板</Text>
+              <Text className='tool-section-count'>({templateOptions.length})</Text>
+            </View>
+            <View className='tool-template-strip'>
+              {templateOptions.map((item, index) => (
+                <View key={`${item.title}-${index}`} className='tool-template-card'>
+                  {item.image ? (
+                    <Image className='tool-template-image' src={item.image} mode='aspectFill' />
+                  ) : (
+                    <View className={`tool-template-image template-tone-${index % 3}`}>
+                      <Text>{item.title}</Text>
+                    </View>
+                  )}
+                  <Text className='tool-template-title'>{item.title}</Text>
+                  <View className='tool-template-button' onClick={() => {
+                    clearFieldError('prompt')
+                    setPrompt(item.prompt)
+                  }}>
+                    立即使用
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {needs('style') && (
           <>
             <Text className='input-label'>风格</Text>
-            <View className={fieldError(formErrors, 'style') ? 'option-row has-error' : 'option-row'}>
+            <View className={fieldError(formErrors, 'style') ? 'tool-option-grid has-error' : 'tool-option-grid'}>
               {styleOptions.map((item) => (
                 <View key={item} className={style === item ? 'option-chip active' : 'option-chip'} onClick={() => {
                   clearFieldError('style')
@@ -857,10 +995,10 @@ export default function ToolPage() {
 
         {needs('ratio') && (
           <>
-            <Text className='input-label'>画面比例</Text>
-            <View className={fieldError(formErrors, 'ratio') ? 'option-row has-error' : 'option-row'}>
+            <Text className='input-label'>{videoMode ? '视频比例' : '图片比例'}</Text>
+            <View className={fieldError(formErrors, 'ratio') ? 'tool-ratio-grid has-error' : 'tool-ratio-grid'}>
               {ratioOptions.map((item) => (
-                <View key={item} className={ratio === item ? 'option-chip ratio-option-chip active' : 'option-chip ratio-option-chip'} onClick={() => {
+                <View key={item} className={ratio === item ? 'tool-ratio-card active' : 'tool-ratio-card'} onClick={() => {
                   clearFieldError('ratio')
                   clearFieldError('resolution')
                   setResolution((current) => nextResolution(tool, item, current))
@@ -868,6 +1006,7 @@ export default function ToolPage() {
                 }}>
                   <View className={ratioFrameClass(item)} />
                   <Text className='ratio-option-label'>{item}</Text>
+                  {!videoMode ? <Text className='tool-ratio-resolution'>{ratioResolutionLabel(activeTool, item, defaultResolutions)}</Text> : null}
                 </View>
               ))}
             </View>
@@ -878,7 +1017,7 @@ export default function ToolPage() {
         {needs('resolution') && (
           <>
             <Text className='input-label'>{resolutionLabel}</Text>
-            <View className={fieldError(formErrors, 'resolution') ? 'option-row has-error' : 'option-row'}>
+            <View className={fieldError(formErrors, 'resolution') ? 'tool-option-grid large-options has-error' : 'tool-option-grid large-options'}>
               {resolutionOptions.map((item) => (
                 <View key={item} className={selectedResolution === item ? 'option-chip active' : 'option-chip'} onClick={() => {
                   clearFieldError('resolution')
@@ -895,7 +1034,7 @@ export default function ToolPage() {
         {needs('duration') && (
           <>
             <Text className='input-label'>视频时长</Text>
-            <View className={fieldError(formErrors, 'duration') ? 'option-row has-error' : 'option-row'}>
+            <View className={fieldError(formErrors, 'duration') ? 'tool-option-grid large-options has-error' : 'tool-option-grid large-options'}>
               {durationOptions.map((item) => (
                 <View key={item} className={duration === item ? 'option-chip active' : 'option-chip'} onClick={() => {
                   clearFieldError('duration')
@@ -912,7 +1051,7 @@ export default function ToolPage() {
         {needs('model') && (
           <>
             <Text className='input-label'>模型</Text>
-            <View className={fieldError(formErrors, 'model') ? 'option-row has-error' : 'option-row'}>
+            <View className={fieldError(formErrors, 'model') ? 'tool-option-grid has-error' : 'tool-option-grid'}>
               {modelOptions.map((item) => (
                 <View key={item} className={model === item ? 'option-chip active' : 'option-chip'} onClick={() => {
                   clearFieldError('model')
@@ -926,12 +1065,19 @@ export default function ToolPage() {
           </>
         )}
 
-        <View className='hero-actions'>
-          <View className='primary-button' onClick={submit}>
-            <AppIcon name='wand' size={16} />
-            <Text>{busy ? '生成中...' : '生成'}</Text>
-          </View>
+        <Text className='tool-ai-note'>当前内容由人工智能生成</Text>
         </View>
+      </View>
+
+      <View className='tool-submit-dock'>
+        <View className='tool-history-button' onClick={() => goPage('/pages/works/index')}>
+          <AppIcon name='clock' size={17} />
+          <Text>生成记录</Text>
+        </View>
+        <View className={busy || uploading ? 'tool-generate-button disabled' : 'tool-generate-button'} onClick={submit}>
+            <AppIcon name='wand' size={16} />
+          <Text>{busy ? '生成中...' : `消耗 ${submitCost} 点 ${submitLabel}`}</Text>
+          </View>
       </View>
 
       <Suspense fallback={null}>
