@@ -4,7 +4,6 @@ import { View, Text, Textarea, Image, Video } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
-import ModelLogo from '../../components/ModelLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
@@ -455,12 +454,17 @@ export default function ToolPage() {
   const resolutionOptions = resolutionOptionsForRatio(activeTool, ratio, defaultResolutions)
   const durationOptions = optionList(activeTool, 'durations', defaultDurations)
   const modelOptions = optionList(activeTool, 'models', defaultModels)
+  const configuredDefaultModel = activeTool?.options?.defaultModelKey || activeTool?.defaultModelKey || tool?.defaultModelKey || ''
+  const effectiveModel = modelOptions.includes(model)
+    ? model
+    : (configuredDefaultModel && modelOptions.includes(configuredDefaultModel))
+      ? configuredDefaultModel
+      : firstValue(modelOptions) || configuredDefaultModel || ''
   const normalizedResolution = normalizeResolution(resolution)
   const selectedResolution = resolutionOptions.includes(normalizedResolution) ? normalizedResolution : ''
   const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution
   const resolutionLabel = videoMode ? '视频精度' : '输出尺寸'
   const uploadConfig = canUseOptionalReferenceUpload ? optionalReferenceUploadConfig(activeTool, activeMode) : inferUploadConfig(activeTool)
-  const templateOptions = promptTemplatesForTool(activeTool, activeMode)
   const submitCost = Number(activeTool?.cost ?? tool?.cost ?? 0) || 0
   const inputAssets = usesAssetSlots
     ? Object.fromEntries(assetSlots.map((slot) => [
@@ -676,9 +680,9 @@ export default function ToolPage() {
       const paymentPayload = await createGenerationPaymentOrder({
         toolKey: tool.id,
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        modelKey: model,
+        modelKey: effectiveModel,
         prompt,
-        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds }),
         clientRuntime
       })
@@ -789,7 +793,7 @@ export default function ToolPage() {
         toolKey: tool.id,
         prompt,
         modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 },
+        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 },
         ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
       })
       const work = result.work
@@ -872,8 +876,21 @@ export default function ToolPage() {
     )
   }
 
+  const fixedFooter = (
+    <View className='tool-submit-dock'>
+      <View className='tool-history-button' onClick={() => goPage('/pages/works/index')}>
+        <AppIcon name='clock' size={17} />
+        <Text>生成记录</Text>
+      </View>
+      <View className={busy || uploading ? 'tool-generate-button disabled' : 'tool-generate-button'} onClick={submit}>
+        <AppIcon name='wand' size={16} />
+        <Text>{busy ? '生成中...' : `消耗 ${submitCost} 点 ${submitLabel}`}</Text>
+      </View>
+    </View>
+  )
+
   return (
-    <Shell title={tool.name} showTab={false} onRefresh={loadTool}>
+    <Shell title={tool.name} showTab={false} onRefresh={loadTool} fixedFooter={fixedFooter}>
       <View className='tool-compose-page'>
         <View className='tool-compose-hero'>
           <View className='tool-compose-title-row'>
@@ -968,35 +985,6 @@ export default function ToolPage() {
         </View>
         {fieldError(formErrors, 'prompt') ? <Text className='field-error'>{fieldError(formErrors, 'prompt')}</Text> : null}
 
-        {templateOptions.length ? (
-          <View className='tool-template-section'>
-            <View className='tool-section-row'>
-              <Text className='input-label'>快速选择模板</Text>
-              <Text className='tool-section-count'>({templateOptions.length})</Text>
-            </View>
-            <View className='tool-template-strip'>
-              {templateOptions.map((item, index) => (
-                <View key={`${item.title}-${index}`} className='tool-template-card'>
-                  {item.image ? (
-                    <Image className='tool-template-image' src={item.image} mode='aspectFill' />
-                  ) : (
-                    <View className={`tool-template-image template-tone-${index % 3}`}>
-                      <Text>{item.title}</Text>
-                    </View>
-                  )}
-                  <Text className='tool-template-title'>{item.title}</Text>
-                  <View className='tool-template-button' onClick={() => {
-                    clearFieldError('prompt')
-                    setPrompt(item.prompt)
-                  }}>
-                    立即使用
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
-
         {needs('style') && (
           <>
             <Text className='input-label'>风格</Text>
@@ -1069,37 +1057,8 @@ export default function ToolPage() {
           </>
         )}
 
-        {needs('model') && (
-          <>
-            <Text className='input-label'>模型</Text>
-            <View className={fieldError(formErrors, 'model') ? 'tool-option-grid has-error' : 'tool-option-grid'}>
-              {modelOptions.map((item) => (
-                <View key={item} className={model === item ? 'option-chip model-option-chip active' : 'option-chip model-option-chip'} onClick={() => {
-                  clearFieldError('model')
-                  setModel(item)
-                }}>
-                  <ModelLogo src={modelLogoOf(activeTool, item)} icon={activeTool?.icon || tool?.icon || 'sparkles'} size={28} className='model-option-logo' />
-                  <Text className='model-option-name'>{modelLabelOf(activeTool, item)}</Text>
-                </View>
-              ))}
-            </View>
-            {fieldError(formErrors, 'model') ? <Text className='field-error'>{fieldError(formErrors, 'model')}</Text> : null}
-          </>
-        )}
-
         <Text className='tool-ai-note'>当前内容由人工智能生成</Text>
         </View>
-      </View>
-
-      <View className='tool-submit-dock'>
-        <View className='tool-history-button' onClick={() => goPage('/pages/works/index')}>
-          <AppIcon name='clock' size={17} />
-          <Text>生成记录</Text>
-        </View>
-        <View className={busy || uploading ? 'tool-generate-button disabled' : 'tool-generate-button'} onClick={submit}>
-            <AppIcon name='wand' size={16} />
-          <Text>{busy ? '生成中...' : `消耗 ${submitCost} 点 ${submitLabel}`}</Text>
-          </View>
       </View>
 
       <Suspense fallback={null}>
