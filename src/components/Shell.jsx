@@ -30,6 +30,7 @@ function normalizeOpacity(value, fallback) {
 }
 
 export default function Shell({ active, children, fixedFooter, showTab = true, showBack, backFallback, transitionKey, onRefresh }) {
+  const isH5Runtime = process.env.TARO_ENV === 'h5'
   const { config } = useAppConfig()
   const homeConfig = config?.home || {}
   const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
@@ -45,7 +46,13 @@ export default function Shell({ active, children, fixedFooter, showTab = true, s
     const feature = featureForTab(tab.key)
     return !feature || isFeatureEnabled(config, feature) || tab.key === active
   })
-  const hasTopBack = showBack ?? !showTab
+  const wantsTopBack = showBack ?? !showTab
+  const hasTopBack = isH5Runtime && wantsTopBack
+  const shellClass = [
+    active === 'home' ? 'app-shell home-shell' : 'app-shell',
+    isH5Runtime ? 'h5-shell' : 'miniapp-shell',
+    fixedFooter ? 'has-fixed-footer' : ''
+  ].filter(Boolean).join(' ')
   const contentClass = [
     'page-content',
     showTab ? 'with-tab' : '',
@@ -164,7 +171,7 @@ export default function Shell({ active, children, fixedFooter, showTab = true, s
   }
 
   return (
-    <View className={active === 'home' ? 'app-shell home-shell' : 'app-shell'} style={homeStyle}>
+    <View className={shellClass} style={homeStyle}>
       {active === 'home' && (
         <View className={videoFixed ? 'home-video-layer fixed' : 'home-video-layer scroll-bound'}>
           <Video
