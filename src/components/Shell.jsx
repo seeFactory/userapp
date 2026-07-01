@@ -29,7 +29,7 @@ function normalizeOpacity(value, fallback) {
   return Math.min(Math.max(parsed, 0), 1)
 }
 
-export default function Shell({ active, children, showTab = true, showBack, backFallback, transitionKey, onRefresh }) {
+export default function Shell({ active, children, fixedFooter, showTab = true, showBack, backFallback, transitionKey, onRefresh }) {
   const { config } = useAppConfig()
   const homeConfig = config?.home || {}
   const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
@@ -205,6 +205,7 @@ export default function Shell({ active, children, showTab = true, showBack, back
       >
         {children}
       </ScrollView>
+      {fixedFooter}
       {showTab && (
         <View className='bottom-tabs'>
           {visibleTabs.map((tab) => (
