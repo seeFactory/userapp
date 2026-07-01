@@ -5055,3 +5055,48 @@ taro-tabbar {
     transform: none;
   }
 }
+
+/* Mini program pages already have a native navigation bar. Keep the custom
+   chrome inside the real webview height instead of the H5 390x844 frame. */
+.miniapp-shell {
+  height: 100vh;
+  min-height: 100vh;
+  max-width: none;
+}
+
+.miniapp-shell::before {
+  position: absolute;
+  height: 100%;
+}
+
+.miniapp-shell .page-back-button {
+  display: none;
+}
+
+.miniapp-shell .page-content {
+  height: 100vh;
+  padding-top: 14px;
+  padding-bottom: 24px;
+}
+
+.miniapp-shell.has-fixed-footer .page-content {
+  padding-bottom: calc(118px + env(safe-area-inset-bottom));
+}
+
+.miniapp-shell .tool-compose-page {
+  padding-bottom: calc(128px + env(safe-area-inset-bottom));
+}
+
+.miniapp-shell .tool-submit-dock {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: none;
+  transform: none;
+}
+
+.miniapp-shell .tool-form-panel {
+  padding-bottom: 12px;
+}
