@@ -217,7 +217,7 @@ for (const target of targets) {
   const branch = targetSpec.branchOverride || branchKeyFromRef(resolvedTarget);
   assert.ok(exactAllowed[branch] || prefixAllowed[branch], `No branch diff policy for ${branch}.`);
 
-  const changedFiles = git(["diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
+  const changedFiles = git(["-c", "core.quotePath=false", "diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
     .split(/\r?\n/)
     .filter(Boolean);
   const unexpectedFiles = changedFiles.filter((file) => !fileAllowed(branch, file));
