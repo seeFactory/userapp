@@ -55,7 +55,7 @@ export default function Agent() {
       if (hasAcceptedAgreement('agent', version)) return true
       const result = await Taro.showModal({
         title: agreement.title || '代理推广协议',
-        content: formatAgreementContent(agreement, config?.legal, '代理推广协议正文待后台发布，请确认后继续访问代理中心。'),
+        content: formatAgreementContent(agreement, config?.legal, '代理推广协议暂未发布，请联系平台确认后再进入代理中心。'),
         cancelText: '暂不进入',
         confirmText: '同意并进入'
       })
