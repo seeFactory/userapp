@@ -469,10 +469,9 @@ assertIncludesAll(source("src/pages/create-center/index.jsx"), "create center li
 assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entry", [
   "goWorkflowCases",
   "/pages/workflow-cases/index",
-  "购买和运行模板",
+  "Workflow",
   "goWorkflowLinear",
-  "/pages/workflow-linear/index",
-  "AI模板"
+  "/pages/workflow-linear/index"
 ]);
 
 const homePage = source("src/pages/index/index.jsx");
