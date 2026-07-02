@@ -20,8 +20,9 @@ const apiBase = process.env.SEEFACTORY_API_BASE || (domesticMiniappTargets.has(r
 module.exports = defineConfig({
   projectName: 'seeFactory',
   date: '2026-06-18',
-  designWidth: 750,
+  designWidth: 390,
   deviceRatio: {
+    390: 750 / 390,
     640: 2.34 / 2,
     750: 1,
     828: 1.81 / 2

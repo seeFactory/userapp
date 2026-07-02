@@ -137,7 +137,7 @@ export default function Agent() {
   if (!agentEnabled) {
     return (
       <Shell title='代理中心' showTab={false} backFallback='/pages/mine/index' onRefresh={loadAgent}>
-        <EmptyState title='代理中心已关闭' description='代理中心暂未开放，请稍后再试。' icon='agent' />
+        <EmptyState title='代理中心已关闭' description='当前后台已关闭代理展示能力，请等待管理员重新开放。' icon='agent' />
       </Shell>
     )
   }

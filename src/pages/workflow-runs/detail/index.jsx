@@ -128,7 +128,7 @@ export default function WorkflowRunDetail() {
   if (!run) {
     return (
       <Shell title='Workflow 运行' showTab={false} backFallback='/pages/workflow-purchases/index' onRefresh={() => loadDetail(true)}>
-        <EmptyState title='暂无运行记录' description='没有找到对应的运行记录。' icon='center' />
+        <EmptyState title='暂无运行记录' description='没有找到对应的 Workflow run。' icon='center' />
       </Shell>
     )
   }

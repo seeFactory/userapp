@@ -37,6 +37,8 @@ function run(args) {
 if (runtimeTarget === "qq-miniapp") {
   run(["clean:dist"]);
   run(["exec", "taro", "build", "--type", "qq"]);
+  run(["prepare:qq-dist"]);
+  run(["verify:qq-dist"]);
   process.exit(0);
 }
 

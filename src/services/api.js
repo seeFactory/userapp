@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
-import { resolveClientRuntime } from '../platform/login'
+import { getTelegramInitDataFromLaunchParams, getTelegramUserFromInitData, resolveClientRuntime } from '../platform/login'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
@@ -14,6 +14,56 @@ let refreshPromise = null
 
 function token() {
   return getAuthToken()
+}
+
+const CACHE_TTL = {
+  appConfig: 5 * 60 * 1000,
+  catalog: 2 * 60 * 1000,
+  list: 45 * 1000,
+  account: 8 * 1000,
+  payment: 5 * 1000
+}
+const responseCache = new Map()
+
+function stableCacheValue(value) {
+  if (value === undefined || value === null) return ''
+  if (Array.isArray(value)) return value.map(stableCacheValue)
+  if (typeof value === 'object') {
+    return Object.keys(value).sort().reduce((next, key) => {
+      if (key !== 'force' && value[key] !== undefined) next[key] = stableCacheValue(value[key])
+      return next
+    }, {})
+  }
+  return value
+}
+
+function cacheKey(scope, params = {}, authScoped = false) {
+  const authPart = authScoped ? `:${token() || 'anon'}` : ''
+  return `${scope}${authPart}:${JSON.stringify(stableCacheValue(params))}`
+}
+
+async function withCache(key, ttl, loader, options = {}) {
+  if (!options.force) {
+    const cached = responseCache.get(key)
+    if (cached && Date.now() - cached.createdAt < ttl) return cached.data
+  }
+  const data = await loader()
+  responseCache.set(key, { data, createdAt: Date.now() })
+  return data
+}
+
+export function invalidateApiCache(prefix = '') {
+  if (!prefix) {
+    responseCache.clear()
+    return
+  }
+  Array.from(responseCache.keys()).forEach((key) => {
+    if (key.startsWith(prefix)) responseCache.delete(key)
+  })
+}
+
+function invalidateMany(prefixes) {
+  prefixes.forEach((prefix) => invalidateApiCache(prefix))
 }
 
 function makeError(response, body) {
@@ -183,17 +233,20 @@ export async function request(path, options = {}) {
 }
 
 export async function fetchGalleryWorks(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 20)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 20)
   })
-  if (params.featured) query.set('featured', 'true')
-  if (params.toolKey) query.set('toolKey', params.toolKey)
-  const data = await request(`/gallery/works?${query.toString()}`)
-  return {
-    ...data,
-    list: (data.list || []).map(toApiWork)
-  }
+  if (queryParams.featured) query.set('featured', 'true')
+  if (queryParams.toolKey) query.set('toolKey', queryParams.toolKey)
+  return withCache(cacheKey('galleryWorks', queryParams), CACHE_TTL.list, async () => {
+    const data = await request(`/gallery/works?${query.toString()}`)
+    return {
+      ...data,
+      list: (data.list || []).map(toApiWork)
+    }
+  }, { force })
 }
 
 export async function fetchGalleryWork(id) {
@@ -201,15 +254,17 @@ export async function fetchGalleryWork(id) {
 }
 
 export async function fetchAppConfig() {
-  return request('/app/config')
+  return withCache(cacheKey('appConfig'), CACHE_TTL.appConfig, () => request('/app/config'))
 }
 
 export async function fetchTools(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams()
-  if (params.featured) query.set('featured', 'true')
-  if (params.category && params.category !== 'all') query.set('category', params.category)
-  const list = await request(`/tools${query.toString() ? `?${query.toString()}` : ''}`)
-  return (list || []).map((item) => ({
+  if (queryParams.featured) query.set('featured', 'true')
+  if (queryParams.category && queryParams.category !== 'all') query.set('category', queryParams.category)
+  return withCache(cacheKey('tools', queryParams), CACHE_TTL.catalog, async () => {
+    const list = await request(`/tools${query.toString() ? `?${query.toString()}` : ''}`)
+    return (list || []).map((item) => ({
     id: item.toolKey || item.id,
     category: item.category,
     name: item.name,
@@ -232,7 +287,8 @@ export async function fetchTools(params = {}) {
     homeSort: item.homeSort ?? item.sort ?? 0,
     searchKeywords: item.searchKeywords || item.keywords || [],
     options: item.options || {}
-  }))
+    }))
+  }, { force })
 }
 
 function modelKeyAlias(value = '') {
@@ -263,12 +319,14 @@ function findToolByAlias(tools = [], key = '') {
   return tools.find((tool) => toolKeyAliases(tool).has(normalizedKey)) || null
 }
 
-export async function fetchToolCategories() {
-  const list = await request('/tools/categories')
+export async function fetchToolCategories(options = {}) {
+  return withCache(cacheKey('toolCategories'), CACHE_TTL.catalog, async () => {
+    const list = await request('/tools/categories')
   return [{ key: 'all', label: '全部产品' }].concat((list || []).map((item) => ({
     key: item.key,
     label: item.name || item.label
-  })))
+    })))
+  }, options)
 }
 
 export async function fetchTool(toolKey) {
@@ -309,26 +367,29 @@ export async function fetchTool(toolKey) {
 }
 
 export async function fetchPromptCases(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 20)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 20)
   })
-  if (params.keyword) query.set('keyword', params.keyword)
-  if (params.category && params.category !== 'all') query.set('category', params.category)
-  const data = await request(`/prompt-cases?${query.toString()}`)
-  return {
-    ...data,
-    list: (data.list || []).map((item) => ({
-      id: item.id,
-      title: item.title,
-      category: item.category,
-      toolId: item.toolKey,
-      date: item.createdAt,
-      tags: item.tags || [],
-      image: item.coverUrl || item.outputUrl,
-      prompt: item.prompt
-    }))
-  }
+  if (queryParams.keyword) query.set('keyword', queryParams.keyword)
+  if (queryParams.category && queryParams.category !== 'all') query.set('category', queryParams.category)
+  return withCache(cacheKey('promptCases', queryParams), CACHE_TTL.list, async () => {
+    const data = await request(`/prompt-cases?${query.toString()}`)
+    return {
+      ...data,
+      list: (data.list || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        category: item.category,
+        toolId: item.toolKey,
+        date: item.createdAt,
+        tags: item.tags || [],
+        image: item.coverUrl || item.outputUrl,
+        prompt: item.prompt
+      }))
+    }
+  }, { force })
 }
 
 export async function fetchPromptCase(id) {
@@ -346,11 +407,15 @@ export async function fetchPromptCase(id) {
 }
 
 export async function copyPromptCase(id) {
-  return request(`/prompt-cases/${id}/copy`, { method: 'POST' })
+  const data = await request(`/prompt-cases/${id}/copy`, { method: 'POST' })
+  invalidateApiCache('promptCases')
+  return data
 }
 
 export async function usePromptCase(id) {
-  return request(`/prompt-cases/${id}/use`, { method: 'POST' })
+  const data = await request(`/prompt-cases/${id}/use`, { method: 'POST' })
+  invalidateApiCache('promptCases')
+  return data
 }
 
 export async function createXAuthorizeUrl(params) {
@@ -362,16 +427,19 @@ export async function createXAuthorizeUrl(params) {
 }
 
 export async function fetchWorks(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 20)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 20)
   })
-  if (params.status) query.set('status', params.status)
-  const data = await request(`/works?${query.toString()}`)
-  return {
-    ...data,
-    list: (data.list || []).map(toApiWork)
-  }
+  if (queryParams.status) query.set('status', queryParams.status)
+  return withCache(cacheKey('works', queryParams, true), CACHE_TTL.list, async () => {
+    const data = await request(`/works?${query.toString()}`)
+    return {
+      ...data,
+      list: (data.list || []).map(toApiWork)
+    }
+  }, { force })
 }
 
 export async function fetchWork(id) {
@@ -379,10 +447,12 @@ export async function fetchWork(id) {
 }
 
 export async function createGenerationTask(payload) {
-  return request('/generation-tasks', {
+  const data = await request('/generation-tasks', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['works', 'galleryWorks', 'creditBalance'])
+  return data
 }
 
 export async function fetchGenerationTask(id) {
@@ -390,19 +460,27 @@ export async function fetchGenerationTask(id) {
 }
 
 export async function cancelGenerationTask(id) {
-  return request(`/generation-tasks/${id}/cancel`, { method: 'POST' })
+  const data = await request(`/generation-tasks/${id}/cancel`, { method: 'POST' })
+  invalidateMany(['works', 'creditBalance'])
+  return data
 }
 
 export async function retryGenerationTask(id) {
-  return request(`/generation-tasks/${id}/retry`, { method: 'POST' })
+  const data = await request(`/generation-tasks/${id}/retry`, { method: 'POST' })
+  invalidateMany(['works', 'creditBalance'])
+  return data
 }
 
 export async function deleteWorkRemote(id) {
-  return request(`/works/${id}`, { method: 'DELETE' })
+  const data = await request(`/works/${id}`, { method: 'DELETE' })
+  invalidateMany(['works', 'galleryWorks'])
+  return data
 }
 
 export async function clearFailedWorksRemote() {
-  return request('/works/clear-failed', { method: 'POST' })
+  const data = await request('/works/clear-failed', { method: 'POST' })
+  invalidateApiCache('works')
+  return data
 }
 
 export async function createWorkShareTicket(id) {
@@ -414,21 +492,27 @@ export async function fetchSharedWork(ticket) {
 }
 
 export async function fetchWorkflowPurchases(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 20)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 20)
   })
-  return request(`/workflow-purchases?${query.toString()}`)
+  return withCache(cacheKey('workflowPurchases', queryParams, true), CACHE_TTL.list, () => (
+    request(`/workflow-purchases?${query.toString()}`)
+  ), { force })
 }
 
 export async function fetchWorkflowCases(params = {}) {
+  const { force = false, ...queryParams } = params
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 20)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 20)
   })
-  if (params.keyword) query.set('keyword', params.keyword)
-  if (params.licenseMode) query.set('licenseMode', params.licenseMode)
-  return request(`/workflow-cases?${query.toString()}`)
+  if (queryParams.keyword) query.set('keyword', queryParams.keyword)
+  if (queryParams.licenseMode) query.set('licenseMode', queryParams.licenseMode)
+  return withCache(cacheKey('workflowCases', queryParams), CACHE_TTL.list, () => (
+    request(`/workflow-cases?${query.toString()}`)
+  ), { force })
 }
 
 export async function fetchWorkflowCase(id) {
@@ -440,33 +524,43 @@ export async function fetchWorkflowCasePurchaseStatus(id) {
 }
 
 export async function purchaseWorkflowCase(id) {
-  return request(`/workflow-cases/${id}/purchase`, { method: 'POST' })
+  const data = await request(`/workflow-cases/${id}/purchase`, { method: 'POST' })
+  invalidateMany(['workflowPurchases', 'workflowCases', 'creditBalance'])
+  return data
 }
 
 export async function fetchWorkflowComponents(params = {}) {
+  const { force = false, ...queryParams } = params
+  const clientRuntime = queryParams.clientRuntime || getClientRuntime()
   const query = new URLSearchParams({
-    page: String(params.page || 1),
-    pageSize: String(params.pageSize || 50)
+    page: String(queryParams.page || 1),
+    pageSize: String(queryParams.pageSize || 50)
   })
-  if (params.category) query.set('category', params.category)
-  if (params.modelKey) query.set('modelKey', params.modelKey)
-  if (params.allowedInLinear !== undefined) query.set('allowedInLinear', String(params.allowedInLinear))
-  query.set('clientRuntime', params.clientRuntime || getClientRuntime())
-  return request(`/components?${query.toString()}`)
+  if (queryParams.category) query.set('category', queryParams.category)
+  if (queryParams.modelKey) query.set('modelKey', queryParams.modelKey)
+  if (queryParams.allowedInLinear !== undefined) query.set('allowedInLinear', String(queryParams.allowedInLinear))
+  query.set('clientRuntime', clientRuntime)
+  return withCache(cacheKey('workflowComponents', { ...queryParams, clientRuntime }), CACHE_TTL.catalog, () => (
+    request(`/components?${query.toString()}`)
+  ), { force })
 }
 
 export async function createWorkflowDraft(payload) {
-  return request('/workflows', {
+  const data = await request('/workflows', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['workflowComponents', 'workflowCases'])
+  return data
 }
 
 export async function updateWorkflowDraft(id, payload) {
-  return request(`/workflows/${id}/draft`, {
+  const data = await request(`/workflows/${id}/draft`, {
     method: 'PUT',
     data: payload
   })
+  invalidateMany(['workflowComponents', 'workflowCases'])
+  return data
 }
 
 export async function validateWorkflowDraft(id, graph) {
@@ -484,31 +578,39 @@ export async function estimateWorkflowDraft(id, graph) {
 }
 
 export async function runWorkflowDraft(id, payload = {}) {
-  return request(`/workflows/${id}/run`, {
+  const data = await request(`/workflows/${id}/run`, {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['works', 'creditBalance'])
+  return data
 }
 
 export async function publishWorkflowDraftCase(id, payload = {}) {
-  return request(`/workflows/${id}/publish-case`, {
+  const data = await request(`/workflows/${id}/publish-case`, {
     method: 'POST',
     data: payload
   })
+  invalidateApiCache('workflowCases')
+  return data
 }
 
 export async function runWorkflowCase(caseContentId, payload = {}) {
-  return request(`/workflow-cases/${caseContentId}/run`, {
+  const data = await request(`/workflow-cases/${caseContentId}/run`, {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['works', 'creditBalance'])
+  return data
 }
 
 export async function trialRunWorkflowCase(caseContentId, payload = {}) {
-  return request(`/workflow-cases/${caseContentId}/trial-run`, {
+  const data = await request(`/workflow-cases/${caseContentId}/trial-run`, {
     method: 'POST',
     data: payload
   })
+  invalidateApiCache('works')
+  return data
 }
 
 export async function fetchWorkflowRuns(params = {}) {
@@ -548,16 +650,17 @@ export async function loginDev(account = 'demo@seefactory.ai') {
     data: withInvitePayload({ account, nickname: 'seeFactory 创作者' })
   })
   saveAuth(data)
+  invalidateApiCache()
   return data
 }
 
 function readTelegramLoginPayload() {
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
-  const initData = webApp?.initData
+  const initData = webApp?.initData || getTelegramInitDataFromLaunchParams()
   if (!initData) {
     throw new Error('请在 Telegram 内打开 seeFactory 后登录')
   }
-  const user = webApp?.initDataUnsafe?.user || {}
+  const user = webApp?.initDataUnsafe?.user || getTelegramUserFromInitData(initData) || {}
   return {
     initData,
     nickname: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
@@ -637,6 +740,7 @@ export async function loginRuntime(providerUserIdOrOptions = {}, options = {}) {
     })
   })
   saveAuth(data)
+  invalidateApiCache()
   return data
 }
 
@@ -650,6 +754,7 @@ export async function logoutRemote() {
     })
   } finally {
     logout()
+    invalidateApiCache()
   }
 }
 
@@ -657,8 +762,10 @@ export async function fetchMe() {
   return request('/auth/me')
 }
 
-export async function fetchCreditBalance() {
-  return request('/credits/balance')
+export async function fetchCreditBalance(options = {}) {
+  return withCache(cacheKey('creditBalance', {}, true), CACHE_TTL.account, () => (
+    request('/credits/balance')
+  ), options)
 }
 
 export async function fetchCreditTransactions(params = {}) {
@@ -669,19 +776,25 @@ export async function fetchCreditTransactions(params = {}) {
   return request(`/credits/transactions?${query.toString()}`)
 }
 
-export async function fetchWalletAccount() {
-  return request('/wallet/account')
+export async function fetchWalletAccount(options = {}) {
+  return withCache(cacheKey('walletAccount', {}, true), CACHE_TTL.account, () => (
+    request('/wallet/account')
+  ), options)
 }
 
 export async function fetchWalletRechargeOptions() {
-  return request('/wallet/recharge-options')
+  return withCache(cacheKey('walletRechargeOptions'), CACHE_TTL.catalog, () => (
+    request('/wallet/recharge-options')
+  ))
 }
 
 export async function createWalletCryptoOrder(payload) {
-  return request('/wallet/recharge/crypto/order', {
+  const data = await request('/wallet/recharge/crypto/order', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['creditBalance', 'walletAccount'])
+  return data
 }
 
 export async function fetchWalletCryptoOrder(id) {
@@ -700,27 +813,35 @@ export async function fetchWalletWithdrawals(params = {}) {
   return request(`/wallet/withdrawals?${query.toString()}`)
 }
 
-export async function fetchRechargeSettings() {
-  return request('/credits/recharge-settings')
+export async function fetchRechargeSettings(options = {}) {
+  return withCache(cacheKey('rechargeSettings'), CACHE_TTL.catalog, () => (
+    request('/credits/recharge-settings')
+  ), options)
 }
 
 export async function fetchPaymentProviders(clientRuntime = getClientRuntime()) {
   const query = new URLSearchParams({ clientRuntime })
-  return request(`/payments/providers?${query.toString()}`)
+  return withCache(cacheKey('paymentProviders', { clientRuntime }), CACHE_TTL.payment, () => (
+    request(`/payments/providers?${query.toString()}`)
+  ))
 }
 
 export async function createRechargeOrder(payload) {
-  return request('/credits/recharge-orders', {
+  const data = await request('/credits/recharge-orders', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['creditBalance', 'walletAccount'])
+  return data
 }
 
 export async function createGenerationPaymentOrder(payload) {
-  return request('/credits/generation-payment-orders', {
+  const data = await request('/credits/generation-payment-orders', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['works', 'creditBalance'])
+  return data
 }
 
 export async function fetchPaymentOrder(orderId) {
@@ -728,17 +849,21 @@ export async function fetchPaymentOrder(orderId) {
 }
 
 export async function createCryptoOrder(payload) {
-  return request('/payments/crypto-orders', {
+  const data = await request('/payments/crypto-orders', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['creditBalance', 'walletAccount'])
+  return data
 }
 
 export async function createPlatformPaymentOrder(payload) {
-  return request('/payments/platform-orders', {
+  const data = await request('/payments/platform-orders', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['creditBalance', 'walletAccount'])
+  return data
 }
 
 export async function fetchCryptoOrder(id) {
@@ -746,10 +871,12 @@ export async function fetchCryptoOrder(id) {
 }
 
 export async function createTelegramStarsOrder(payload) {
-  return request('/payments/telegram-stars-orders', {
+  const data = await request('/payments/telegram-stars-orders', {
     method: 'POST',
     data: payload
   })
+  invalidateMany(['creditBalance', 'walletAccount'])
+  return data
 }
 
 export async function fetchTelegramStarsOrder(id) {
@@ -764,10 +891,12 @@ export async function getUploadToken(payload) {
 }
 
 export async function createAsset(payload) {
-  return request('/assets', {
+  const data = await request('/assets', {
     method: 'POST',
     data: payload
   })
+  invalidateApiCache('works')
+  return data
 }
 
 export async function fetchCustomerService() {
@@ -799,11 +928,15 @@ export async function fetchAgentCommissions(params = {}) {
 }
 
 export async function publishGalleryWork(id) {
-  return request(`/works/${id}/publish-gallery`, { method: 'POST' })
+  const data = await request(`/works/${id}/publish-gallery`, { method: 'POST' })
+  invalidateMany(['works', 'galleryWorks'])
+  return data
 }
 
 export async function unpublishGalleryWork(id) {
-  return request(`/works/${id}/unpublish-gallery`, { method: 'POST' })
+  const data = await request(`/works/${id}/unpublish-gallery`, { method: 'POST' })
+  invalidateMany(['works', 'galleryWorks'])
+  return data
 }
 
 export async function getDownloadUrl(id, shareTicket = '') {
