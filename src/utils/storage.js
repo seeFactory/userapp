@@ -5,6 +5,7 @@ const TOKEN_KEY = 'seeFactoryToken'
 const REFRESH_TOKEN_KEY = 'seeFactoryRefreshToken'
 const USER_KEY = 'seeFactoryUser'
 const AGREEMENT_PREFIX = 'seeFactoryAgreement'
+export const AUTH_CHANGE_EVENT = 'seeFactoryAuthChanged'
 
 export function isLoggedIn() {
   return Taro.getStorageSync(LOGIN_KEY) === '1'
@@ -12,6 +13,7 @@ export function isLoggedIn() {
 
 export function login() {
   Taro.setStorageSync(LOGIN_KEY, '1')
+  emitAuthChanged()
 }
 
 export function saveAuth(payload = {}) {
@@ -19,6 +21,7 @@ export function saveAuth(payload = {}) {
   if (payload.accessToken) Taro.setStorageSync(TOKEN_KEY, payload.accessToken)
   if (payload.refreshToken) Taro.setStorageSync(REFRESH_TOKEN_KEY, payload.refreshToken)
   if (payload.user) Taro.setStorageSync(USER_KEY, payload.user)
+  emitAuthChanged()
 }
 
 export function getAuthToken() {
@@ -31,6 +34,52 @@ export function getRefreshToken() {
 
 export function getCurrentUser() {
   return Taro.getStorageSync(USER_KEY) || null
+}
+
+function authSnapshot() {
+  return {
+    loggedIn: isLoggedIn(),
+    user: getCurrentUser()
+  }
+}
+
+function emitAuthChanged() {
+  const detail = authSnapshot()
+  try {
+    Taro.eventCenter?.trigger?.(AUTH_CHANGE_EVENT, detail)
+  } catch (_) {}
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent(AUTH_CHANGE_EVENT, { detail }))
+    } catch (_) {}
+  }
+}
+
+export function subscribeAuthChange(handler) {
+  const notify = (detail) => handler(detail || authSnapshot())
+  const eventCenter = Taro.eventCenter
+  try {
+    eventCenter?.on?.(AUTH_CHANGE_EVENT, notify)
+  } catch (_) {}
+
+  let windowHandler
+  if (typeof window !== 'undefined') {
+    windowHandler = (event) => notify(event?.detail)
+    try {
+      window.addEventListener(AUTH_CHANGE_EVENT, windowHandler)
+    } catch (_) {}
+  }
+
+  return () => {
+    try {
+      eventCenter?.off?.(AUTH_CHANGE_EVENT, notify)
+    } catch (_) {}
+    if (windowHandler && typeof window !== 'undefined') {
+      try {
+        window.removeEventListener(AUTH_CHANGE_EVENT, windowHandler)
+      } catch (_) {}
+    }
+  }
 }
 
 function currentUserKey() {
@@ -53,6 +102,7 @@ export function logout() {
   Taro.removeStorageSync(TOKEN_KEY)
   Taro.removeStorageSync(REFRESH_TOKEN_KEY)
   Taro.removeStorageSync(USER_KEY)
+  emitAuthChanged()
 }
 
 export function requireLogin(redirect) {
