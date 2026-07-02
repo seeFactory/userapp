@@ -5060,7 +5060,8 @@ taro-tabbar {
    chrome inside the real webview height instead of the H5 390x844 frame. */
 .miniapp-shell {
   height: 100vh;
-  min-height: 100vh;
+  height: var(--tg-viewport-height, 100vh);
+  min-height: 0;
   max-width: none;
 }
 
@@ -5075,6 +5076,7 @@ taro-tabbar {
 
 .miniapp-shell .page-content {
   height: 100vh;
+  height: var(--tg-viewport-height, 100vh);
   padding-top: 14px;
   padding-bottom: 24px;
 }
@@ -5088,12 +5090,14 @@ taro-tabbar {
 }
 
 .miniapp-shell .tool-submit-dock {
-  position: absolute;
+  position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
+  z-index: 80;
   width: 100%;
   max-width: none;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom) + var(--tg-content-safe-area-bottom, 0px));
   transform: none;
 }
 

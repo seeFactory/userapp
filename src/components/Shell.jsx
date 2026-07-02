@@ -17,6 +17,16 @@ const tabs = [
   { key: 'mine', label: '我的', icon: 'user', path: '/pages/mine/index' }
 ]
 
+const RUNTIME_TARGET = process.env.SEEFACTORY_RUNTIME_TARGET || 'h5'
+const MINIAPP_RUNTIME_TARGETS = new Set([
+  'tma',
+  'telegram-tma',
+  'wechat-miniapp',
+  'alipay-miniapp',
+  'douyin-miniapp',
+  'qq-miniapp'
+])
+
 function featureForTab(key) {
   if (key === 'center') return 'generation'
   if (key === 'gallery') return 'gallery'
@@ -30,7 +40,8 @@ function normalizeOpacity(value, fallback) {
 }
 
 export default function Shell({ active, children, fixedFooter, showTab = true, showBack, backFallback, transitionKey, onRefresh }) {
-  const isH5Runtime = process.env.TARO_ENV === 'h5'
+  const isMiniAppRuntime = MINIAPP_RUNTIME_TARGETS.has(RUNTIME_TARGET)
+  const isH5Runtime = process.env.TARO_ENV === 'h5' && !isMiniAppRuntime
   const { config } = useAppConfig()
   const homeConfig = config?.home || {}
   const videoUrl = homeConfig.videoUrl || fallbackHomeVideo
@@ -50,7 +61,7 @@ export default function Shell({ active, children, fixedFooter, showTab = true, s
   const hasTopBack = isH5Runtime && wantsTopBack
   const shellClass = [
     active === 'home' ? 'app-shell home-shell' : 'app-shell',
-    isH5Runtime ? 'h5-shell' : 'miniapp-shell',
+    isMiniAppRuntime ? 'miniapp-shell' : 'h5-shell',
     fixedFooter ? 'has-fixed-footer' : ''
   ].filter(Boolean).join(' ')
   const contentClass = [
