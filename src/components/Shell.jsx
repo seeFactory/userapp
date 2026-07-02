@@ -24,7 +24,9 @@ const MINIAPP_RUNTIME_TARGETS = new Set([
   'wechat-miniapp',
   'alipay-miniapp',
   'douyin-miniapp',
-  'qq-miniapp'
+  'qq-miniapp',
+  'android-apk',
+  'apk'
 ])
 
 function featureForTab(key) {
