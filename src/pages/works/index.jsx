@@ -6,7 +6,8 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import WorkMedia from '../../components/WorkMedia'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
-import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { useAuthState } from '../../hooks/useAuthState'
+import { requireLogin } from '../../utils/storage'
 import { clearFailedWorksRemote, fetchToolCategories, fetchWorks } from '../../services/api'
 import { goPage } from '../../utils/navigation'
 
@@ -44,7 +45,7 @@ function workBadgeClass(item) {
 }
 
 export default function Works() {
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthState()
   const [category, setCategory] = useState('all')
   const [works, setWorks] = useState([])
   const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])

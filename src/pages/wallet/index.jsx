@@ -7,7 +7,8 @@ import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { fetchWalletAccount, fetchWalletWithdrawals } from '../../services/api'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
-import { isLoggedIn, requireLogin } from '../../utils/storage'
+import { useAuthState } from '../../hooks/useAuthState'
+import { requireLogin } from '../../utils/storage'
 
 function asId(item) {
   return item?.id || item?._id || ''
@@ -43,7 +44,7 @@ function statusClass(status) {
 }
 
 export default function Wallet() {
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthState()
   const { config, loading: configLoading } = useAppConfig()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
