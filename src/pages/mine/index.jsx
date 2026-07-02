@@ -69,26 +69,15 @@ export default function Mine() {
     return { creditData, walletData, rechargeData }
   }
 
-  const clearAccountState = () => {
-    setBalance(null)
-    setFrozenBalance(0)
-    setWallet(null)
-    setRechargePayment(null)
-  }
-
-  const applyAccountData = ({ creditData, walletData, rechargeData }) => {
-    setBalance(creditData?.balance ?? null)
-    setFrozenBalance(creditData?.frozenBalance || 0)
-    setWallet(walletData?.account || null)
-    if (rechargeData) setRechargePolicy({ ...defaultRechargePolicy(), ...rechargeData })
-  }
-
   useEffect(() => {
     if (!loggedIn) return undefined
     let mounted = true
     loadAccount().then(({ creditData, walletData, rechargeData }) => {
       if (!mounted) return
-      applyAccountData({ creditData, walletData, rechargeData })
+      setBalance(creditData?.balance ?? null)
+      setFrozenBalance(creditData?.frozenBalance || 0)
+      setWallet(walletData?.account || null)
+      if (rechargeData) setRechargePolicy({ ...defaultRechargePolicy(), ...rechargeData })
     })
     return () => {
       mounted = false
@@ -97,7 +86,10 @@ export default function Mine() {
 
   const signOut = async () => {
     await logoutRemote().catch(() => {})
-    clearAccountState()
+    setBalance(null)
+    setFrozenBalance(0)
+    setWallet(null)
+    setRechargePayment(null)
     Taro.showToast({ title: '已退出登录', icon: 'success' })
   }
 
@@ -175,7 +167,11 @@ export default function Mine() {
   }
 
   const reloadBalance = async () => {
-    applyAccountData(await loadAccount({ force: true }))
+    const { creditData, walletData, rechargeData } = await loadAccount({ force: true })
+    setBalance(creditData?.balance ?? null)
+    setFrozenBalance(creditData?.frozenBalance || 0)
+    setWallet(walletData?.account || null)
+    if (rechargeData) setRechargePolicy({ ...defaultRechargePolicy(), ...rechargeData })
   }
 
   const beginRecharge = async () => {

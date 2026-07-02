@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { getAuthToken, getRefreshToken, logout, saveAuth } from '../utils/storage'
 import { withInvitePayload } from '../platform/invite'
-import { resolveClientRuntime } from '../platform/login'
+import { getTelegramInitDataFromLaunchParams, getTelegramUserFromInitData, resolveClientRuntime } from '../platform/login'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:10087/api/v1'
 const API_BASE = (process.env.SEEFACTORY_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '')
@@ -656,11 +656,11 @@ export async function loginDev(account = 'demo@seefactory.ai') {
 
 function readTelegramLoginPayload() {
   const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null
-  const initData = webApp?.initData
+  const initData = webApp?.initData || getTelegramInitDataFromLaunchParams()
   if (!initData) {
     throw new Error('请在 Telegram 内打开 seeFactory 后登录')
   }
-  const user = webApp?.initDataUnsafe?.user || {}
+  const user = webApp?.initDataUnsafe?.user || getTelegramUserFromInitData(initData) || {}
   return {
     initData,
     nickname: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username,
