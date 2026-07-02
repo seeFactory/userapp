@@ -7,8 +7,8 @@ const kib = 1024
 const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
-  // H5 pages are split into lazy chunks; includes workflow asset upload runtime shared by tool and workflow pages.
-  maxTotalJsBytes: 4220 * kib,
+  // H5 pages are split into lazy chunks; includes workflow asset upload runtime and Taro tabbar keep-alive runtime.
+  maxTotalJsBytes: 4560 * kib,
   maxLogoCopies: 1
 }
 

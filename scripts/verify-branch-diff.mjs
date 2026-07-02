@@ -1,63 +1,201 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 
-const baseBranch = process.argv[2] || "main";
-const targetBranches = process.argv.slice(3);
-const branches = targetBranches.length ? targetBranches : ["tma", "qq", "wechat", "alipay"];
-const allowedDifferentFiles = new Set([
-  "src/platform/login.js",
-  "src/platform/payment.js"
-]);
+const defaultBaseRef = process.env.VERIFY_BRANCH_BASE || "origin/main";
+const baseRef = process.argv[2] || defaultBaseRef;
+const requestedTargets = process.argv.slice(3);
+const defaultTargets = [
+  "origin/tma",
+  "origin/wechat",
+  "origin/alipay",
+  "origin/douyin",
+  "origin/qq",
+  "origin/android",
+  "origin/apk"
+];
+const targets = requestedTargets.length ? requestedTargets : defaultTargets;
+
+const exactAllowed = {
+  tma: new Set([
+    "src/platform/login.js",
+    "src/platform/payment.js"
+  ]),
+  wechat: new Set([
+    ".env.example",
+    "config/index.js",
+    "package.json",
+    "project.config.json",
+    "project.private.config.json",
+    "scripts/build-production.mjs",
+    "scripts/postprocess-weapp-dist.mjs",
+    "scripts/verify-env-example.mjs",
+    "scripts/verify-weapp-dist.mjs",
+    "src/platform/login.js",
+    "src/platform/payment.js"
+  ]),
+  alipay: new Set([
+    ".env.example",
+    "config/index.js",
+    "mini.project.json",
+    "package.json",
+    "project.config.json",
+    "scripts/build-production.mjs",
+    "scripts/postprocess-alipay-dist.mjs",
+    "scripts/verify-alipay-dist.mjs",
+    "scripts/verify-env-example.mjs",
+    "src/app.config.js",
+    "src/platform/login.js",
+    "src/platform/payment.js"
+  ]),
+  douyin: new Set([
+    ".env.example",
+    "config/index.js",
+    "package.json",
+    "project.config.json",
+    "scripts/build-production.mjs",
+    "scripts/postprocess-douyin-dist.mjs",
+    "scripts/verify-douyin-dist.mjs",
+    "scripts/verify-env-example.mjs",
+    "src/app.config.js",
+    "src/platform/login.js",
+    "src/platform/payment.js"
+  ]),
+  qq: new Set([
+    ".env.example",
+    "config/index.js",
+    "package.json",
+    "scripts/build-production.mjs",
+    "scripts/postprocess-qq-dist.mjs",
+    "scripts/verify-qq-dist.mjs",
+    "scripts/verify-env-example.mjs",
+    "src/app.config.js",
+    "src/platform/login.js",
+    "src/platform/payment.js"
+  ]),
+  android: new Set([
+    "APK外部登录说明.md",
+    "APK封装说明.md",
+    "capacitor.config.json",
+    "config/index.js",
+    "package.json",
+    "pnpm-lock.yaml",
+    "scripts/build-android.mjs",
+    "scripts/build-production.mjs",
+    "scripts/verify-apk-dist.mjs",
+    "src/app.jsx",
+    "src/hooks/useAuthState.js",
+    "src/hooks/useAuthStatus.js",
+    "src/platform/deeplink.js",
+    "src/platform/externalAuth.js",
+    "src/platform/login.js",
+    "src/platform/payment.js",
+    "src/utils/storage.js"
+  ]),
+  apk: new Set([
+    "APK外部登录说明.md",
+    "APK封装说明.md",
+    "capacitor.config.json",
+    "config/index.js",
+    "package.json",
+    "pnpm-lock.yaml",
+    "scripts/build-android.mjs",
+    "scripts/build-production.mjs",
+    "scripts/verify-apk-dist.mjs",
+    "src/app.jsx",
+    "src/hooks/useAuthState.js",
+    "src/hooks/useAuthStatus.js",
+    "src/platform/deeplink.js",
+    "src/platform/externalAuth.js",
+    "src/platform/login.js",
+    "src/platform/payment.js",
+    "src/utils/storage.js"
+  ])
+};
+
+const prefixAllowed = {
+  android: ["android/", "static/auth/"],
+  apk: ["android/", "static/auth/"]
+};
 
 const branchRuntime = {
   main: "h5-google",
   tma: "telegram-tma",
-  qq: "qq-miniapp",
   wechat: "wechat-miniapp",
-  alipay: "alipay-miniapp"
+  qq: "qq-miniapp",
+  alipay: "alipay-miniapp",
+  douyin: "douyin-miniapp",
+  android: "android-apk",
+  apk: "android-apk"
 };
 
 const paymentRuntime = {
   main: "[]",
   tma: "[]",
-  qq: "['qq-miniapp']",
   wechat: "['wechat-miniapp']",
-  alipay: "['alipay-miniapp']"
+  qq: "['qq-miniapp']",
+  alipay: "['alipay-miniapp']",
+  douyin: "['douyin-miniapp']",
+  android: "[]",
+  apk: "[]"
 };
 
 function git(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
 
-function branchExists(branch) {
+function refExists(ref) {
   try {
-    git(["rev-parse", "--verify", branch]);
+    git(["rev-parse", "--verify", `${ref}^{commit}`]);
     return true;
   } catch {
     return false;
   }
 }
 
-function show(branch, file) {
-  return git(["show", `${branch}:${file}`]);
+function resolveRef(ref) {
+  if (refExists(ref)) return ref;
+  if (!ref.startsWith("origin/") && refExists(`origin/${ref}`)) return `origin/${ref}`;
+  return "";
 }
 
-assert.ok(branchExists(baseBranch), `Missing base branch: ${baseBranch}`);
+function branchKeyFromRef(ref) {
+  return ref
+    .replace(/^refs\/heads\//, "")
+    .replace(/^refs\/remotes\/origin\//, "")
+    .replace(/^origin\//, "");
+}
 
-for (const branch of branches) {
-  assert.ok(branchExists(branch), `Missing target branch: ${branch}`);
-  const changedFiles = git(["diff", "--name-only", `${baseBranch}..${branch}`])
+function fileAllowed(branch, file) {
+  if (exactAllowed[branch]?.has(file)) return true;
+  return (prefixAllowed[branch] || []).some((prefix) => file.startsWith(prefix));
+}
+
+function show(ref, file) {
+  return git(["show", `${ref}:${file}`]);
+}
+
+const resolvedBase = resolveRef(baseRef);
+assert.ok(resolvedBase, `Missing base ref: ${baseRef}`);
+
+const checked = [];
+for (const target of targets) {
+  const resolvedTarget = resolveRef(target);
+  assert.ok(resolvedTarget, `Missing target ref: ${target}`);
+  const branch = branchKeyFromRef(resolvedTarget);
+  assert.ok(exactAllowed[branch] || prefixAllowed[branch], `No branch diff policy for ${branch}.`);
+
+  const changedFiles = git(["diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
     .split(/\r?\n/)
     .filter(Boolean);
-  const unexpectedFiles = changedFiles.filter((file) => !allowedDifferentFiles.has(file));
+  const unexpectedFiles = changedFiles.filter((file) => !fileAllowed(branch, file));
   assert.deepEqual(
     unexpectedFiles,
     [],
-    `${baseBranch}..${branch} may only differ in login/payment modules.`
+    `${resolvedBase}..${resolvedTarget} contains non-platform code drift.`
   );
 
-  const loginSource = show(branch, "src/platform/login.js");
-  const paymentSource = show(branch, "src/platform/payment.js");
+  const loginSource = show(resolvedTarget, "src/platform/login.js");
+  const paymentSource = show(resolvedTarget, "src/platform/payment.js");
   assert.ok(
     loginSource.includes(`LOGIN_BRANCH = '${branch}'`),
     `${branch} login module must identify LOGIN_BRANCH.`
@@ -74,10 +212,11 @@ for (const branch of branches) {
     paymentSource.includes(`PLATFORM_PAY_RUNTIMES = ${paymentRuntime[branch]}`),
     `${branch} payment module must use ${paymentRuntime[branch]}.`
   );
+
+  checked.push({ branch, ref: resolvedTarget, changedFiles });
 }
 
 console.log(JSON.stringify({
-  baseBranch,
-  branches,
-  allowedDifferentFiles: [...allowedDifferentFiles]
+  baseRef: resolvedBase,
+  checked
 }, null, 2));
