@@ -15,6 +15,16 @@ const defaultTargets = [
 ];
 const targets = requestedTargets.length ? requestedTargets : defaultTargets;
 
+function parseTargetSpec(target) {
+  const [branch, ...refParts] = String(target).split("=");
+  if (refParts.length === 0) return { input: target, ref: target, branchOverride: "" };
+  return {
+    input: target,
+    ref: refParts.join("="),
+    branchOverride: branch
+  };
+}
+
 const exactAllowed = {
   tma: new Set([
     "src/platform/login.js",
@@ -201,9 +211,10 @@ assert.ok(resolvedBase, `Missing base ref: ${baseRef}`);
 
 const checked = [];
 for (const target of targets) {
-  const resolvedTarget = resolveRef(target);
-  assert.ok(resolvedTarget, `Missing target ref: ${target}`);
-  const branch = branchKeyFromRef(resolvedTarget);
+  const targetSpec = parseTargetSpec(target);
+  const resolvedTarget = resolveRef(targetSpec.ref);
+  assert.ok(resolvedTarget, `Missing target ref: ${targetSpec.input}`);
+  const branch = targetSpec.branchOverride || branchKeyFromRef(resolvedTarget);
   assert.ok(exactAllowed[branch] || prefixAllowed[branch], `No branch diff policy for ${branch}.`);
 
   const changedFiles = git(["diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
