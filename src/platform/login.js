@@ -27,3 +27,15 @@ export function shouldLoadTelegramSdk(runtimeTarget = 'h5') {
 export function telegramSdkUrl(runtimeTarget = 'h5') {
   return ''
 }
+
+export function readTelegramLaunchParams() {
+  return ''
+}
+
+export function getTelegramInitDataFromLaunchParams() {
+  return ''
+}
+
+export function getTelegramUserFromInitData() {
+  return {}
+}

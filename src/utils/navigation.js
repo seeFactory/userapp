@@ -10,9 +10,19 @@ export const TAB_PATHS = {
   mine: '/pages/mine/index'
 }
 
+const TAB_PATH_VALUES = new Set(Object.values(TAB_PATHS))
+
 function normalizePath(url = HOME_PATH) {
   const nextUrl = url || HOME_PATH
   return nextUrl.startsWith('/') ? nextUrl : `/${nextUrl}`
+}
+
+function pathOnly(url = HOME_PATH) {
+  return normalizePath(url).split(/[?#]/)[0]
+}
+
+export function isTabPath(url) {
+  return TAB_PATH_VALUES.has(pathOnly(url))
 }
 
 function getStackDepth() {
@@ -40,6 +50,7 @@ function runNavigation(fn, fallback) {
 
 export function goPage(url, options = {}) {
   const target = normalizePath(url)
+  if (isTabPath(target)) return goTab(target)
   const method = options.replace ? Taro.redirectTo : Taro.navigateTo
   return runNavigation(
     () => method({ url: target }),
@@ -49,6 +60,13 @@ export function goPage(url, options = {}) {
 
 export function goTab(tabKeyOrPath) {
   const target = normalizePath(TAB_PATHS[tabKeyOrPath] || tabKeyOrPath || HOME_PATH)
+  const tabTarget = pathOnly(target)
+  if (TAB_PATH_VALUES.has(tabTarget)) {
+    return runNavigation(
+      () => Taro.switchTab({ url: tabTarget }),
+      () => Taro.reLaunch({ url: tabTarget })
+    )
+  }
   return runNavigation(
     () => Taro.redirectTo({ url: target }),
     () => Taro.reLaunch({ url: target })

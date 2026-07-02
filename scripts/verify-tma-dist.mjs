@@ -47,6 +47,8 @@ for (const pattern of [
   "-app.js?62",
   "/auth/tma-login",
   "readTelegramLoginPayload",
+  "getTelegramInitDataFromLaunchParams",
+  "getTelegramUserFromInitData",
   "createTelegramStarsOrder"
 ]) {
   assert.ok(joined.includes(pattern), `TMA dist artifacts must include ${pattern}.`);
