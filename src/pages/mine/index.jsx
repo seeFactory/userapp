@@ -8,6 +8,7 @@ import CustomerModal from '../../components/CustomerModal'
 import PaymentSheet from '../../components/PaymentSheet'
 import { firstCryptoRoute } from '../../components/CryptoRoutePicker'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useAuthState } from '../../hooks/useAuthState'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import {
   createCryptoOrder,
@@ -27,7 +28,7 @@ import {
 } from '../../services/api'
 import { formatAgreementContent } from '../../utils/agreement'
 import { goPage } from '../../utils/navigation'
-import { getCurrentUser, isLoggedIn, requireLogin } from '../../utils/storage'
+import { requireLogin } from '../../utils/storage'
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -45,7 +46,7 @@ function defaultRechargePolicy() {
 
 export default function Mine() {
   const [customerOpen, setCustomerOpen] = useState(false)
-  const [loggedIn, setLoggedIn] = useState(isLoggedIn())
+  const { loggedIn, user: currentUser } = useAuthState()
   const [balance, setBalance] = useState(null)
   const [frozenBalance, setFrozenBalance] = useState(0)
   const [wallet, setWallet] = useState(null)
@@ -53,7 +54,7 @@ export default function Mine() {
   const [rechargeAmount, setRechargeAmount] = useState('20')
   const [creatingRecharge, setCreatingRecharge] = useState(false)
   const [rechargePayment, setRechargePayment] = useState(null)
-  const currentUser = getCurrentUser()
+  const [agreementModal, setAgreementModal] = useState(null)
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
   const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
@@ -84,7 +85,6 @@ export default function Mine() {
 
   const signOut = async () => {
     await logoutRemote().catch(() => {})
-    setLoggedIn(false)
     setBalance(null)
     setFrozenBalance(0)
     setWallet(null)

@@ -6,9 +6,9 @@ import AppIcon from '../../components/AppIcon'
 import ModelLogo from '../../components/ModelLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useAuthState } from '../../hooks/useAuthState'
 import { fetchTools } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
-import { isLoggedIn } from '../../utils/storage'
 
 const HOME_TOOL_TABS = [
   { key: 'recommended', label: '推荐' },
@@ -78,7 +78,7 @@ function modelLogoOf(tool) {
 }
 
 export default function Index() {
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthState()
   const { config, loading: configLoading } = useAppConfig()
   const generationEnabled = isFeatureEnabled(config, 'generation')
   const [tools, setTools] = useState([])
