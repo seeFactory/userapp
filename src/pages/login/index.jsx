@@ -586,6 +586,17 @@ export default function Login() {
     }
   }
 
+  const refreshLoginPage = () => {
+    setAgreementCache({})
+    if (isTelegram && typeof window !== 'undefined') {
+      try {
+        window.Telegram?.WebApp?.ready?.()
+        window.Telegram?.WebApp?.expand?.()
+      } catch (_) {}
+    }
+    Taro.showToast({ title: '登录页已刷新', icon: 'none' })
+  }
+
   const handleLoginTouchStart = (event) => {
     loginPullStartYRef.current = Number(event?.touches?.[0]?.clientY || 0)
   }
