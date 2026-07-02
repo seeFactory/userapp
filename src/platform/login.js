@@ -1,5 +1,5 @@
-export const LOGIN_BRANCH = 'apk'
-export const BRANCH_CLIENT_RUNTIME = 'h5-google'
+export const LOGIN_BRANCH = 'android'
+export const BRANCH_CLIENT_RUNTIME = 'android-apk'
 
 export function isTelegramRuntimeTarget(runtimeTarget = 'h5') {
   return runtimeTarget === 'tma' || runtimeTarget === 'telegram-tma'
@@ -26,4 +26,16 @@ export function shouldLoadTelegramSdk(runtimeTarget = 'h5') {
 
 export function telegramSdkUrl(runtimeTarget = 'h5') {
   return ''
+}
+
+export function readTelegramLaunchParams() {
+  return ''
+}
+
+export function getTelegramInitDataFromLaunchParams() {
+  return ''
+}
+
+export function getTelegramUserFromInitData() {
+  return {}
 }

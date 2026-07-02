@@ -1,4 +1,4 @@
-export const PAYMENT_BRANCH = 'apk'
+export const PAYMENT_BRANCH = 'android'
 export const PLATFORM_PAY_RUNTIMES = []
 
 export function isTelegramStarsRuntime(clientRuntime) {
