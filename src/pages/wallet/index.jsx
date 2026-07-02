@@ -116,7 +116,7 @@ export default function Wallet() {
         </View>
         <Text className='tool-desc'>当前充值统一购买点数，提现通道已关闭。这里仅保留历史钱包余额、流水和提现记录展示。</Text>
         {!configLoading && !rechargeFeatureEnabled ? (
-          <InlineNotice tone='warning'>充值功能已由后台关闭</InlineNotice>
+          <InlineNotice tone='warning'>充值功能暂未开放</InlineNotice>
         ) : null}
         <InlineNotice tone='warning'>历史钱包余额不会自动兑换为点数，也不能继续发起提现。</InlineNotice>
         <View className='wallet-balance-grid'>
