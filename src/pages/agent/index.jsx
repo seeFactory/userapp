@@ -6,9 +6,10 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useAuthState } from '../../hooks/useAuthState'
 import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats, fetchAgreement } from '../../services/api'
 import { formatAgreementContent } from '../../utils/agreement'
-import { acceptAgreement, hasAcceptedAgreement, isLoggedIn, requireLogin } from '../../utils/storage'
+import { acceptAgreement, hasAcceptedAgreement, requireLogin } from '../../utils/storage'
 
 const defaultStats = {
   invitedUsers: 0,
@@ -39,7 +40,7 @@ export default function Agent() {
   const [error, setError] = useState('')
   const [agreementError, setAgreementError] = useState('')
   const [agreementDeclined, setAgreementDeclined] = useState(false)
-  const loggedIn = isLoggedIn()
+  const { loggedIn } = useAuthState()
   const { config, loading: configLoading } = useAppConfig()
   const agentEnabled = isFeatureEnabled(config, 'agent')
 

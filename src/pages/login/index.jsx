@@ -205,7 +205,7 @@ export default function Login() {
         acceptAgreement(agreement?.type, version)
       })
       Taro.showToast({ title: '登录成功', icon: 'success' })
-      goPage(successTarget, { replace: true })
+      await Promise.resolve(goPage(successTarget, { replace: true }))
     } catch (error) {
       Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
     } finally {
