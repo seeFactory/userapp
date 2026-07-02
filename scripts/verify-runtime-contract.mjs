@@ -218,12 +218,12 @@ assertIncludesAll(shell, "Shell.jsx fixed home video contract", [
 ]);
 
 for (const [relativePath, label, patterns] of [
-  ["src/pages/index/index.jsx", "home page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作功能已由后台关闭"]],
+  ["src/pages/index/index.jsx", "home page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作功能已关闭"]],
   ["src/pages/create-center/index.jsx", "create center generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作中心已关闭"]],
   ["src/pages/tool/index.jsx", "tool page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "生成服务已关闭"]],
   ["src/pages/gallery/index.jsx", "gallery feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'gallery')", "galleryEnabled", "作品广场已关闭"]],
-  ["src/pages/mine/index.jsx", "mine page recharge and agent feature gates", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "isFeatureEnabled(config, 'agent')", "rechargeDisabled", "agentFeatureEnabled"]],
-  ["src/pages/wallet/index.jsx", "wallet recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeFeatureEnabled", "充值功能已由后台关闭"]],
+  ["src/pages/mine/index.jsx", "mine page recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeDisabled"]],
+  ["src/pages/wallet/index.jsx", "wallet recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeFeatureEnabled", "充值功能暂未开放"]],
   ["src/pages/agent/index.jsx", "agent page feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'agent')", "agentEnabled", "代理中心已关闭"]]
 ]) {
   assertIncludesAll(source(relativePath), label, patterns);
@@ -267,7 +267,7 @@ assertIncludesAll(login, "login page multi-runtime contract", [
 
 for (const [relativePath, label, patterns] of [
   ["src/pages/mine/index.jsx", "mine page agreement legal display", ["formatAgreementContent", "content: formatAgreementContent(agreement, config?.legal)", "fetchAgreement"]],
-  ["src/pages/agent/index.jsx", "agent page agreement legal display", ["formatAgreementContent", "content: formatAgreementContent(agreement, config?.legal, '代理推广协议正文待后台发布，请确认后继续访问代理中心。')", "fetchAgreement('agent')"]]
+  ["src/pages/agent/index.jsx", "agent page agreement legal display", ["formatAgreementContent", "content: formatAgreementContent(agreement, config?.legal, '代理推广协议暂未发布，请联系平台确认后再进入代理中心。')", "fetchAgreement('agent')"]]
 ]) {
   assertIncludesAll(source(relativePath), label, patterns);
 }
@@ -331,14 +331,14 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution",
   "function ratioFrameClass",
   "function isVideoTool",
-  "ratio-option-chip",
+  "tool-ratio-card",
   "ratioFrameClass(item)",
   "needs('resolution')",
   "fieldError(formErrors, 'resolution')",
-  "modelKey: model,",
+  "modelKey: effectiveModel,",
   "prompt,",
   "...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })",
-  "params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model, count: 1 }"
+  "params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 }"
 ]);
 
 const workflowLinearPage = source("src/pages/workflow-linear/index.jsx");
@@ -362,9 +362,9 @@ assertIncludesAll(workflowLinearPage, "linear workflow miniapp builder contract"
   "trialEnabled: publishMode === 'closed_paid' && trialEnabled",
   "trialLimitPerUser: publishMode === 'closed_paid' && trialEnabled ? normalizedTrialLimit : 0",
   "input: runInput, params: runInput",
-  "小程序端只支持顺序拼接组件",
-  "不开放自由连线、条件分支、循环或 .seeflow 导入导出",
-  "小程序线性链最多 8 步",
+  "当前支持按顺序组合组件",
+  "暂不开放分支、循环或文件导入导出",
+  "AI 模板最多 8 个步骤",
   "保存并运行",
   "保存并发布"
 ]);
@@ -432,7 +432,7 @@ assertIncludesAll(workflowPurchasesPage, "purchased workflow run form contract",
   "作者已停止公开展示该案例",
   "作者已隐藏公开展示",
   "购买记录仍保留",
-  "存在可替代模型",
+  "平台已准备替代模型",
   "暂无运行",
   "initialWorkflowRunValues(runFormOf(item))",
   "buildWorkflowRunPayload(runFormOf(item), runValuesById[item.id]",
@@ -464,7 +464,7 @@ assertIncludesAll(source("src/pages/create-center/index.jsx"), "create center li
   "Workflow 案例",
   "goWorkflowLinear",
   "/pages/workflow-linear/index",
-  "线性拼积木"
+  "AI模板"
 ]);
 assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entry", [
   "goWorkflowCases",
@@ -472,7 +472,7 @@ assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entr
   "购买和运行模板",
   "goWorkflowLinear",
   "/pages/workflow-linear/index",
-  "创建 Workflow"
+  "创建 AI模板"
 ]);
 
 const homePage = source("src/pages/index/index.jsx");

@@ -92,7 +92,7 @@ assertPageIncludes("pages/login/index", [
   ["Taro.showLoading", "login actions must show loading."],
   ["Taro.hideLoading", "login actions must hide loading."],
   ["Taro.showToast", "login failures and successes must use toast feedback."],
-  ["Taro.showModal", "agreement viewing must use modal feedback."],
+  ["AgreementModal", "agreement viewing must use modal feedback."],
   ["loading ? 'primary-button disabled'", "primary login button must expose a disabled/loading state."]
 ]);
 
@@ -102,7 +102,7 @@ assertPageIncludes("pages/mine/index", [
   ["Taro.showLoading", "recharge and agreement actions must show loading."],
   ["Taro.hideLoading", "recharge and agreement actions must hide loading."],
   ["Taro.showToast", "mine page actions must use toast feedback."],
-  ["Taro.showModal", "agreement viewing must use modal feedback."]
+  ["AgreementModal", "agreement viewing must use modal feedback."]
 ]);
 
 for (const pattern of [
