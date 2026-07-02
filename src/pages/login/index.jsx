@@ -134,6 +134,7 @@ export default function Login() {
   const [googleReady, setGoogleReady] = useState(false)
   const [agreementCache, setAgreementCache] = useState({})
   const googleHostId = useRef(`google-login-${Date.now()}`)
+  const loginPullStartYRef = useRef(0)
   const { config } = useAppConfig()
   const runtime = getClientRuntime()
   const loginConfig = getFrontendLoginConfig()
@@ -298,6 +299,17 @@ export default function Login() {
       return
     }
     completeLogin(() => loginDev(account))
+  }
+
+  const refreshLoginPage = () => {
+    setAgreementCache({})
+    if (isTelegram && typeof window !== 'undefined') {
+      try {
+        window.Telegram?.WebApp?.ready?.()
+        window.Telegram?.WebApp?.expand?.()
+      } catch (_) {}
+    }
+    Taro.showToast({ title: '登录页已刷新', icon: 'none' })
   }
 
   const handleLoginTouchStart = (event) => {
