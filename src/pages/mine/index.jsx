@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import Taro from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
+import AgreementModal from '../../components/AgreementModal'
 import BrandLogo from '../../components/BrandLogo'
 import CustomerModal from '../../components/CustomerModal'
 import PaymentSheet from '../../components/PaymentSheet'
@@ -89,38 +90,36 @@ export default function Mine() {
     setFrozenBalance(0)
     setWallet(null)
     setRechargePayment(null)
-    Taro.showToast({ title: '已退出登录', icon: 'success' })
+    Taro.showToast({ title: '宸查€€鍑虹櫥褰?, icon: 'success' })
   }
 
   const showAgreement = async (type) => {
     const titleMap = {
-      user: '用户协议',
-      privacy: '隐私政策',
-      creator: '创作与生成服务条款'
+      user: '鐢ㄦ埛鍗忚',
+      privacy: '闅愮鏀跨瓥',
+      creator: '鍒涗綔涓庣敓鎴愭湇鍔℃潯娆?
     }
-    Taro.showLoading({ title: '加载中' })
+    Taro.showLoading({ title: '鍔犺浇涓? })
     try {
       const agreement = await fetchAgreement(type)
       Taro.hideLoading()
-      Taro.showModal({
+      setAgreementModal({
         title: agreement.title || titleMap[type],
         content: formatAgreementContent(agreement, config?.legal),
-        showCancel: false,
-        confirmText: '我知道了'
       })
     } catch (error) {
       Taro.hideLoading()
-      Taro.showToast({ title: error.message || '协议暂未发布', icon: 'none' })
+      Taro.showToast({ title: error.message || '鍗忚鏆傛湭鍙戝竷', icon: 'none' })
     }
   }
 
   const goAgent = () => {
     if (configLoading) {
-      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
+      Taro.showToast({ title: '搴旂敤閰嶇疆鍚屾涓?, icon: 'none' })
       return
     }
     if (!agentFeatureEnabled) {
-      Taro.showToast({ title: '代理中心暂未开放', icon: 'none' })
+      Taro.showToast({ title: '浠ｇ悊涓績鏆傛湭寮€鏀?, icon: 'none' })
       return
     }
     if (loggedIn) {
@@ -161,7 +160,7 @@ export default function Mine() {
   const createRechargeCryptoOrder = async (route) => {
     if (!rechargePayment?.order?.id || rechargePayment.cryptoCreating) return
     setRechargePayment((current) => current ? { ...current, cryptoCreating: true } : current)
-    Taro.showLoading({ title: '创建 Crypto 支付' })
+    Taro.showLoading({ title: '鍒涘缓 Crypto 鏀粯' })
     try {
       const cryptoOrder = await createCryptoOrder({
         paymentOrderId: rechargePayment.order.id,
@@ -174,10 +173,10 @@ export default function Mine() {
         cryptoOrderRequired: false,
         cryptoCreating: false
       } : current)
-      Taro.showToast({ title: '打币订单已创建', icon: 'success' })
+      Taro.showToast({ title: '鎵撳竵璁㈠崟宸插垱寤?, icon: 'success' })
     } catch (error) {
       setRechargePayment((current) => current ? { ...current, cryptoCreating: false } : current)
-      Taro.showToast({ title: error.message || 'Crypto 支付创建失败', icon: 'none' })
+      Taro.showToast({ title: error.message || 'Crypto 鏀粯鍒涘缓澶辫触', icon: 'none' })
     } finally {
       Taro.hideLoading()
     }
@@ -193,34 +192,34 @@ export default function Mine() {
 
   const beginRecharge = async () => {
     if (configLoading) {
-      Taro.showToast({ title: '应用配置同步中', icon: 'none' })
+      Taro.showToast({ title: '搴旂敤閰嶇疆鍚屾涓?, icon: 'none' })
       return
     }
     if (!rechargeFeatureEnabled) {
-      Taro.showToast({ title: '充值功能暂未开放', icon: 'none' })
+      Taro.showToast({ title: '鍏呭€煎姛鑳芥殏鏈紑鏀?, icon: 'none' })
       return
     }
     if (!requireLogin('/pages/mine/index')) return
     if (rechargePolicy.allowCustomAmount === false) {
-      Taro.showToast({ title: '点数充值暂未开放', icon: 'none' })
+      Taro.showToast({ title: '鐐规暟鍏呭€兼殏鏈紑鏀?, icon: 'none' })
       return
     }
     const amount = Number(rechargeAmount)
     if (!Number.isFinite(amount) || amount <= 0) {
-      Taro.showToast({ title: '请输入有效充值金额', icon: 'none' })
+      Taro.showToast({ title: '璇疯緭鍏ユ湁鏁堝厖鍊奸噾棰?, icon: 'none' })
       return
     }
     const amountCents = Math.round(amount * 100)
     if (amountCents < rechargePolicy.minAmountCents || amountCents > rechargePolicy.maxAmountCents) {
       Taro.showToast({
-        title: `金额需在 ¥${money(rechargePolicy.minAmountCents / 100)} 到 ¥${money(rechargePolicy.maxAmountCents / 100)}`,
+        title: `閲戦闇€鍦?楼${money(rechargePolicy.minAmountCents / 100)} 鍒?楼${money(rechargePolicy.maxAmountCents / 100)}`,
         icon: 'none'
       })
       return
     }
     const clientRuntime = getClientRuntime()
     setCreatingRecharge(true)
-    Taro.showLoading({ title: '创建支付' })
+    Taro.showLoading({ title: '鍒涘缓鏀粯' })
     try {
       const order = await createRechargeOrder({ amountCents, clientRuntime })
       const nextPayment = { order, runtime: clientRuntime, afterPaid: 'recharge' }
@@ -236,15 +235,15 @@ export default function Mine() {
       }
       setRechargePayment(nextPayment)
       Taro.showToast({
-        title: nextPayment.cryptoOrderRequired ? '请选择支付链并创建订单' : '请完成支付后刷新状态',
+        title: nextPayment.cryptoOrderRequired ? '璇烽€夋嫨鏀粯閾惧苟鍒涘缓璁㈠崟' : '璇峰畬鎴愭敮浠樺悗鍒锋柊鐘舵€?,
         icon: 'none'
       })
     } catch (error) {
       if (error?.action === 'login' || error?.statusCode === 401) {
-        Taro.showToast({ title: '请重新登录后再创建订单', icon: 'none' })
+        Taro.showToast({ title: '璇烽噸鏂扮櫥褰曞悗鍐嶅垱寤鸿鍗?, icon: 'none' })
         return
       }
-      Taro.showToast({ title: error.message || '创建支付失败', icon: 'none' })
+      Taro.showToast({ title: error.message || '鍒涘缓鏀粯澶辫触', icon: 'none' })
     } finally {
       Taro.hideLoading()
       setCreatingRecharge(false)
@@ -253,7 +252,7 @@ export default function Mine() {
 
   const refreshRechargePayment = async () => {
     if (!rechargePayment?.order?.id) return
-    Taro.showLoading({ title: '刷新状态' })
+    Taro.showLoading({ title: '鍒锋柊鐘舵€? })
     try {
       const nextPayment = { ...rechargePayment }
       if (rechargePayment.cryptoOrder?.id) {
@@ -268,12 +267,12 @@ export default function Mine() {
       if (order.status === 'paid') {
         await reloadBalance()
         setRechargePayment(null)
-        Taro.showToast({ title: '点数已到账', icon: 'success' })
+        Taro.showToast({ title: '鐐规暟宸插埌璐?, icon: 'success' })
       } else {
-        Taro.showToast({ title: '订单仍在处理中', icon: 'none' })
+        Taro.showToast({ title: '璁㈠崟浠嶅湪澶勭悊涓?, icon: 'none' })
       }
     } catch (error) {
-      Taro.showToast({ title: error.message || '状态刷新失败', icon: 'none' })
+      Taro.showToast({ title: error.message || '鐘舵€佸埛鏂板け璐?, icon: 'none' })
     } finally {
       Taro.hideLoading()
     }
@@ -285,36 +284,36 @@ export default function Mine() {
   const maxRecharge = money(rechargePolicy.maxAmountCents / 100)
 
   return (
-    <Shell active='mine' title='我的' onRefresh={loggedIn ? reloadBalance : () => Promise.resolve()}>
+    <Shell active='mine' title='鎴戠殑' onRefresh={loggedIn ? reloadBalance : () => Promise.resolve()}>
       <View className='panel'>
         <View className='panel-brand-row'>
           <BrandLogo size={54} />
           <View className='brand-title-copy'>
-            <Text className='section-kicker'>账户中心</Text>
-            <Text className='section-title'>{loggedIn ? (currentUser?.nickname || 'seeFactory 创作者') : '未登录'}</Text>
+            <Text className='section-kicker'>璐︽埛涓績</Text>
+            <Text className='section-title'>{loggedIn ? (currentUser?.nickname || 'seeFactory 鍒涗綔鑰?) : '鏈櫥褰?}</Text>
           </View>
         </View>
         <Text className='tool-desc'>
           {loggedIn
-            ? `点数 ${balance === null ? '--' : balance} 点${frozenBalance ? `，冻结 ${frozenBalance} 点` : ''}。所有充值均直接购买点数，不能提现。`
-            : '登录后可查看作品、复制提示词并使用生成工具。'}
+            ? `鐐规暟 ${balance === null ? '--' : balance} 鐐?{frozenBalance ? `锛屽喕缁?${frozenBalance} 鐐筦 : ''}銆傛墍鏈夊厖鍊煎潎鐩存帴璐拱鐐规暟锛屼笉鑳芥彁鐜般€俙
+            : '鐧诲綍鍚庡彲鏌ョ湅浣滃搧銆佸鍒舵彁绀鸿瘝骞朵娇鐢ㄧ敓鎴愬伐鍏枫€?}
         </Text>
         <View className='hero-actions'>
           {loggedIn ? (
             <>
               <View className={rechargeDisabled ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={rechargeDisabled ? undefined : beginRecharge}>
                 <AppIcon name='coin' size={16} />
-                <Text>购买点数</Text>
+                <Text>璐拱鐐规暟</Text>
               </View>
               <View className='ghost-button glass-button' onClick={signOut}>
                 <AppIcon name='logout' size={16} />
-                <Text>退出登录</Text>
+                <Text>閫€鍑虹櫥褰?/Text>
               </View>
             </>
           ) : (
             <View className='primary-button' onClick={() => goPage('/pages/login/index?redirect=/pages/mine/index')}>
               <AppIcon name='login' size={16} />
-              <Text>立即登录</Text>
+              <Text>绔嬪嵆鐧诲綍</Text>
             </View>
           )}
         </View>
@@ -324,98 +323,104 @@ export default function Mine() {
         <View className='form-panel credit-recharge-panel'>
           <View className='section-head compact-head'>
             <View>
-              <Text className='section-kicker'>点数充值</Text>
-              <Text className='section-title'>自填金额充值</Text>
+              <Text className='section-kicker'>鐐规暟鍏呭€?/Text>
+              <Text className='section-title'>鑷～閲戦鍏呭€?/Text>
             </View>
             <Text className={rechargeDisabled ? 'status failed' : 'status success'}>
-              {rechargeDisabled ? '暂未开放' : `1 CNY = ${rechargePolicy.pointRate} 点`}
+              {rechargeDisabled ? '鏆傛湭寮€鏀? : `1 CNY = ${rechargePolicy.pointRate} 鐐筦}
             </Text>
           </View>
 
-          <Text className='input-label'>充值金额</Text>
+          <Text className='input-label'>鍏呭€奸噾棰?/Text>
           <View className='text-input recharge-input'>
-            <Text className='money-prefix'>¥</Text>
+            <Text className='money-prefix'>楼</Text>
             <Input
               type='digit'
               value={rechargeAmount}
               disabled={rechargeDisabled}
-              placeholder={`最低 ${minRecharge}`}
+              placeholder={`鏈€浣?${minRecharge}`}
               placeholderClass='muted'
               onInput={(event) => setRechargeAmount(event.detail.value)}
             />
           </View>
           <View className='recharge-meta'>
-            <Text>预计到账 {estimatedPoints} 点</Text>
-            <Text>范围 ¥{minRecharge} - ¥{maxRecharge}</Text>
+            <Text>棰勮鍒拌处 {estimatedPoints} 鐐?/Text>
+            <Text>鑼冨洿 楼{minRecharge} - 楼{maxRecharge}</Text>
           </View>
           <View className={creatingRecharge || rechargeDisabled ? 'primary-button full-width-button disabled' : 'primary-button full-width-button'} onClick={creatingRecharge || rechargeDisabled ? undefined : beginRecharge}>
             <AppIcon name='coin' size={16} />
-            <Text>{rechargeDisabled ? '充值已关闭' : creatingRecharge ? '创建中...' : '创建点数订单'}</Text>
+            <Text>{rechargeDisabled ? '鍏呭€煎凡鍏抽棴' : creatingRecharge ? '鍒涘缓涓?..' : '鍒涘缓鐐规暟璁㈠崟'}</Text>
           </View>
         </View>
       )}
 
       <View className='section-head'>
         <View>
-          <Text className='section-kicker'>服务支持</Text>
-          <Text className='section-title'>服务入口</Text>
+          <Text className='section-kicker'>鏈嶅姟鏀寔</Text>
+          <Text className='section-title'>鏈嶅姟鍏ュ彛</Text>
         </View>
       </View>
 
       <View className='profile-grid'>
         <View className={rechargeDisabled ? 'profile-card disabled' : 'profile-card'} onClick={rechargeDisabled ? undefined : beginRecharge}>
           <View className='profile-icon'><AppIcon name='coin' size={22} /></View>
-          <Text className='profile-name'>购买点数</Text>
-          <Text className='tool-desc'>充值后不可提现</Text>
+          <Text className='profile-name'>璐拱鐐规暟</Text>
+          <Text className='tool-desc'>鍏呭€煎悗涓嶅彲鎻愮幇</Text>
         </View>
         <View className='profile-card' onClick={goWorkflowPurchases}>
           <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
-          <Text className='profile-name'>已购模板库</Text>
-          <Text className='tool-desc'>Workflow 权益</Text>
+          <Text className='profile-name'>宸茶喘妯℃澘搴?/Text>
+          <Text className='tool-desc'>Workflow 鏉冪泭</Text>
         </View>
         <View className='profile-card' onClick={goWorkflowCases}>
           <View className='profile-icon'><AppIcon name='fusion' size={22} /></View>
-          <Text className='profile-name'>Workflow 案例</Text>
-          <Text className='tool-desc'>购买和运行模板</Text>
+          <Text className='profile-name'>Workflow 妗堜緥</Text>
+          <Text className='tool-desc'>璐拱鍜岃繍琛屾ā鏉?/Text>
         </View>
         <View className='profile-card' onClick={goWorkflowLinear}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
-          <Text className='profile-name'>AI模板</Text>
-          <Text className='tool-desc'>创建 Workflow</Text>
+          <Text className='profile-name'>AI妯℃澘</Text>
+          <Text className='tool-desc'>鍒涘缓 Workflow</Text>
         </View>
         {!configLoading && agentFeatureEnabled ? (
         <View className='profile-card' onClick={goAgent}>
           <View className='profile-icon'><AppIcon name='agent' size={22} /></View>
-          <Text className='profile-name'>代理中心</Text>
-          <Text className='tool-desc'>用户和激活</Text>
+          <Text className='profile-name'>浠ｇ悊涓績</Text>
+          <Text className='tool-desc'>鐢ㄦ埛鍜屾縺娲?/Text>
         </View>
         ) : null}
         <View className='profile-card' onClick={() => setCustomerOpen(true)}>
           <View className='profile-icon'><AppIcon name='headphones' size={22} /></View>
-          <Text className='profile-name'>联系客服</Text>
-          <Text className='tool-desc'>反馈建议</Text>
+          <Text className='profile-name'>鑱旂郴瀹㈡湇</Text>
+          <Text className='tool-desc'>鍙嶉寤鸿</Text>
         </View>
         <View className='profile-card' onClick={() => showAgreement('user')}>
           <View className='profile-icon'><AppIcon name='book' size={22} /></View>
-          <Text className='profile-name'>用户协议</Text>
-          <Text className='tool-desc'>查看服务条款</Text>
+          <Text className='profile-name'>鐢ㄦ埛鍗忚</Text>
+          <Text className='tool-desc'>鏌ョ湅鏈嶅姟鏉℃</Text>
         </View>
         <View className='profile-card' onClick={() => showAgreement('privacy')}>
           <View className='profile-icon'><AppIcon name='lock' size={22} /></View>
-          <Text className='profile-name'>隐私政策</Text>
-          <Text className='tool-desc'>查看数据说明</Text>
+          <Text className='profile-name'>闅愮鏀跨瓥</Text>
+          <Text className='tool-desc'>鏌ョ湅鏁版嵁璇存槑</Text>
         </View>
         <View className='profile-card' onClick={() => showAgreement('creator')}>
           <View className='profile-icon'><AppIcon name='wand' size={22} /></View>
-          <Text className='profile-name'>创作条款</Text>
-          <Text className='tool-desc'>生成服务说明</Text>
+          <Text className='profile-name'>鍒涗綔鏉℃</Text>
+          <Text className='tool-desc'>鐢熸垚鏈嶅姟璇存槑</Text>
         </View>
       </View>
 
       <CustomerModal open={customerOpen} onClose={() => setCustomerOpen(false)} />
+      <AgreementModal
+        open={Boolean(agreementModal)}
+        title={agreementModal?.title}
+        content={agreementModal?.content}
+        onClose={() => setAgreementModal(null)}
+      />
       <PaymentSheet
         open={Boolean(rechargePayment)}
-        title='点数充值'
+        title='鐐规暟鍏呭€?
         payment={rechargePayment}
         onClose={() => setRechargePayment(null)}
         onRefresh={refreshRechargePayment}

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
 import { View, Text, Input } from '@tarojs/components'
 import AppIcon from '../../components/AppIcon'
+import AgreementModal from '../../components/AgreementModal'
 import BrandLogo from '../../components/BrandLogo'
 import PageBackButton from '../../components/PageBackButton'
 import { captureInviteFromParams } from '../../platform/invite'
@@ -23,46 +24,46 @@ const X_REDIRECT_URI_KEY = 'seeFactoryXRedirectUri'
 const X_RETURN_TO_KEY = 'seeFactoryXReturnTo'
 const X_ACCEPTED_AGREEMENTS_KEY = 'seeFactoryXAcceptedAgreements'
 const REQUIRED_AGREEMENTS = [
-  { type: 'user', label: '用户协议' },
-  { type: 'privacy', label: '隐私政策' },
-  { type: 'creator', label: '创作与生成服务条款' }
+  { type: 'user', label: '鐢ㄦ埛鍗忚' },
+  { type: 'privacy', label: '闅愮鏀跨瓥' },
+  { type: 'creator', label: '鍒涗綔涓庣敓鎴愭湇鍔℃潯娆? }
 ]
 
 const runtimeMeta = {
   'telegram-tma': {
-    title: 'Telegram Mini App 登录',
-    subtitle: '通过 Telegram 授权进入 seeFactory',
-    action: '继续使用 Telegram',
+    title: 'Telegram Mini App 鐧诲綍',
+    subtitle: '閫氳繃 Telegram 鎺堟潈杩涘叆 seeFactory',
+    action: '缁х画浣跨敤 Telegram',
     icon: 'login'
   },
   'wechat-miniapp': {
-    title: '微信小程序登录',
-    subtitle: '使用微信登录凭证换取 seeFactory 账号',
-    action: '微信一键登录',
+    title: '寰俊灏忕▼搴忕櫥褰?,
+    subtitle: '浣跨敤寰俊鐧诲綍鍑瘉鎹㈠彇 seeFactory 璐﹀彿',
+    action: '寰俊涓€閿櫥褰?,
     icon: 'login'
   },
   'alipay-miniapp': {
-    title: '支付宝小程序登录',
-    subtitle: '使用支付宝授权码换取 seeFactory 账号',
-    action: '支付宝一键登录',
+    title: '鏀粯瀹濆皬绋嬪簭鐧诲綍',
+    subtitle: '浣跨敤鏀粯瀹濇巿鏉冪爜鎹㈠彇 seeFactory 璐﹀彿',
+    action: '鏀粯瀹濅竴閿櫥褰?,
     icon: 'login'
   },
   'douyin-miniapp': {
-    title: '抖音小程序登录',
-    subtitle: '使用抖音登录凭证换取 seeFactory 账号',
-    action: '抖音一键登录',
+    title: '鎶栭煶灏忕▼搴忕櫥褰?,
+    subtitle: '浣跨敤鎶栭煶鐧诲綍鍑瘉鎹㈠彇 seeFactory 璐﹀彿',
+    action: '鎶栭煶涓€閿櫥褰?,
     icon: 'login'
   },
   'qq-miniapp': {
-    title: 'QQ 小程序登录',
-    subtitle: '使用 QQ 登录凭证换取 seeFactory 账号',
-    action: 'QQ 一键登录',
+    title: 'QQ 灏忕▼搴忕櫥褰?,
+    subtitle: '浣跨敤 QQ 鐧诲綍鍑瘉鎹㈠彇 seeFactory 璐﹀彿',
+    action: 'QQ 涓€閿櫥褰?,
     icon: 'login'
   },
   'h5-google': {
-    title: 'H5 账户登录',
-    subtitle: '可使用 Google 或 X 账户进入 seeFactory',
-    action: 'Google 账户登录',
+    title: 'H5 璐︽埛鐧诲綍',
+    subtitle: '鍙娇鐢?Google 鎴?X 璐︽埛杩涘叆 seeFactory',
+    action: 'Google 璐︽埛鐧诲綍',
     icon: 'login'
   }
 }
@@ -91,7 +92,7 @@ function randomBase64Url(byteLength = 48) {
 
 async function sha256Base64Url(value) {
   if (typeof window === 'undefined' || !window.crypto?.subtle) {
-    throw new Error('当前浏览器不支持安全授权登录')
+    throw new Error('褰撳墠娴忚鍣ㄤ笉鏀寔瀹夊叏鎺堟潈鐧诲綍')
   }
   const bytes = new TextEncoder().encode(value)
   const digest = await window.crypto.subtle.digest('SHA-256', bytes)
@@ -100,7 +101,7 @@ async function sha256Base64Url(value) {
 }
 
 function loadScript(src) {
-  if (typeof document === 'undefined') return Promise.reject(new Error('当前环境不支持网页登录'))
+  if (typeof document === 'undefined') return Promise.reject(new Error('褰撳墠鐜涓嶆敮鎸佺綉椤电櫥褰?))
   const existed = document.querySelector(`script[src="${src}"]`)
   if (existed) {
     return existed.dataset.loaded === 'true'
@@ -133,6 +134,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [googleReady, setGoogleReady] = useState(false)
   const [agreementCache, setAgreementCache] = useState({})
+  const [agreementModal, setAgreementModal] = useState(null)
   const googleHostId = useRef(`google-login-${Date.now()}`)
   const loginPullStartYRef = useRef(0)
   const { config } = useAppConfig()
@@ -164,20 +166,18 @@ export default function Login() {
   }
 
   const showAgreement = async (type) => {
-    Taro.showLoading({ title: '加载协议' })
+    Taro.showLoading({ title: '鍔犺浇鍗忚' })
     try {
       const agreement = await loadAgreement(type)
       Taro.hideLoading()
       const meta = REQUIRED_AGREEMENTS.find((item) => item.type === type)
-      Taro.showModal({
-        title: agreement.title || meta?.label || '协议',
+      setAgreementModal({
+        title: agreement.title || meta?.label || '鍗忚',
         content: formatAgreementContent(agreement, config?.legal),
-        showCancel: false,
-        confirmText: '我知道了'
       })
     } catch (error) {
       Taro.hideLoading()
-      Taro.showToast({ title: error.message || '协议暂未发布', icon: 'none' })
+      Taro.showToast({ title: error.message || '鍗忚鏆傛湭鍙戝竷', icon: 'none' })
     }
   }
 
@@ -191,11 +191,11 @@ export default function Login() {
 
   const completeLogin = async (runner, successTarget = target, options = {}) => {
     if (!options.skipAgreement && !agreed) {
-      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作与生成服务条款', icon: 'none' })
+      Taro.showToast({ title: '璇峰厛鍚屾剰鐢ㄦ埛鍗忚銆侀殣绉佹斂绛栧拰鍒涗綔涓庣敓鎴愭湇鍔℃潯娆?, icon: 'none' })
       return
     }
     setLoading(true)
-    Taro.showLoading({ title: '登录中' })
+    Taro.showLoading({ title: '鐧诲綍涓? })
     try {
       const acceptedAgreements = options.skipAgreement ? [] : await ensureLoginAgreements()
       const data = await runner()
@@ -205,10 +205,10 @@ export default function Login() {
         const version = agreement?.version || agreement?.id || agreement?.updatedAt
         acceptAgreement(agreement?.type, version)
       })
-      Taro.showToast({ title: '登录成功', icon: 'success' })
+      Taro.showToast({ title: '鐧诲綍鎴愬姛', icon: 'success' })
       await Promise.resolve(goPage(successTarget, { replace: true }))
     } catch (error) {
-      Taro.showToast({ title: error.message || '登录失败，请重试', icon: 'none' })
+      Taro.showToast({ title: error.message || '鐧诲綍澶辫触锛岃閲嶈瘯', icon: 'none' })
     } finally {
       Taro.hideLoading()
       setLoading(false)
@@ -218,7 +218,7 @@ export default function Login() {
   useEffect(() => {
     const callback = readWindowParams()
     if (callback.error) {
-      Taro.showToast({ title: 'X 授权已取消或失败', icon: 'none' })
+      Taro.showToast({ title: 'X 鎺堟潈宸插彇娑堟垨澶辫触', icon: 'none' })
       return
     }
     if (!callback.code || !callback.state) return
@@ -227,7 +227,7 @@ export default function Login() {
     const returnTo = Taro.getStorageSync(X_RETURN_TO_KEY) || target
     const acceptedAgreements = Taro.getStorageSync(X_ACCEPTED_AGREEMENTS_KEY) || []
     if (!codeVerifier) {
-      Taro.showToast({ title: 'X 登录状态已过期，请重新授权', icon: 'none' })
+      Taro.showToast({ title: 'X 鐧诲綍鐘舵€佸凡杩囨湡锛岃閲嶆柊鎺堟潈', icon: 'none' })
       return
     }
     Taro.removeStorageSync(X_CODE_VERIFIER_KEY)
@@ -254,7 +254,7 @@ export default function Login() {
           client_id: loginConfig.googleClientId,
           callback: (response) => {
             if (!response?.credential) {
-              Taro.showToast({ title: 'Google 授权失败，请重试', icon: 'none' })
+              Taro.showToast({ title: 'Google 鎺堟潈澶辫触锛岃閲嶈瘯', icon: 'none' })
               return
             }
             completeLogin(() => loginRuntime({ clientRuntime: 'h5-google', idToken: response.credential }))
@@ -276,7 +276,7 @@ export default function Login() {
         }
       })
       .catch(() => {
-        Taro.showToast({ title: 'Google 登录组件加载失败', icon: 'none' })
+        Taro.showToast({ title: 'Google 鐧诲綍缁勪欢鍔犺浇澶辫触', icon: 'none' })
       })
     return () => {
       cancelled = true
@@ -295,7 +295,7 @@ export default function Login() {
 
   const handleDevLogin = () => {
     if (!account) {
-      Taro.showToast({ title: '请输入开发账号', icon: 'none' })
+      Taro.showToast({ title: '璇疯緭鍏ュ紑鍙戣处鍙?, icon: 'none' })
       return
     }
     completeLogin(() => loginDev(account))
@@ -309,7 +309,7 @@ export default function Login() {
         window.Telegram?.WebApp?.expand?.()
       } catch (_) {}
     }
-    Taro.showToast({ title: '登录页已刷新', icon: 'none' })
+    Taro.showToast({ title: '鐧诲綍椤靛凡鍒锋柊', icon: 'none' })
   }
 
   const handleLoginTouchStart = (event) => {
@@ -326,15 +326,15 @@ export default function Login() {
 
   const handleXLogin = async () => {
     if (!agreed) {
-      Taro.showToast({ title: '请先同意用户协议、隐私政策和创作与生成服务条款', icon: 'none' })
+      Taro.showToast({ title: '璇峰厛鍚屾剰鐢ㄦ埛鍗忚銆侀殣绉佹斂绛栧拰鍒涗綔涓庣敓鎴愭湇鍔℃潯娆?, icon: 'none' })
       return
     }
     if (!xRedirectUri) {
-      Taro.showToast({ title: '请先配置 X 登录回调地址', icon: 'none' })
+      Taro.showToast({ title: '璇峰厛閰嶇疆 X 鐧诲綍鍥炶皟鍦板潃', icon: 'none' })
       return
     }
     setLoading(true)
-    Taro.showLoading({ title: '准备授权' })
+    Taro.showLoading({ title: '鍑嗗鎺堟潈' })
     try {
       const acceptedAgreements = await ensureLoginAgreements()
       const codeVerifier = randomBase64Url()
@@ -351,7 +351,7 @@ export default function Login() {
         window.location.href = result.authorizeUrl
       }
     } catch (error) {
-      Taro.showToast({ title: error.message || 'X 授权启动失败', icon: 'none' })
+      Taro.showToast({ title: error.message || 'X 鎺堟潈鍚姩澶辫触', icon: 'none' })
     } finally {
       Taro.hideLoading()
       setLoading(false)
@@ -365,7 +365,7 @@ export default function Login() {
       <View className='login-card'>
         <Text className='hero-kicker'>seeFactory</Text>
         <Text className='hero-title'>seeFactory</Text>
-        <Text className='hero-subtitle'>{meta.subtitle}。案例完整提示词无需登录。</Text>
+        <Text className='hero-subtitle'>{meta.subtitle}銆傛渚嬪畬鏁存彁绀鸿瘝鏃犻渶鐧诲綍銆?/Text>
 
         <View className='platform-panel'>
           <View className='platform-badge'>
@@ -373,7 +373,7 @@ export default function Login() {
             <Text>{meta.title}</Text>
           </View>
           {isTelegram && (
-            <Text className='platform-hint'>请在 Telegram 内打开 seeFactory，授权信息仅用于完成登录。</Text>
+            <Text className='platform-hint'>璇峰湪 Telegram 鍐呮墦寮€ seeFactory锛屾巿鏉冧俊鎭粎鐢ㄤ簬瀹屾垚鐧诲綍銆?/Text>
           )}
           {!isH5 && (
             <View className={loading ? 'primary-button disabled' : 'primary-button'} onClick={handleRuntimeLogin}>
@@ -386,18 +386,18 @@ export default function Login() {
               <View id={googleHostId.current} className='google-button-host' />
               {!loginConfig.googleClientId && (
                 <View className='login-warning'>
-                  <Text>Google 登录暂未开放。</Text>
+                  <Text>Google 鐧诲綍鏆傛湭寮€鏀俱€?/Text>
                 </View>
               )}
               {loginConfig.googleClientId && !googleReady && (
                 <View className='ghost-button glass-button'>
                   <AppIcon name='refresh' size={16} />
-                  <Text>准备 Google 登录</Text>
+                  <Text>鍑嗗 Google 鐧诲綍</Text>
                 </View>
               )}
               <View className={loading ? 'ghost-button glass-button disabled' : 'ghost-button glass-button'} onClick={handleXLogin}>
                 <AppIcon name='login' size={16} />
-                <Text>使用 X 账户登录</Text>
+                <Text>浣跨敤 X 璐︽埛鐧诲綍</Text>
               </View>
             </View>
           )}
@@ -405,29 +405,35 @@ export default function Login() {
 
         {isDevLoginVisible && (
           <View className='dev-login-panel'>
-            <Text className='input-label'>开发账号</Text>
+            <Text className='input-label'>寮€鍙戣处鍙?/Text>
             <Input className='text-input' value={account} onInput={(event) => setAccount(event.detail.value)} />
             <View className='ghost-button glass-button block-gap' onClick={handleDevLogin}>
               <AppIcon name='lock' size={16} />
-              <Text>账号登录</Text>
+              <Text>璐﹀彿鐧诲綍</Text>
             </View>
           </View>
         )}
 
         <View className='checkbox-row'>
-          <View className={agreed ? 'fake-check checked' : 'fake-check'} onClick={() => setAgreed(!agreed)}>{agreed ? '✓' : ''}</View>
+          <View className={agreed ? 'fake-check checked' : 'fake-check'} onClick={() => setAgreed(!agreed)}>{agreed ? '鉁? : ''}</View>
           <View className='agreement-copy'>
-            <Text onClick={() => setAgreed(!agreed)}>我已阅读并同意</Text>
+            <Text onClick={() => setAgreed(!agreed)}>鎴戝凡闃呰骞跺悓鎰?/Text>
             {REQUIRED_AGREEMENTS.map((item) => (
-              <Text key={item.type} className='agreement-link' onClick={() => showAgreement(item.type)}>《{item.label}》</Text>
+              <Text key={item.type} className='agreement-link' onClick={() => showAgreement(item.type)}>銆妠item.label}銆?/Text>
             ))}
           </View>
         </View>
 
         <View className='ghost-button glass-button block-gap' onClick={() => goTab('/pages/index/index')}>
           <AppIcon name='home' size={16} />
-          <Text>先逛逛</Text>
+          <Text>鍏堥€涢€?/Text>
         </View>
+        <AgreementModal
+          open={Boolean(agreementModal)}
+          title={agreementModal?.title}
+          content={agreementModal?.content}
+          onClose={() => setAgreementModal(null)}
+        />
       </View>
     </View>
   )
