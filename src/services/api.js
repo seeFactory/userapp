@@ -296,6 +296,34 @@ export async function fetchTools(params = {}) {
   }, { force })
 }
 
+function modelKeyAlias(value = '') {
+  return String(value || '').trim().replace(/^newapi\./i, '').split('.').pop()
+}
+
+function toolKeyAliases(tool = {}) {
+  const id = String(tool.id || '').trim()
+  const defaultModelKey = String(tool.defaultModelKey || '').trim()
+  const values = [
+    id,
+    defaultModelKey,
+    modelKeyAlias(defaultModelKey)
+  ]
+  const categoryPrefix = `${tool.category || ''}-`
+  if (categoryPrefix.length > 1 && id.startsWith(categoryPrefix)) {
+    values.push(id.slice(categoryPrefix.length))
+  }
+  if (id.startsWith('t2v-') || id.startsWith('i2v-')) {
+    values.push(id.slice(4))
+  }
+  return new Set(values.filter(Boolean))
+}
+
+function findToolByAlias(tools = [], key = '') {
+  const normalizedKey = String(key || '').trim()
+  if (!normalizedKey) return null
+  return tools.find((tool) => toolKeyAliases(tool).has(normalizedKey)) || null
+}
+
 export async function fetchToolCategories(options = {}) {
   return withCache(cacheKey('toolCategories'), CACHE_TTL.catalog, async () => {
     const list = await request('/tools/categories')
@@ -307,7 +335,16 @@ export async function fetchToolCategories(options = {}) {
 }
 
 export async function fetchTool(toolKey) {
-  const item = await request(`/tools/${toolKey}`)
+  let item
+  try {
+    item = await request(`/tools/${toolKey}`)
+  } catch (error) {
+    if (![404, 'NOT_FOUND'].includes(error.statusCode) && error.code !== 'NOT_FOUND') throw error
+    const tools = await fetchTools({ force: true })
+    const matched = findToolByAlias(tools, toolKey)
+    if (matched) return matched
+    throw error
+  }
   return {
     id: item.toolKey || item.id,
     category: item.category,
