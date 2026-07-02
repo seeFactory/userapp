@@ -73,6 +73,23 @@ export function goTab(tabKeyOrPath) {
   )
 }
 
+export function goAuthTarget(url = HOME_PATH) {
+  const target = normalizePath(url)
+  const tabTarget = pathOnly(target)
+
+  if (TAB_PATH_VALUES.has(tabTarget)) {
+    return runNavigation(
+      () => Taro.reLaunch({ url: tabTarget }),
+      () => Taro.switchTab({ url: tabTarget })
+    )
+  }
+
+  return runNavigation(
+    () => Taro.reLaunch({ url: target }),
+    () => Taro.redirectTo({ url: target })
+  )
+}
+
 export function safeBack(options = {}) {
   const fallbackUrl = normalizePath(options.fallbackUrl || HOME_PATH)
   const delta = Math.max(1, Number(options.delta || 1))
