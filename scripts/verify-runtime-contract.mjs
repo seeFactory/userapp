@@ -472,7 +472,7 @@ assertIncludesAll(source("src/pages/mine/index.jsx"), "mine linear workflow entr
   "购买和运行模板",
   "goWorkflowLinear",
   "/pages/workflow-linear/index",
-  "创建 AI模板"
+  "AI模板"
 ]);
 
 const homePage = source("src/pages/index/index.jsx");
