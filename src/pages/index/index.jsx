@@ -210,7 +210,7 @@ export default function Index() {
       </View>
 
       {!generationEnabled ? (
-        <EmptyState title='创作功能已由后台关闭' description='生成服务暂未开放，你仍可查看作品、联系客服和管理账号。' icon='wand' />
+        <EmptyState title='创作功能已关闭' description='生成服务暂未开放，你仍可查看作品、联系客服和管理账号。' icon='wand' />
       ) : loading ? (
         <PageLoading title='正在同步工具配置' description='正在同步可用创作工具。' />
       ) : error ? (
