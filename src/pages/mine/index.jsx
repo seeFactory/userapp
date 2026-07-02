@@ -59,7 +59,6 @@ export default function Mine() {
   const [agreementModal, setAgreementModal] = useState(null)
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
-  const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
 
   const loadAccount = async (options = {}) => {
     const [creditData, walletData, rechargeData] = await Promise.all([
