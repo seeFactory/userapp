@@ -9,10 +9,11 @@ import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import { goPage } from '../../utils/navigation'
-import { chooseTypedFiles, formatFileSize, uploadLimits, uploadToOss, validateUploadFile } from '../../utils/upload'
+import { chooseTypedFiles, formatFileSize, normalizeImageForVideoReference, uploadLimits, uploadToOss, validateUploadFile } from '../../utils/upload'
 import {
   createAsset,
   createCryptoOrder,
+  createGenerationQuote,
   createGenerationPaymentOrder,
   createGenerationTask,
   createPlatformPaymentOrder,
@@ -23,9 +24,10 @@ import {
   fetchTool,
   fetchWalletRechargeOptions,
   getClientRuntime,
-  getUploadToken
+  getUploadToken,
+  prepareWorkReuseContext
 } from '../../services/api'
-import { requireLogin } from '../../utils/storage'
+import { isLoggedIn, requireLogin } from '../../utils/storage'
 
 const PaymentSheet = lazy(() => import('../../components/PaymentSheet'))
 
@@ -187,17 +189,64 @@ function isCreativeMediaTool(tool, mode) {
   return isImageTool(tool, mode) || isVideoTool({ ...tool, category: outputTypeOf(tool, mode) || tool?.category })
 }
 
+function toolOptionsOf(tool) {
+  return tool?.options && typeof tool.options === 'object' ? tool.options : {}
+}
+
+function allowsOptionalReferenceUpload(tool, mode) {
+  const options = { ...toolOptionsOf(tool), ...(mode?.options || {}) }
+  if (options.allowReferenceUpload === true) return true
+  if (options.allowReferenceUpload === false) return false
+  return isImageTool(tool, mode)
+}
+
+function countOption(tool, keys, fallback, { min = 0, max = 12 } = {}) {
+  const options = toolOptionsOf(tool)
+  for (const key of keys) {
+    const value = Number(options[key])
+    if (Number.isFinite(value)) return Math.max(min, Math.min(max, Math.floor(value)))
+  }
+  return Math.max(min, Math.min(max, Math.floor(fallback)))
+}
+
+function listOption(tool, keys, fallback) {
+  const options = toolOptionsOf(tool)
+  for (const key of keys) {
+    if (Array.isArray(options[key])) {
+      const list = options[key].map((item) => String(item || '').trim().toLowerCase()).filter(Boolean)
+      if (list.length) return list
+    }
+  }
+  return fallback
+}
+
+function textOption(tool, keys, fallback) {
+  const options = toolOptionsOf(tool)
+  for (const key of keys) {
+    const value = String(options[key] || '').trim()
+    if (value) return value
+  }
+  return fallback
+}
+
+function uploadCounts(tool, minKeys, maxKeys, fallbackMin, fallbackMax) {
+  const maxCount = countOption(tool, maxKeys, fallbackMax, { min: 1, max: 12 })
+  const minCount = countOption(tool, minKeys, fallbackMin, { min: 0, max: maxCount })
+  return { minCount, maxCount }
+}
+
 function inferUploadConfig(tool) {
   const fields = tool?.fields || []
   const text = `${tool?.id || ''} ${tool?.category || ''} ${tool?.name || ''}`.toLowerCase()
   if (fields.includes('multiUpload')) {
+    const { minCount, maxCount } = uploadCounts(tool, ['uploadMin', 'minUploadCount', 'minAssetCount'], ['uploadMax', 'maxUploadCount', 'maxAssetCount'], 2, 6)
     return {
-      acceptTypes: ['image'],
-      maxCount: 6,
-      minCount: 2,
-      label: '参考素材，多图融合',
-      actionText: '点击添加图片素材',
-      tip: '支持 JPG / PNG / WebP，单张最大 20 MB，至少 2 张，最多 6 张'
+      acceptTypes: listOption(tool, ['acceptAssetTypes', 'assetTypes', 'uploadTypes'], ['image']),
+      maxCount,
+      minCount,
+      label: textOption(tool, ['uploadLabel', 'assetLabel'], '参考素材，多图融合'),
+      actionText: textOption(tool, ['uploadActionText', 'assetActionText'], '点击添加图片素材'),
+      tip: textOption(tool, ['uploadTip', 'assetTip'], `支持 JPG / PNG / WebP，至少 ${minCount} 张，最多 ${maxCount} 张`)
     }
   }
   if (text.includes('audio') || text.includes('音')) {
@@ -316,15 +365,16 @@ function slotUploadConfig(slot) {
 
 function optionalReferenceUploadConfig(tool, mode) {
   const isVideo = isVideoTool({ ...tool, category: outputTypeOf(tool, mode) || tool?.category })
+  const { minCount, maxCount } = uploadCounts(tool, ['referenceUploadMin', 'minReferenceUploadCount'], ['referenceUploadMax', 'maxReferenceUploadCount'], 0, 1)
   return {
-    acceptTypes: ['image'],
-    maxCount: 1,
-    minCount: 0,
-    label: '参考图片（可选）',
-    actionText: isVideo ? '上传 1 张参考图片' : '添加图片',
-    tip: isVideo
-      ? '支持 JPG / PNG / WebP，建议图片比例与视频比例一致'
-      : '支持 JPG / PNG / WebP，可用于参考构图、主体或风格'
+    acceptTypes: listOption(tool, ['referenceAcceptAssetTypes', 'referenceAssetTypes'], ['image']),
+    maxCount,
+    minCount,
+    label: textOption(tool, ['referenceUploadLabel', 'referenceLabel'], '参考图片（可选）'),
+    actionText: textOption(tool, ['referenceUploadActionText', 'referenceActionText'], maxCount > 1 ? `添加 1-${maxCount} 张参考图片` : (isVideo ? '上传 1 张参考图片' : '添加图片')),
+    tip: textOption(tool, ['referenceUploadTip', 'referenceTip'], isVideo
+      ? `支持 JPG / PNG / WebP，最多 ${maxCount} 张，建议图片比例与视频比例一致`
+      : `支持 JPG / PNG / WebP，最多 ${maxCount} 张，可用于参考构图、主体或风格`)
   }
 }
 
@@ -363,15 +413,109 @@ function mergeFieldError(errors, field, message) {
   }
 }
 
+function decodeRouterParam(value = '') {
+  try {
+    return decodeURIComponent(String(value || ''))
+  } catch (_) {
+    return String(value || '')
+  }
+}
+
+function restoredUploadItem(asset, index) {
+  const type = String(asset?.type || 'image').toLowerCase()
+  const url = String(asset?.url || '')
+  const rawName = url.split('?')[0].split('/').filter(Boolean).pop() || `参考素材 ${index + 1}`
+  return {
+    key: `restored-${asset.id}-${index}`,
+    name: decodeRouterParam(rawName),
+    type,
+    mimeType: asset.mimeType || '',
+    size: Number(asset.size || 0),
+    width: asset.width,
+    height: asset.height,
+    duration: asset.duration,
+    filePath: url,
+    previewPath: type === 'image' ? url : '',
+    remoteUrl: url,
+    assetId: asset.id,
+    status: 'ready',
+    progress: 100,
+    message: '已恢复'
+  }
+}
+
+function restoredUploadState(context, tool, mode) {
+  const assets = Array.isArray(context?.assets) ? context.assets : []
+  const assetById = new Map(assets.map((asset) => [String(asset.id), asset]))
+  const orderedIds = listOf(context?.inputAssetIds)
+  const orderedAssets = orderedIds.map((id) => assetById.get(id)).filter(Boolean)
+  assets.forEach((asset) => {
+    if (!orderedIds.includes(String(asset.id))) orderedAssets.push(asset)
+  })
+  const itemById = new Map(orderedAssets.map((asset, index) => [String(asset.id), restoredUploadItem(asset, index)]))
+  const slots = slotsForMode(tool, mode)
+  if (!slots.length) {
+    return {
+      uploadItems: orderedAssets.map((asset) => itemById.get(String(asset.id))).filter(Boolean),
+      slotUploadItems: {}
+    }
+  }
+  const sourceSlots = context?.inputAssets && typeof context.inputAssets === 'object' ? context.inputAssets : {}
+  const assigned = new Set()
+  const slotUploadItems = Object.fromEntries(slots.map((slot) => {
+    const items = listOf(sourceSlots[slot.slotKey]).map((id) => itemById.get(id)).filter(Boolean)
+    items.forEach((item) => assigned.add(String(item.assetId)))
+    return [slot.slotKey, items]
+  }))
+  const leftovers = orderedAssets
+    .map((asset) => itemById.get(String(asset.id)))
+    .filter((item) => item && !assigned.has(String(item.assetId)))
+  if (leftovers.length) slotUploadItems[slots[0].slotKey] = (slotUploadItems[slots[0].slotKey] || []).concat(leftovers)
+  return { uploadItems: [], slotUploadItems }
+}
+
+function channelOffersOf(tool) {
+  const raw = tool?.options?.channelOffers || tool?.channelOffers || []
+  if (!Array.isArray(raw)) return []
+  return raw.map((offer) => ({
+    id: String(offer?.id || ''),
+    name: String(offer?.name || 'AI 渠道'),
+    logoUrl: String(offer?.logoUrl || ''),
+    pricePoints: Math.max(0, Number(offer?.pricePoints || 0)),
+    pricingVersion: Math.max(1, Number(offer?.pricingVersion || 1)),
+    latencyMs: Math.max(0, Number(offer?.latencyMs || 0)),
+    qualityLabel: String(offer?.qualityLabel || ''),
+    recommended: Boolean(offer?.recommended)
+  })).filter((offer) => offer.id)
+}
+
+function defaultChannelOfferId(tool, offers = channelOffersOf(tool)) {
+  const configured = String(tool?.options?.defaultChannelOfferId || tool?.defaultChannelOfferId || '')
+  if (configured && offers.some((offer) => offer.id === configured)) return configured
+  return (offers.find((offer) => offer.recommended) || offers[0])?.id || ''
+}
+
+function channelLatencyLabel(latencyMs) {
+  const seconds = Math.ceil(Number(latencyMs || 0) / 1000)
+  if (!seconds) return ''
+  return seconds < 60 ? `约 ${seconds} 秒` : `约 ${Math.ceil(seconds / 60)} 分钟`
+}
+
 export default function ToolPage() {
   const params = getCurrentInstance().router?.params || {}
+  const reuseWorkId = decodeRouterParam(params.reuseWorkId)
+  const reuseShareTicket = decodeRouterParam(params.ticket)
   const [tool, setTool] = useState(fallbackTool(params.id))
-  const [prompt, setPrompt] = useState(params.prompt ? decodeURIComponent(params.prompt) : '')
+  const [prompt, setPrompt] = useState(params.prompt ? decodeRouterParam(params.prompt) : '')
   const [style, setStyle] = useState(firstValue(defaultStyles))
   const [ratio, setRatio] = useState('9:16')
   const [resolution, setResolution] = useState('1024x1792')
   const [duration, setDuration] = useState(firstValue(defaultDurations))
   const [model, setModel] = useState(firstValue(defaultModels))
+  const [channelOfferId, setChannelOfferId] = useState('')
+  const [generationQuote, setGenerationQuote] = useState(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
+  const [quoteError, setQuoteError] = useState('')
   const [activeModeKey, setActiveModeKey] = useState('')
   const [uploadItems, setUploadItems] = useState([])
   const [slotUploadItems, setSlotUploadItems] = useState({})
@@ -396,26 +540,47 @@ export default function ToolPage() {
     }
     let mounted = true
     setToolLoading(true)
-    fetchTool(params.id)
-      .then((data) => {
+    const reuseContextRequest = reuseWorkId
+      ? prepareWorkReuseContext(reuseWorkId, { shareTicket: reuseShareTicket })
+      : Promise.resolve(null)
+    Promise.all([fetchTool(params.id), reuseContextRequest])
+      .then(([data, reuseContext]) => {
         if (!mounted) return
         if (!data) {
           setToolError('工具配置不存在或已下架，请稍后重试。')
           return
         }
         setTool(data)
-        const nextMode = modeForKey(data)
+        const nextMode = modeForKey(data, reuseContext?.modeKey)
+        const nextActiveTool = toolWithMode(data, nextMode)
+        const restoredParams = reuseContext?.params || {}
+        const nextChannelOffers = channelOffersOf(nextActiveTool)
+        const restoredChannelOfferId = String(reuseContext?.channelOfferId || '')
+        setChannelOfferId(restoredChannelOfferId && nextChannelOffers.some((offer) => offer.id === restoredChannelOfferId)
+          ? restoredChannelOfferId
+          : defaultChannelOfferId(nextActiveTool, nextChannelOffers))
+        setGenerationQuote(null)
+        setQuoteError('')
         setActiveModeKey(nextMode ? modeKeyOf(nextMode) : '')
-        setUploadItems([])
-        setSlotUploadItems({})
-        setStyle((current) => nextSelected(data, 'styles', defaultStyles, current))
+        if (reuseContext) {
+          const restoredUploads = restoredUploadState(reuseContext, data, nextMode)
+          setPrompt(reuseContext.prompt || '')
+          setUploadItems(restoredUploads.uploadItems)
+          setSlotUploadItems(restoredUploads.slotUploadItems)
+        } else {
+          setPrompt(params.prompt ? decodeRouterParam(params.prompt) : '')
+          setUploadItems([])
+          setSlotUploadItems({})
+        }
+        setStyle((current) => nextSelected(nextActiveTool, 'styles', defaultStyles, reuseContext ? restoredParams.style : current))
         setRatio((current) => {
-          const nextRatio = nextSelected(data, 'ratios', defaultRatios, current)
-          setResolution((resolutionValue) => nextResolution(data, nextRatio, resolutionValue))
+          const nextRatio = nextSelected(nextActiveTool, 'ratios', defaultRatios, reuseContext ? restoredParams.ratio : current)
+          setResolution((resolutionValue) => nextResolution(nextActiveTool, nextRatio, reuseContext ? (restoredParams.resolution || restoredParams.size) : resolutionValue))
           return nextRatio
         })
-        setDuration((current) => nextSelected(data, 'durations', defaultDurations, current))
-        setModel((current) => nextSelected(data, 'models', defaultModels, current))
+        setDuration((current) => nextSelected(nextActiveTool, 'durations', defaultDurations, reuseContext ? restoredParams.duration : current))
+        setModel((current) => nextSelected(nextActiveTool, 'models', defaultModels, reuseContext ? (reuseContext.modelKey || restoredParams.modelKey || restoredParams.model) : current))
+        setFormErrors({})
         setToolError('')
       })
       .catch((error) => {
@@ -430,7 +595,7 @@ export default function ToolPage() {
   useEffect(() => {
     const cleanup = loadTool()
     return cleanup
-  }, [params.id, configLoading, generationEnabled])
+  }, [params.id, params.prompt, reuseWorkId, reuseShareTicket, configLoading, generationEnabled])
 
   useEffect(() => {
     setResolution((current) => nextResolution(tool, ratio, current))
@@ -439,6 +604,11 @@ export default function ToolPage() {
   const availableModes = enabledModes(tool)
   const activeMode = modeForKey(tool, activeModeKey)
   const activeTool = toolWithMode(tool, activeMode)
+  const channelOffers = channelOffersOf(activeTool)
+  const effectiveChannelOfferId = channelOffers.some((offer) => offer.id === channelOfferId)
+    ? channelOfferId
+    : defaultChannelOfferId(activeTool, channelOffers)
+  const selectedChannelOffer = channelOffers.find((offer) => offer.id === effectiveChannelOfferId) || null
   const activeFields = fieldsForMode(tool, activeMode)
   const assetSlots = slotsForMode(tool, activeMode)
   const usesAssetSlots = assetSlots.length > 0
@@ -446,8 +616,7 @@ export default function ToolPage() {
   const toolOutputType = outputTypeOf(tool, activeMode)
   const videoMode = isVideoTool({ ...activeTool, category: toolOutputType || activeTool?.category })
   const imageMode = isImageTool(activeTool, activeMode)
-  const mediaMode = isCreativeMediaTool(activeTool, activeMode)
-  const canUseOptionalReferenceUpload = mediaMode && !usesAssetSlots && !needs('upload') && !needs('multiUpload')
+  const canUseOptionalReferenceUpload = !usesAssetSlots && !needs('upload') && !needs('multiUpload') && allowsOptionalReferenceUpload(activeTool, activeMode)
   const shouldRenderLegacyUpload = !usesAssetSlots && (needs('upload') || needs('multiUpload') || canUseOptionalReferenceUpload)
   const styleOptions = optionList(activeTool, 'styles', defaultStyles)
   const ratioOptions = optionList(activeTool, 'ratios', defaultRatios)
@@ -465,7 +634,7 @@ export default function ToolPage() {
   const effectiveResolution = selectedResolution || firstValue(resolutionOptions) || normalizedResolution
   const resolutionLabel = videoMode ? '视频精度' : '输出尺寸'
   const uploadConfig = canUseOptionalReferenceUpload ? optionalReferenceUploadConfig(activeTool, activeMode) : inferUploadConfig(activeTool)
-  const submitCost = Number(activeTool?.cost ?? tool?.cost ?? 0) || 0
+  const submitCost = Number(generationQuote?.pricePoints ?? selectedChannelOffer?.pricePoints ?? activeTool?.cost ?? tool?.cost ?? 0) || 0
   const inputAssets = usesAssetSlots
     ? Object.fromEntries(assetSlots.map((slot) => [
       slot.slotKey,
@@ -474,21 +643,93 @@ export default function ToolPage() {
     : {}
   const assetIds = usesAssetSlots
     ? Object.values(inputAssets).flat()
-    : uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+    : shouldRenderLegacyUpload
+      ? uploadItems.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
+      : []
   const uploaded = usesAssetSlots
     ? assetSlots.every((slot) => (inputAssets[slot.slotKey] || []).length >= slotMinCount(slot))
     : assetIds.length > 0
   const referenceRequired = usesAssetSlots
     ? assetSlots.some((slot) => slotMinCount(slot) > 0)
     : needs('upload') || needs('multiUpload')
+  const referenceAvailable = usesAssetSlots || shouldRenderLegacyUpload
+  const hasPendingUpload = usesAssetSlots
+    ? Object.values(slotUploadItems).flat().some((item) => item.status === 'pending' || item.status === 'uploading')
+    : uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')
+  const generationParams = {
+    style,
+    ratio,
+    resolution: effectiveResolution,
+    size: effectiveResolution,
+    duration,
+    ...(channelOffers.length ? {} : { model: effectiveModel }),
+    count: 1
+  }
+  const generationRequestPayload = {
+    toolKey: tool.id,
+    prompt,
+    modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
+    channelOfferId: effectiveChannelOfferId || undefined,
+    params: generationParams,
+    ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
+  }
+  const quoteRequestKey = JSON.stringify(generationRequestPayload)
+  const canRequestQuote = Boolean(
+    generationEnabled
+    && isLoggedIn()
+    && effectiveChannelOfferId
+    && prompt.trim()
+    && (!referenceRequired || uploaded)
+    && !hasPendingUpload
+  )
   const promptLabel = videoMode ? '视频创意描述' : '提示词'
   const promptPlaceholder = videoMode
     ? '请描述你想要的视频效果，例如：一只可爱的小猫在沙滩上抓螃蟹，镜头缓慢推进，主体清晰，画面自然流畅'
     : '请输入绘图提示词，描述你想要生成的图片、主体、风格、构图和氛围'
-  const helperCopy = videoMode
-    ? (referenceRequired ? '当前模式需要先上传参考图片，再根据描述生成视频。' : '可上传参考图片辅助画面构图，也可以只输入描述生成视频。')
-    : (referenceRequired ? '当前模式会结合参考图片与提示词生成新图片。' : '可上传参考图片辅助构图、主体或风格，也可以只输入提示词生成。')
+  const helperCopy = referenceAvailable
+    ? (videoMode
+      ? (referenceRequired ? '当前模式需要先上传参考图片，再根据描述生成视频。' : '可上传参考图片辅助画面构图，也可以只输入描述生成视频。')
+      : (referenceRequired ? '当前模式会结合参考图片与提示词生成新图片。' : '可上传参考图片辅助构图、主体或风格，也可以只输入提示词生成。'))
+    : (videoMode ? '输入描述后直接生成视频。' : '输入提示词后直接生成图片。')
   const submitLabel = videoMode ? '生成视频' : '生成图片'
+
+  useEffect(() => {
+    if (!effectiveChannelOfferId || channelOfferId === effectiveChannelOfferId) return
+    setChannelOfferId(effectiveChannelOfferId)
+    setGenerationQuote(null)
+    setQuoteError('')
+  }, [effectiveChannelOfferId, channelOfferId])
+
+  useEffect(() => {
+    if (!canRequestQuote) {
+      setGenerationQuote(null)
+      setQuoteLoading(false)
+      setQuoteError('')
+      return undefined
+    }
+    let canceled = false
+    const timer = setTimeout(() => {
+      setQuoteLoading(true)
+      createGenerationQuote(generationRequestPayload)
+        .then((quote) => {
+          if (!canceled) {
+            setGenerationQuote({ ...quote, requestKey: quoteRequestKey })
+            setQuoteError('')
+          }
+        })
+        .catch((error) => {
+          if (!canceled) {
+            setGenerationQuote(null)
+            setQuoteError(error.message || '渠道报价暂不可用')
+          }
+        })
+        .finally(() => !canceled && setQuoteLoading(false))
+    }, 350)
+    return () => {
+      canceled = true
+      clearTimeout(timer)
+    }
+  }, [canRequestQuote, quoteRequestKey])
 
   if (!generationEnabled) {
     return (
@@ -578,6 +819,17 @@ export default function ToolPage() {
     }
   }
 
+  const ensureGenerationQuote = async () => {
+    if (!effectiveChannelOfferId) return null
+    const expiresAt = generationQuote?.expiresAt ? new Date(generationQuote.expiresAt).getTime() : 0
+    if (generationQuote?.requestKey === quoteRequestKey && expiresAt > Date.now() + 5000) return generationQuote
+    const quote = await createGenerationQuote(generationRequestPayload)
+    const nextQuote = { ...quote, requestKey: quoteRequestKey }
+    setGenerationQuote(nextQuote)
+    setQuoteError('')
+    return nextQuote
+  }
+
   const chooseUpload = async (slot = null) => {
     if (uploading) return
     if (!requireLogin(`/pages/tool/index?id=${tool.id}`)) return
@@ -612,7 +864,15 @@ export default function ToolPage() {
         })
       }
       if (!validFiles.length) return
-      const pendingItems = validFiles.map((file) => ({
+      const uploadFiles = videoMode
+        ? await Promise.all(validFiles.map((file) => normalizeImageForVideoReference(file)))
+        : validFiles
+      const normalizedReference = uploadFiles.find((file) => file.videoReferenceNormalized)
+      if (normalizedReference?.targetRatio) {
+        setRatio(normalizedReference.targetRatio)
+        clearFieldError('ratio')
+      }
+      const pendingItems = uploadFiles.map((file) => ({
         ...file,
         status: 'pending',
         progress: 0,
@@ -635,7 +895,10 @@ export default function ToolPage() {
             type: file.type,
             filename: file.name,
             mimeType: file.mimeType,
-            size: file.size
+            size: file.size,
+            width: file.width,
+            height: file.height,
+            duration: file.duration
           })
           if (policy.configured) {
             await uploadToOss(policy, file, (progress) => updateUploadItem(file.key, { progress }, slotKey))
@@ -646,16 +909,22 @@ export default function ToolPage() {
             url: policy.publicUrl,
             ossKey: policy.ossKey,
             mimeType: file.mimeType,
-            size: file.size
+            size: file.size,
+            width: file.width,
+            height: file.height,
+            duration: file.duration
           })
           successCount += 1
           updateUploadItem(file.key, {
             assetId: asset.id,
             remoteUrl: policy.publicUrl,
+            filePath: policy.publicUrl,
+            previewPath: file.type === 'image' ? policy.publicUrl : file.previewPath,
             status: 'ready',
             progress: 100,
             message: '已上传'
           }, slotKey)
+          if (file.videoReferenceNormalized && typeof URL !== 'undefined') URL.revokeObjectURL(file.filePath)
         } catch (error) {
           updateUploadItem(file.key, {
             status: 'failed',
@@ -677,13 +946,10 @@ export default function ToolPage() {
     const clientRuntime = getClientRuntime()
     Taro.showLoading({ title: '创建支付' })
     try {
+      const activeQuote = await ensureGenerationQuote()
       const paymentPayload = await createGenerationPaymentOrder({
-        toolKey: tool.id,
-        modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        modelKey: effectiveModel,
-        prompt,
-        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 },
-        ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds }),
+        ...generationRequestPayload,
+        ...(effectiveChannelOfferId ? { quoteId: activeQuote?.quoteId } : {}),
         clientRuntime
       })
       const order = paymentPayload.order
@@ -752,6 +1018,12 @@ export default function ToolPage() {
       Taro.showToast({ title: '请输入提示词', icon: 'none' })
       return
     }
+    if (channelOffers.length && !effectiveChannelOfferId) {
+      nextErrors = mergeFieldError(nextErrors, 'channelOfferId', '请选择可用的生成渠道')
+      setFormErrors(nextErrors)
+      Taro.showToast({ title: '请选择生成渠道', icon: 'none' })
+      return
+    }
     if (usesAssetSlots) {
       for (const slot of assetSlots) {
         const count = (inputAssets[slot.slotKey] || []).length
@@ -777,9 +1049,6 @@ export default function ToolPage() {
       Taro.showToast({ title: `请至少添加 ${uploadConfig.minCount} 张参考素材`, icon: 'none' })
       return
     }
-    const hasPendingUpload = usesAssetSlots
-      ? Object.values(slotUploadItems).flat().some((item) => item.status === 'pending' || item.status === 'uploading')
-      : uploadItems.some((item) => item.status === 'pending' || item.status === 'uploading')
     if (hasPendingUpload) {
       nextErrors = mergeFieldError(nextErrors, usesAssetSlots ? 'inputAssets' : 'inputAssetIds', '素材仍在上传中')
       setFormErrors(nextErrors)
@@ -789,17 +1058,21 @@ export default function ToolPage() {
     setFormErrors({})
     setBusy(true)
     try {
+      const activeQuote = await ensureGenerationQuote()
       const result = await createGenerationTask({
-        toolKey: tool.id,
-        prompt,
-        modeKey: activeMode ? modeKeyOf(activeMode) : undefined,
-        params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 },
-        ...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })
+        ...generationRequestPayload,
+        ...(effectiveChannelOfferId ? { quoteId: activeQuote?.quoteId } : {})
       })
       const work = result.work
       Taro.showToast({ title: '任务已提交', icon: 'success' })
       goPage(`/pages/work-detail/index?id=${work.id}`)
     } catch (error) {
+      if (error.action === 'refresh_quote' || String(error.code || '').startsWith('GENERATION_QUOTE_')) {
+        setGenerationQuote(null)
+        setQuoteError(error.message || '报价已变化，请重新确认')
+        Taro.showToast({ title: error.message || '报价已变化，请重新确认', icon: 'none' })
+        return
+      }
       if (error.code === 'INSUFFICIENT_CREDITS' || error.action === 'refresh_payment') {
         await beginGenerationPayment()
         return
@@ -819,11 +1092,12 @@ export default function ToolPage() {
   const renderUploadBlock = ({ blockKey = '', label, config, items, errorKey, onClick, required = false }) => {
     const readyIds = items.filter((item) => item.status === 'ready' && item.assetId).map((item) => item.assetId)
     const hasReady = readyIds.length > 0
+    const readyActionText = Number(config.maxCount || 1) > 1 && readyIds.length < Number(config.maxCount || 1) ? '继续添加' : '重新选择'
     return (
       <>
         <View className='tool-field-head'>
           <Text className='input-label'>{fieldLabelWithRequired(label || config.label, required)}</Text>
-          {hasReady ? <Text className='tool-field-action' onClick={onClick}>重新选择</Text> : null}
+          {hasReady ? <Text className='tool-field-action' onClick={onClick}>{readyActionText}</Text> : null}
         </View>
         <View className={`${uploading ? 'upload-box tool-upload-box uploading' : 'upload-box tool-upload-box'}${fieldError(formErrors, errorKey) ? ' has-error' : ''}`} onClick={onClick}>
           <View className='tool-upload-empty'>
@@ -920,7 +1194,11 @@ export default function ToolPage() {
                     key={key}
                     className={activeMode && modeKeyOf(activeMode) === key ? 'tool-mode-card active' : 'tool-mode-card'}
                     onClick={() => {
+                      const nextModeTool = toolWithMode(tool, mode)
                       setActiveModeKey(key)
+                      setChannelOfferId(defaultChannelOfferId(nextModeTool))
+                      setGenerationQuote(null)
+                      setQuoteError('')
                       setUploadItems([])
                       setSlotUploadItems({})
                       setFormErrors({})
@@ -931,6 +1209,50 @@ export default function ToolPage() {
                 )
               })}
             </View>
+          </>
+        ) : null}
+
+        {channelOffers.length ? (
+          <>
+            <View className='tool-field-head tool-channel-head'>
+              <View className='tool-label-with-icon'>
+                <AppIcon name='fusion' size={15} />
+                <Text className='input-label'>{fieldLabelWithRequired('生成渠道', true)}</Text>
+              </View>
+              <Text className='tool-quote-state'>{quoteLoading ? '报价同步中' : generationQuote ? '报价已锁定' : '选择后自动报价'}</Text>
+            </View>
+            <View className={fieldError(formErrors, 'channelOfferId') ? 'tool-channel-grid has-error' : 'tool-channel-grid'}>
+              {channelOffers.map((offer) => {
+                const active = effectiveChannelOfferId === offer.id
+                return (
+                  <View
+                    key={offer.id}
+                    className={active ? 'tool-channel-card active' : 'tool-channel-card'}
+                    onClick={() => {
+                      clearFieldError('channelOfferId')
+                      setChannelOfferId(offer.id)
+                      setGenerationQuote(null)
+                      setQuoteError('')
+                    }}
+                  >
+                    <View className='tool-channel-logo'>
+                      {offer.logoUrl ? <Image src={offer.logoUrl} mode='aspectFit' /> : <AppIcon name='sparkles' size={18} />}
+                    </View>
+                    <View className='tool-channel-copy'>
+                      <View className='tool-channel-title-row'>
+                        <Text className='tool-channel-name'>{offer.name}</Text>
+                        {offer.recommended ? <Text className='tool-channel-tag'>推荐</Text> : null}
+                        {offer.qualityLabel ? <Text className='tool-channel-tag secondary'>{offer.qualityLabel}</Text> : null}
+                      </View>
+                      <Text className='tool-channel-latency'>{channelLatencyLabel(offer.latencyMs) || '可立即提交'}</Text>
+                    </View>
+                    <Text className='tool-channel-price'>{offer.pricePoints} 点</Text>
+                  </View>
+                )
+              })}
+            </View>
+            {fieldError(formErrors, 'channelOfferId') ? <Text className='field-error'>{fieldError(formErrors, 'channelOfferId')}</Text> : null}
+            {quoteError ? <InlineNotice tone='warning'>{quoteError}</InlineNotice> : null}
           </>
         ) : null}
 
