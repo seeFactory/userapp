@@ -24,6 +24,17 @@ export const uploadLimits = {
   }
 }
 
+export const videoReferenceTargets = {
+  portrait: { width: 720, height: 1280, ratio: '9:16', resolution: '720x1280' },
+  landscape: { width: 1280, height: 720, ratio: '16:9', resolution: '1280x720' }
+}
+
+export function videoReferenceTargetForDimensions(dimensions = {}) {
+  return Number(dimensions.width || 0) > Number(dimensions.height || 0)
+    ? videoReferenceTargets.landscape
+    : videoReferenceTargets.portrait
+}
+
 export function formatFileSize(size = 0) {
   if (!size) return '未知大小'
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(size > 10 * 1024 * 1024 ? 0 : 1)} MB`
@@ -55,6 +66,8 @@ function normalizeFile(file, fallbackType, index) {
   const name = file.name || file.originalFileObj?.name || filePath.split(/[\\/]/).pop() || `${fallbackType}-${Date.now()}-${index}`
   const type = inferFileType(file, fallbackType)
   const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
+  const width = Number(file.width || file.originalFileObj?.width || 0)
+  const height = Number(file.height || file.originalFileObj?.height || 0)
   return {
     key: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
     type,
@@ -62,8 +75,35 @@ function normalizeFile(file, fallbackType, index) {
     filePath,
     previewPath: file.thumbTempFilePath || filePath,
     size: Number(file.size || file.originalFileObj?.size || 0),
-    mimeType: String(rawMimeType).includes('/') ? rawMimeType : ''
+    mimeType: String(rawMimeType).includes('/') ? rawMimeType : '',
+    width: Number.isFinite(width) && width > 0 ? Math.floor(width) : undefined,
+    height: Number.isFinite(height) && height > 0 ? Math.floor(height) : undefined,
+    originalFileObj: file.originalFileObj || file.originalFile || null
   }
+}
+
+function browserImageInfo(src) {
+  if (typeof window === 'undefined' || !window.Image || !src) return Promise.resolve({})
+  return new Promise((resolve) => {
+    const image = new window.Image()
+    image.onload = () => resolve({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height })
+    image.onerror = () => resolve({})
+    image.src = src
+  })
+}
+
+async function withImageInfo(files) {
+  return Promise.all(files.map(async (file) => {
+    if (file.type !== 'image' || (file.width && file.height)) return file
+    let info = {}
+    if (typeof Taro.getImageInfo === 'function' && file.filePath) {
+      try {
+        info = await Taro.getImageInfo({ src: file.filePath })
+      } catch (_) {}
+    }
+    if (!info.width || !info.height) info = await browserImageInfo(file.filePath || file.previewPath)
+    return { ...file, width: Number(info.width) || undefined, height: Number(info.height) || undefined }
+  }))
 }
 
 export function validateUploadFile(file, config, subject = '当前工具') {
@@ -91,14 +131,14 @@ export async function chooseTypedFiles(config) {
         sizeType: ['compressed'],
         sourceType: ['album', 'camera']
       })
-      return (result.tempFiles || []).map((file, index) => normalizeFile({ ...file, fileType: 'image' }, 'image', index))
+      return withImageInfo((result.tempFiles || []).map((file, index) => normalizeFile({ ...file, fileType: 'image' }, 'image', index)))
     }
     const result = await Taro.chooseImage({
       count: config.maxCount,
       sizeType: ['compressed'],
       sourceType: ['album', 'camera']
     })
-    return (result.tempFiles || []).map((file, index) => normalizeFile(file, 'image', index))
+    return withImageInfo((result.tempFiles || []).map((file, index) => normalizeFile(file, 'image', index)))
   }
   if (chosenType === 'video') {
     if (typeof Taro.chooseMedia === 'function') {
@@ -131,7 +171,94 @@ export async function chooseTypedFiles(config) {
   throw new Error('当前平台暂不支持选择该类型素材')
 }
 
+async function resolveUploadBlob(file) {
+  if (typeof Blob !== 'undefined' && file?.originalFileObj instanceof Blob) return file.originalFileObj
+  if (file?.filePath && typeof fetch === 'function') {
+    const response = await fetch(file.filePath)
+    if (response.ok) return response.blob()
+  }
+  throw new Error('素材文件读取失败，请重新选择')
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('参考图适配失败，请重新上传')), 'image/jpeg', 0.92)
+  })
+}
+
+export async function normalizeImageForVideoReference(file) {
+  if (file?.type !== 'image' || process.env.TARO_ENV !== 'h5') return file
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof window === 'undefined') return file
+  const sourceBlob = await resolveUploadBlob(file)
+  const sourceUrl = URL.createObjectURL(sourceBlob)
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new window.Image()
+      element.onload = () => resolve(element)
+      element.onerror = () => reject(new Error('参考图读取失败，请重新上传'))
+      element.src = sourceUrl
+    })
+    const sourceWidth = Number(file.width || image.naturalWidth || image.width || 0)
+    const sourceHeight = Number(file.height || image.naturalHeight || image.height || 0)
+    if (!sourceWidth || !sourceHeight) return file
+    const target = videoReferenceTargetForDimensions({ width: sourceWidth, height: sourceHeight })
+    const canvas = document.createElement('canvas')
+    canvas.width = target.width
+    canvas.height = target.height
+    const context = canvas.getContext('2d')
+    if (!context) return file
+    const scale = Math.max(target.width / sourceWidth, target.height / sourceHeight)
+    const drawWidth = sourceWidth * scale
+    const drawHeight = sourceHeight * scale
+    context.fillStyle = '#000'
+    context.fillRect(0, 0, target.width, target.height)
+    context.drawImage(image, (target.width - drawWidth) / 2, (target.height - drawHeight) / 2, drawWidth, drawHeight)
+    const outputBlob = await canvasToBlob(canvas)
+    const outputUrl = URL.createObjectURL(outputBlob)
+    return {
+      ...file,
+      name: String(file.name || `video-reference-${Date.now()}.jpg`).replace(/\.[a-z0-9]{2,8}$/i, '.jpg'),
+      filePath: outputUrl,
+      previewPath: outputUrl,
+      size: outputBlob.size,
+      mimeType: 'image/jpeg',
+      width: target.width,
+      height: target.height,
+      targetRatio: target.ratio,
+      targetResolution: target.resolution,
+      videoReferenceNormalized: true,
+      originalFileObj: outputBlob
+    }
+  } finally {
+    URL.revokeObjectURL(sourceUrl)
+  }
+}
+
+function uploadViaSignedPut(policy, file, onProgress) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const blob = await resolveUploadBlob(file)
+      const xhr = new XMLHttpRequest()
+      xhr.open(policy.httpMethod || 'PUT', policy.uploadUrl, true)
+      Object.entries(policy.headers || {}).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') xhr.setRequestHeader(key, String(value))
+      })
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress(Math.max(1, Math.min(95, Math.round((event.loaded / event.total) * 100))))
+      }
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300
+        ? resolve({ statusCode: xhr.status, data: xhr.responseText })
+        : reject(new Error('OSS 上传失败，请稍后重试'))
+      xhr.onerror = () => reject(new Error('素材上传失败，请检查网络或上传域名配置'))
+      xhr.send(blob)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
 export function uploadToOss(policy, file, onProgress) {
+  if (policy?.uploadMode === 'signed-put') return uploadViaSignedPut(policy, file, onProgress)
   return new Promise((resolve, reject) => {
     const task = Taro.uploadFile({
       url: policy.uploadUrl,
