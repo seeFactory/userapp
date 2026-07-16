@@ -129,6 +129,7 @@ export function normalizeWorkMedia(item = {}) {
 export function toApiWork(item) {
   const category = item.type || item.category || 'image'
   return normalizeWorkMedia({
+    ...item,
     id: item.id,
     title: item.galleryTitle || item.title || item.prompt?.slice(0, 18) || 'seeFactory 作品',
     category,
@@ -457,6 +458,22 @@ export async function fetchWorks(params = {}) {
 
 export async function fetchWork(id) {
   return toApiWork(await request(`/works/${id}`))
+}
+
+export async function prepareWorkReuseContext(id, options = {}) {
+  return request(`/works/${id}/reuse-context`, {
+    method: 'POST',
+    data: {
+      ...(options.shareTicket ? { shareTicket: options.shareTicket } : {})
+    }
+  })
+}
+
+export async function createGenerationQuote(payload) {
+  return request('/generation-quotes', {
+    method: 'POST',
+    data: payload
+  })
 }
 
 export async function createGenerationTask(payload) {
