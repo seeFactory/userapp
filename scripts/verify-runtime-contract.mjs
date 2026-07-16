@@ -335,10 +335,11 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "ratioFrameClass(item)",
   "needs('resolution')",
   "fieldError(formErrors, 'resolution')",
-  "modelKey: effectiveModel,",
+  "...(channelOffers.length ? {} : { model: effectiveModel })",
   "prompt,",
   "...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })",
-  "params: { style, ratio, resolution: effectiveResolution, size: effectiveResolution, duration, model: effectiveModel, count: 1 }"
+  "const generationParams = {",
+  "const generationRequestPayload = {"
 ]);
 
 const workflowLinearPage = source("src/pages/workflow-linear/index.jsx");
@@ -505,7 +506,8 @@ assertIncludesAll(packageSource, "package.json verification contract", [
   "\"verify:runtime-contract\"",
   "\"verify:env-example\"",
   "\"verify:branch-diff\"",
-  "pnpm verify:runtime-contract && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:branch-diff && pnpm build:all"
+  "\"verify:generation-core-upgrades\"",
+  "pnpm verify:runtime-contract && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:generation-core-upgrades && pnpm verify:branch-diff && pnpm build:all"
 ]);
 
 const envExample = source(".env.example");
