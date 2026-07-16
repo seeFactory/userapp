@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import Taro, { getCurrentInstance } from '@tarojs/taro'
-import { View, Text, Image, Video } from '@tarojs/components'
+import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import WorkMedia from '../../components/WorkMedia'
 import { ErrorState, PageLoading } from '../../components/PageState'
 import {
   cancelGenerationTask,
@@ -16,7 +17,6 @@ import {
   getDownloadUrl,
   normalizeWorkMedia,
   publishGalleryWork,
-  retryGenerationTask,
   unpublishGalleryWork
 } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
@@ -252,18 +252,14 @@ export default function WorkDetail() {
     })
   }
 
-  const retry = async () => {
-    if (work.generationTaskId && work.status === 'failed') {
-      try {
-        const result = await retryGenerationTask(work.generationTaskId)
-        Taro.showToast({ title: '已重新提交', icon: 'success' })
-        goPage(`/pages/work-detail/index?id=${result.work.id}`, { replace: true })
-        return
-      } catch (error) {
-        Taro.showToast({ title: error.message || '重试失败', icon: 'none' })
-      }
-    }
-    goPage(`/pages/tool/index?id=${work.toolKey || 'factory-painter'}&prompt=${encodeURIComponent(work.prompt || '')}`)
+  const reuseWork = () => {
+    const query = [
+      `id=${encodeURIComponent(work.toolKey || 'factory-painter')}`,
+      `reuseWorkId=${encodeURIComponent(work.id)}`
+    ]
+    if (source) query.push(`source=${encodeURIComponent(source)}`)
+    if (ticket) query.push(`ticket=${encodeURIComponent(ticket)}`)
+    goPage(`/pages/tool/index?${query.join('&')}`)
   }
 
   const saveWork = async () => {
@@ -411,11 +407,14 @@ export default function WorkDetail() {
 
   return (
     <Shell title='作品详情' showTab={false} backFallback={backFallback} onRefresh={work?.generationTaskId && isActiveStatus(work.status) ? (() => refreshTaskStatus(true)) : loadWorkDetail}>
-      {media && mediaKind === 'video' ? (
-        <Video className='detail-image' src={media} poster={preview} controls />
-      ) : (
-        <Image className='detail-image' src={preview} mode='aspectFill' />
-      )}
+      <WorkMedia
+        item={{ ...work, mediaUrl: media, mediaKind, previewUrl: preview, coverUrl: work.coverUrl, resultUrls: work.resultUrls || [] }}
+        className='detail-image'
+        controls={mediaKind === 'video'}
+        muted
+        objectFit={mediaKind === 'video' ? 'contain' : 'cover'}
+        showBadge={false}
+      />
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
           <BrandLogo size={42} />
@@ -495,9 +494,9 @@ export default function WorkDetail() {
       </View>
       {publicLikeDetail ? (
         <View className='hero-actions'>
-          <View className='primary-button' onClick={retry}>
+          <View className='primary-button' onClick={reuseWork}>
             <AppIcon name='wand' size={16} />
-            <Text>同款创作</Text>
+            <Text>做同款</Text>
           </View>
         </View>
       ) : (
@@ -512,18 +511,18 @@ export default function WorkDetail() {
           </View>
         </View>
       )}
-      <View className='hero-actions'>
-        <View className='ghost-button glass-button' onClick={retry}>
-          <AppIcon name='refresh' size={16} />
-          <Text>{publicLikeDetail ? '带入提示词' : '重新生成'}</Text>
-        </View>
-        {!publicLikeDetail && (
+      {!publicLikeDetail && (
+        <View className='hero-actions'>
+          <View className='ghost-button glass-button' onClick={reuseWork}>
+            <AppIcon name='refresh' size={16} />
+            <Text>重新生成</Text>
+          </View>
           <View className='danger-button transparent-button' onClick={remove}>
             <AppIcon name='delete' size={16} />
             <Text>删除</Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </Shell>
   )
 }
