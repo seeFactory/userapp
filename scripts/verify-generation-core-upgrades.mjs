@@ -18,6 +18,11 @@ for (const pattern of ['createGenerationQuote', "request('/generation-quotes'", 
 }
 for (const pattern of [
   'channelOffersOf',
+  'availabilityStatus',
+  'disabledReason',
+  'channelSelectionUnavailable',
+  "offer.selectable !== false",
+  "AppIcon name='lock'",
   'effectiveChannelOfferId',
   'quoteId: activeQuote?.quoteId',
   'prepareWorkReuseContext(reuseWorkId',
