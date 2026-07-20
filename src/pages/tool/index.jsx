@@ -485,14 +485,17 @@ function channelOffersOf(tool) {
     pricingVersion: Math.max(1, Number(offer?.pricingVersion || 1)),
     latencyMs: Math.max(0, Number(offer?.latencyMs || 0)),
     qualityLabel: String(offer?.qualityLabel || ''),
+    selectable: offer?.selectable !== false,
+    availabilityStatus: String(offer?.availabilityStatus || 'available'),
+    disabledReason: String(offer?.disabledReason || ''),
     recommended: Boolean(offer?.recommended)
   })).filter((offer) => offer.id)
 }
 
 function defaultChannelOfferId(tool, offers = channelOffersOf(tool)) {
   const configured = String(tool?.options?.defaultChannelOfferId || tool?.defaultChannelOfferId || '')
-  if (configured && offers.some((offer) => offer.id === configured)) return configured
-  return (offers.find((offer) => offer.recommended) || offers[0])?.id || ''
+  if (configured && offers.some((offer) => offer.id === configured && offer.selectable)) return configured
+  return (offers.find((offer) => offer.recommended && offer.selectable) || offers.find((offer) => offer.selectable))?.id || ''
 }
 
 function channelLatencyLabel(latencyMs) {
@@ -605,10 +608,12 @@ export default function ToolPage() {
   const activeMode = modeForKey(tool, activeModeKey)
   const activeTool = toolWithMode(tool, activeMode)
   const channelOffers = channelOffersOf(activeTool)
-  const effectiveChannelOfferId = channelOffers.some((offer) => offer.id === channelOfferId)
+  const effectiveChannelOfferId = channelOffers.some((offer) => offer.id === channelOfferId && offer.selectable)
     ? channelOfferId
     : defaultChannelOfferId(activeTool, channelOffers)
   const selectedChannelOffer = channelOffers.find((offer) => offer.id === effectiveChannelOfferId) || null
+  const selectableChannelOffers = channelOffers.filter((offer) => offer.selectable)
+  const channelSelectionUnavailable = channelOffers.length > 0 && selectableChannelOffers.length === 0
   const activeFields = fieldsForMode(tool, activeMode)
   const assetSlots = slotsForMode(tool, activeMode)
   const usesAssetSlots = assetSlots.length > 0
@@ -1019,9 +1024,10 @@ export default function ToolPage() {
       return
     }
     if (channelOffers.length && !effectiveChannelOfferId) {
-      nextErrors = mergeFieldError(nextErrors, 'channelOfferId', '请选择可用的生成渠道')
+      const message = channelSelectionUnavailable ? '当前暂无可用生成渠道' : '请选择可用的生成渠道'
+      nextErrors = mergeFieldError(nextErrors, 'channelOfferId', message)
       setFormErrors(nextErrors)
-      Taro.showToast({ title: '请选择生成渠道', icon: 'none' })
+      Taro.showToast({ title: message, icon: 'none' })
       return
     }
     if (usesAssetSlots) {
@@ -1156,9 +1162,12 @@ export default function ToolPage() {
         <AppIcon name='clock' size={17} />
         <Text>生成记录</Text>
       </View>
-      <View className={busy || uploading ? 'tool-generate-button disabled' : 'tool-generate-button'} onClick={submit}>
+      <View
+        className={busy || uploading || channelSelectionUnavailable ? 'tool-generate-button disabled' : 'tool-generate-button'}
+        onClick={busy || uploading || channelSelectionUnavailable ? undefined : submit}
+      >
         <AppIcon name='wand' size={16} />
-        <Text>{busy ? '生成中...' : `消耗 ${submitCost} 点 ${submitLabel}`}</Text>
+        <Text>{busy ? '生成中...' : channelSelectionUnavailable ? '暂无可用渠道' : `消耗 ${submitCost} 点 ${submitLabel}`}</Text>
       </View>
     </View>
   )
@@ -1219,21 +1228,23 @@ export default function ToolPage() {
                 <AppIcon name='fusion' size={15} />
                 <Text className='input-label'>{fieldLabelWithRequired('生成渠道', true)}</Text>
               </View>
-              <Text className='tool-quote-state'>{quoteLoading ? '报价同步中' : generationQuote ? '报价已锁定' : '选择后自动报价'}</Text>
+              <Text className='tool-quote-state'>{channelSelectionUnavailable ? '渠道配置中' : quoteLoading ? '报价同步中' : generationQuote ? '报价已锁定' : '选择后自动报价'}</Text>
             </View>
             <View className={fieldError(formErrors, 'channelOfferId') ? 'tool-channel-grid has-error' : 'tool-channel-grid'}>
               {channelOffers.map((offer) => {
                 const active = effectiveChannelOfferId === offer.id
+                const selectable = offer.selectable !== false
                 return (
                   <View
                     key={offer.id}
-                    className={active ? 'tool-channel-card active' : 'tool-channel-card'}
-                    onClick={() => {
+                    className={`tool-channel-card${active ? ' active' : ''}${selectable ? '' : ' disabled'}`}
+                    aria-disabled={!selectable}
+                    onClick={selectable ? () => {
                       clearFieldError('channelOfferId')
                       setChannelOfferId(offer.id)
                       setGenerationQuote(null)
                       setQuoteError('')
-                    }}
+                    } : undefined}
                   >
                     <View className='tool-channel-logo'>
                       {offer.logoUrl ? <Image src={offer.logoUrl} mode='aspectFit' /> : <AppIcon name='sparkles' size={18} />}
@@ -1244,9 +1255,17 @@ export default function ToolPage() {
                         {offer.recommended ? <Text className='tool-channel-tag'>推荐</Text> : null}
                         {offer.qualityLabel ? <Text className='tool-channel-tag secondary'>{offer.qualityLabel}</Text> : null}
                       </View>
-                      <Text className='tool-channel-latency'>{channelLatencyLabel(offer.latencyMs) || '可立即提交'}</Text>
+                      <Text className='tool-channel-latency'>{selectable ? channelLatencyLabel(offer.latencyMs) || '可立即提交' : '保留展示，暂不可选择'}</Text>
                     </View>
-                    <Text className='tool-channel-price'>{offer.pricePoints} 点</Text>
+                    <View className='tool-channel-side'>
+                      <Text className='tool-channel-price'>{offer.pricePoints} 点</Text>
+                      {!selectable ? (
+                        <View className='tool-channel-unavailable'>
+                          <AppIcon name='lock' size={11} />
+                          <Text>{offer.disabledReason || '暂不可用'}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 )
               })}
