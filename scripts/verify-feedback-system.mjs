@@ -90,20 +90,22 @@ for (const [pagePath, patterns] of Object.entries(dataPageRules)) {
 
 assertPageIncludes("pages/login/index", [
   ["Taro.showLoading", "login actions must show loading."],
-  ["Taro.hideLoading", "login actions must hide loading."],
-  ["Taro.showToast", "login failures and successes must use toast feedback."],
-  ["AgreementModal", "agreement viewing must use modal feedback."],
-  ["loading ? 'primary-button disabled'", "primary login button must expose a disabled/loading state."]
+    ["Taro.hideLoading", "login actions must hide loading."],
+    ["Taro.showToast", "login failures and successes must use toast feedback."],
+    ["AgreementModal", "agreement viewing must use modal feedback."],
+    ["agreementModal", "agreement viewing must store modal state."],
+    ["loading ? 'primary-button disabled'", "primary login button must expose a disabled/loading state."]
 ]);
 
 assertPageIncludes("pages/mine/index", [
   ["CustomerModal", "mine page must expose customer service modal."],
   ["PaymentSheet", "mine page must expose recharge payment modal."],
   ["Taro.showLoading", "recharge and agreement actions must show loading."],
-  ["Taro.hideLoading", "recharge and agreement actions must hide loading."],
-  ["Taro.showToast", "mine page actions must use toast feedback."],
-  ["AgreementModal", "agreement viewing must use modal feedback."]
-]);
+    ["Taro.hideLoading", "recharge and agreement actions must hide loading."],
+    ["Taro.showToast", "mine page actions must use toast feedback."],
+    ["AgreementModal", "agreement viewing must use modal feedback."],
+    ["agreementModal", "agreement viewing must store modal state."]
+  ]);
 
 for (const pattern of [
   "const [invoking, setInvoking] = useState(false)",
