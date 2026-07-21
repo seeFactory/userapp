@@ -52,7 +52,6 @@ module.exports = defineConfig({
   copy: {
     patterns: [
       { from: 'src/assets/logo.png', to: 'dist/static/logo.png' },
-      { from: 'src/assets/logo-hero.png', to: 'dist/static/logo-hero.png' }
     ],
     options: {}
   },

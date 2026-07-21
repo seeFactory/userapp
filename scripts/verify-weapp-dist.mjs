@@ -5,6 +5,7 @@ import path from "node:path";
 const distDir = path.resolve("dist");
 const appWxssPath = path.join(distDir, "app.wxss");
 const projectConfigPath = path.join(distDir, "project.config.json");
+const packagedHomeLogoPath = path.join(distDir, "static", "logo-hero.png");
 const requiredApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
 const requiredHomeLogoUrl = "https://sf-oss.sidcloud.cn/branding/seefactory/home/2026/07/lAJalmQyrdKWH7PXSK.png";
 const forbiddenApiPatterns = [
@@ -29,6 +30,7 @@ function walk(dir) {
 
 assert.ok(fs.existsSync(appWxssPath), "WeApp dist/app.wxss must exist.");
 assert.ok(fs.existsSync(projectConfigPath), "WeApp dist/project.config.json must exist.");
+assert.ok(!fs.existsSync(packagedHomeLogoPath), "WeApp dist must not package the replaced local homepage logo.");
 
 const appWxss = fs.readFileSync(appWxssPath, "utf8");
 assert.ok(!appWxss.includes("*"), "WeApp app.wxss must not include universal selectors; WeChat WXSS rejects them.");
