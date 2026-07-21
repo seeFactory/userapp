@@ -4,7 +4,7 @@ import { fetchAppConfig } from '../services/api'
 export const DEFAULT_APP_CONFIG = {
   brand: {
     name: 'seeFactory',
-    logoUrl: 'docs/logo.png'
+    logoUrl: 'https://sf-oss.sidcloud.cn/branding/seefactory/home/2026/07/lAJalmQyrdKWH7PXSK.png'
   },
   home: {
     videoFixed: true,

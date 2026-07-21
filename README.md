@@ -303,6 +303,11 @@ pnpm verify
 
 ## Changelog
 
+### 2026-07-21 - 微信首页 Logo 切换至正式 OSS
+
+- 首页顶部 Logo 从包内 `/static/logo-hero.png` 切换为 `https://sf-oss.sidcloud.cn` 下的 HTTPS 资源；上传后已核对文件大小和 SHA-256，确认 OSS 对象与源码图片一致。
+- 微信生产构建校验新增 Logo URL 契约，要求产物包含指定 OSS 地址且不得回退到包内首页 Logo。
+
 ### 2026-07-21 - 多运行端公共源码对齐
 
 - Main、TMA、微信、支付宝、抖音、QQ、Android 和 APK 正式分支已统一公共生成、渠道状态与功能门禁源码，仅保留分支白名单中的平台登录、支付、构建和原生工程差异。

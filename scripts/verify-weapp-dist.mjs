@@ -6,6 +6,7 @@ const distDir = path.resolve("dist");
 const appWxssPath = path.join(distDir, "app.wxss");
 const projectConfigPath = path.join(distDir, "project.config.json");
 const requiredApiBase = "https://seefactory-api.sidcloud.cn/api/v1";
+const requiredHomeLogoUrl = "https://sf-oss.sidcloud.cn/branding/seefactory/home/2026/07/lAJalmQyrdKWH7PXSK.png";
 const forbiddenApiPatterns = [
   "http://127.0.0.1",
   "https://127.0.0.1",
@@ -55,6 +56,8 @@ assert.ok(textFiles.length, "WeApp dist must contain text build artifacts.");
 
 const joined = textFiles.map((file) => fs.readFileSync(file, "utf8")).join("\n");
 assert.ok(joined.includes(requiredApiBase), `WeApp dist must include ${requiredApiBase}.`);
+assert.ok(joined.includes(requiredHomeLogoUrl), `WeApp dist must include ${requiredHomeLogoUrl}.`);
+assert.ok(!joined.includes("/static/logo-hero.png"), "WeApp homepage must not fall back to the packaged hero logo.");
 assert.ok(joined.includes("wechat-miniapp"), "WeApp dist must include the wechat-miniapp runtime target.");
 
 for (const pattern of forbiddenApiPatterns) {
@@ -70,6 +73,7 @@ console.log(JSON.stringify({
     "WeApp WXSS excludes universal selectors",
     "WeApp runtime target is wechat-miniapp",
     "WeApp production API base is embedded",
+    "WeApp homepage logo uses the approved sidcloud.cn OSS URL",
     "WeApp project AppID matches the WeChat public platform",
     "WeApp DevTools compatibility flags are disabled"
   ],

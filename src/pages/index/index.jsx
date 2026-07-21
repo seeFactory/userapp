@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Taro from '@tarojs/taro'
-import { View, Text, Input } from '@tarojs/components'
+import { View, Text, Input, Image } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import ModelLogo from '../../components/ModelLogo'
@@ -15,6 +15,8 @@ const HOME_TOOL_TABS = [
   { key: 'ai_image', label: 'AI生图' },
   { key: 'ai_video', label: 'AI生视频' }
 ]
+
+const HOME_BRAND_LOGO_URL = 'https://sf-oss.sidcloud.cn/branding/seefactory/home/2026/07/lAJalmQyrdKWH7PXSK.png'
 
 function textOf(value) {
   return String(value || '').toLowerCase()
@@ -168,7 +170,7 @@ export default function Index() {
       <View className='hero'>
         <View className='hero-logo-line'>
           <View className='hero-orbit-icon'>
-            <View className='hero-brand-image' style={{ backgroundImage: 'url(/static/logo-hero.png)' }} />
+            <Image className='hero-brand-image' src={HOME_BRAND_LOGO_URL} mode='aspectFit' />
           </View>
           <Text className='hero-kicker'>seeFactory AI 创作平台</Text>
         </View>
