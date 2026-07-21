@@ -59,6 +59,7 @@ export default function Mine() {
   const [agreementModal, setAgreementModal] = useState(null)
   const { config, loading: configLoading } = useAppConfig()
   const rechargeFeatureEnabled = isFeatureEnabled(config, 'recharge')
+  const agentFeatureEnabled = isFeatureEnabled(config, 'agent')
 
   const loadAccount = async (options = {}) => {
     const [creditData, walletData, rechargeData] = await Promise.all([
@@ -135,6 +136,18 @@ export default function Mine() {
       return
     }
     requireLogin('/pages/workflow-linear/index')
+  }
+
+  const goAgent = () => {
+    if (!agentFeatureEnabled) {
+      Taro.showToast({ title: '代理中心暂未开放', icon: 'none' })
+      return
+    }
+    if (loggedIn) {
+      goPage('/pages/agent/index')
+      return
+    }
+    requireLogin('/pages/agent/index')
   }
 
   const updateRechargeCryptoRoute = (route) => {
@@ -366,6 +379,11 @@ export default function Mine() {
           <View className='profile-icon'><AppIcon name='headphones' size={22} /></View>
           <Text className='profile-name'>联系客服</Text>
           <Text className='tool-desc'>反馈建议</Text>
+        </View>
+        <View className={agentFeatureEnabled ? 'profile-card' : 'profile-card disabled'} onClick={goAgent}>
+          <View className='profile-icon'><AppIcon name='agent' size={22} /></View>
+          <Text className='profile-name'>代理中心</Text>
+          <Text className='tool-desc'>{agentFeatureEnabled ? '推广状态与佣金' : '暂未开放'}</Text>
         </View>
         <View className='profile-card' onClick={() => showAgreement('user')}>
           <View className='profile-icon'><AppIcon name='book' size={22} /></View>

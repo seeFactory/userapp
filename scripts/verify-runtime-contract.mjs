@@ -222,8 +222,8 @@ for (const [relativePath, label, patterns] of [
   ["src/pages/create-center/index.jsx", "create center generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "创作中心已关闭"]],
   ["src/pages/tool/index.jsx", "tool page generation feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'generation')", "generationEnabled", "生成服务已关闭"]],
   ["src/pages/gallery/index.jsx", "gallery feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'gallery')", "galleryEnabled", "作品广场已关闭"]],
-  ["src/pages/mine/index.jsx", "mine page recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeDisabled"]],
-  ["src/pages/wallet/index.jsx", "wallet recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeFeatureEnabled", "充值功能暂未开放"]],
+  ["src/pages/mine/index.jsx", "mine page recharge and agent feature gates", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "isFeatureEnabled(config, 'agent')", "rechargeDisabled", "agentFeatureEnabled"]],
+  ["src/pages/wallet/index.jsx", "wallet recharge feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'recharge')", "rechargeFeatureEnabled", "充值功能暂未开放", "钱包充值已关闭"]],
   ["src/pages/agent/index.jsx", "agent page feature gate", ["useAppConfig", "configLoading", "isFeatureEnabled(config, 'agent')", "agentEnabled", "代理中心已关闭"]]
 ]) {
   assertIncludesAll(source(relativePath), label, patterns);
