@@ -4,8 +4,10 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import NativeShareButton from '../../components/NativeShareButton'
 import WorkMedia from '../../components/WorkMedia'
 import { ErrorState, PageLoading } from '../../components/PageState'
+import { isWechatMiniappRuntime, useMiniappShare } from '../../hooks/useMiniappShare'
 import {
   cancelGenerationTask,
   createWorkShareTicket,
@@ -138,6 +140,19 @@ export default function WorkDetail() {
   const [refreshingTask, setRefreshingTask] = useState(false)
   const [cancelingTask, setCancelingTask] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const workCanShare = Boolean(work?.status === 'success' && !work?.lockedUntilPurchase)
+  const preparedShareTicket = work?.shareTicket || ticket || ''
+  const galleryShareReady = detailMode === 'gallery' && Boolean(work?.id) && !preparedShareTicket
+  const nativeShareReady = workCanShare && Boolean(galleryShareReady || preparedShareTicket)
+  const nativeShareQuery = galleryShareReady
+    ? { id: work?.id, source: 'gallery' }
+    : { ticket: preparedShareTicket, source: 'share' }
+  useMiniappShare({
+    enabled: nativeShareReady,
+    title: work?.title ? `${work.title} - seeFactory AI 作品` : 'seeFactory AI 作品',
+    path: '/pages/work-detail/index',
+    query: nativeShareQuery
+  })
 
   const loadWorkDetail = () => {
     let mounted = true
@@ -331,6 +346,13 @@ export default function WorkDetail() {
         ? buildShareLink({ id: work.id, source: 'gallery' })
         : buildShareLink({ ticket: shareTicket, id: work.id, source: 'share' })
       Taro.hideLoading()
+      if (isWechatMiniappRuntime()) {
+        try {
+          await Taro.showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+        } catch (_) {}
+        Taro.showToast({ title: '分享已就绪，请再次点击分享', icon: 'none' })
+        return
+      }
       try {
         Taro.showShareMenu({ withShareTicket: true })
       } catch (_) {}
@@ -487,10 +509,17 @@ export default function WorkDetail() {
           <AppIcon name='download' size={16} />
           <Text>{lockedUntilPurchase ? '购买后保存' : work.downloadEnabled === false && publicLikeDetail ? '不可保存' : '保存'}</Text>
         </View>
-        <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
-          <AppIcon name='share' size={16} />
-          <Text>{lockedUntilPurchase ? '购买后分享' : sharing ? '生成中' : '分享'}</Text>
-        </View>
+        {isWechatMiniappRuntime() && nativeShareReady ? (
+          <NativeShareButton className='ghost-button glass-button native-share-button'>
+            <AppIcon name='share' size={16} />
+            <Text>分享</Text>
+          </NativeShareButton>
+        ) : (
+          <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
+            <AppIcon name='share' size={16} />
+            <Text>{lockedUntilPurchase ? '购买后分享' : sharing ? '生成中' : '分享'}</Text>
+          </View>
+        )}
       </View>
       {publicLikeDetail ? (
         <View className='hero-actions'>

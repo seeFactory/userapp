@@ -4,9 +4,11 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import NativeShareButton from '../../components/NativeShareButton'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { useAuthState } from '../../hooks/useAuthState'
+import { isWechatMiniappRuntime, useMiniappShare } from '../../hooks/useMiniappShare'
 import { fetchAgentCommissions, fetchAgentInviteCode, fetchAgentProfile, fetchAgentStats, fetchAgreement } from '../../services/api'
 import { formatAgreementContent } from '../../utils/agreement'
 import { acceptAgreement, hasAcceptedAgreement, requireLogin } from '../../utils/storage'
@@ -43,6 +45,15 @@ export default function Agent() {
   const { loggedIn } = useAuthState()
   const { config, loading: configLoading } = useAppConfig()
   const agentEnabled = isFeatureEnabled(config, 'agent')
+  const wechatRuntime = isWechatMiniappRuntime()
+  const inviteShareEnabled = Boolean(profile?.isAgent && inviteCode)
+  useMiniappShare({
+    enabled: inviteShareEnabled,
+    timelineEnabled: false,
+    title: '邀请你加入 seeFactory，一起开始 AI 创作',
+    path: '/pages/index/index',
+    query: { inviteCode, source: 'wechat-share' }
+  })
 
   const ensureAgentAgreement = async () => {
     setAgreementError('')
@@ -260,9 +271,29 @@ export default function Agent() {
             <Text>{inviteCode ? `推广识别码：${inviteCode}` : '代理开通后显示推广识别码'}</Text>
           </View>
 
-          <View className='primary-button' onClick={copyCode}>
-            <AppIcon name='copy' size={16} />
-            <Text>{inviteCode ? '复制邀请码' : '等待平台开通'}</Text>
+          <View className='hero-actions'>
+            {wechatRuntime && inviteShareEnabled ? (
+              <NativeShareButton className='primary-button native-share-button'>
+                <AppIcon name='share' size={16} />
+                <Text>分享邀请</Text>
+              </NativeShareButton>
+            ) : wechatRuntime ? (
+              <View className='primary-button disabled'>
+                <AppIcon name='share' size={16} />
+                <Text>等待平台开通</Text>
+              </View>
+            ) : (
+              <View className='primary-button' onClick={copyCode}>
+                <AppIcon name='copy' size={16} />
+                <Text>{inviteCode ? '复制邀请码' : '等待平台开通'}</Text>
+              </View>
+            )}
+            {wechatRuntime ? (
+              <View className='ghost-button glass-button' onClick={copyCode}>
+                <AppIcon name='copy' size={16} />
+                <Text>复制邀请码</Text>
+              </View>
+            ) : null}
           </View>
 
           <View className='panel'>

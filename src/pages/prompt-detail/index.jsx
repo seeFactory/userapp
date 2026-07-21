@@ -5,6 +5,7 @@ import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { ErrorState, PageLoading } from '../../components/PageState'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { copyPromptCase, fetchPromptCase, fetchTools, usePromptCase } from '../../services/api'
 import { goPage } from '../../utils/navigation'
 import { requireLogin } from '../../utils/storage'
@@ -16,6 +17,12 @@ export default function PromptDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const tool = toolList.find((entry) => entry.id === item?.toolId)
+  useMiniappShare({
+    enabled: Boolean(item),
+    title: item?.title ? `${item.title} - AI 提示词案例` : 'AI 提示词案例',
+    path: '/pages/prompt-detail/index',
+    query: { id }
+  })
 
   const loadPromptDetail = () => {
     let mounted = true

@@ -507,7 +507,7 @@ assertIncludesAll(packageSource, "package.json verification contract", [
   "\"verify:env-example\"",
   "\"verify:branch-diff\"",
   "\"verify:generation-core-upgrades\"",
-  "pnpm verify:runtime-contract && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:generation-core-upgrades && pnpm verify:branch-diff && pnpm build:all"
+  "pnpm verify:runtime-contract && pnpm verify:weapp-share && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:generation-core-upgrades && pnpm verify:branch-diff && pnpm build:all"
 ]);
 
 const envExample = source(".env.example");

@@ -7,10 +7,15 @@ import BrandLogo from '../../components/BrandLogo'
 import WorkMedia from '../../components/WorkMedia'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { fetchGalleryWorks, fetchToolCategories } from '../../services/api'
 import { goPage } from '../../utils/navigation'
 
 export default function Gallery() {
+  useMiniappShare({
+    title: '看看大家用 AI 创作了什么',
+    path: '/pages/gallery/index'
+  })
   const [category, setCategory] = useState('all')
   const [works, setWorks] = useState([])
   const [categories, setCategories] = useState([{ key: 'all', label: '全部' }])

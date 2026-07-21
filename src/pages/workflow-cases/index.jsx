@@ -15,6 +15,7 @@ import {
   trialRunWorkflowCase
 } from '../../services/api'
 import { useAuthState } from '../../hooks/useAuthState'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { requireLogin } from '../../utils/storage'
 import { goPage } from '../../utils/navigation'
 
@@ -114,6 +115,12 @@ export default function WorkflowCases() {
   const blockedReason = workflowBlockedReason(status, selected)
   const lifecycleNote = workflowLifecycleNote(status, selected)
   const trialEnabled = canTrialRun(status, selected)
+  useMiniappShare({
+    enabled: Boolean(selected),
+    title: selected ? `${caseTitle(selected)} - Workflow 案例` : 'Workflow 案例',
+    path: '/pages/workflow-cases/index',
+    query: { id: selected?.id }
+  })
 
   const loadCases = () => {
     let mounted = true

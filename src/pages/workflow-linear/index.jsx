@@ -16,6 +16,7 @@ import {
 } from '../../services/api'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useAuthState } from '../../hooks/useAuthState'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { goPage } from '../../utils/navigation'
 import { requireLogin } from '../../utils/storage'
 
@@ -214,6 +215,10 @@ function splitTags(text) {
 }
 
 export default function WorkflowLinear() {
+  useMiniappShare({
+    title: '用 AI 模板组合你的创作流程',
+    path: '/pages/workflow-linear/index'
+  })
   const { loggedIn } = useAuthState()
   const { config } = useAppConfig()
   const workflowPolicy = config?.workflowPolicy || {}
