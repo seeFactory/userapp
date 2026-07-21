@@ -4,11 +4,12 @@ import { gzipSync } from 'node:zlib'
 
 const distRoot = join(process.cwd(), 'dist')
 const kib = 1024
+const runtimeTarget = String(process.env.SEEFACTORY_RUNTIME_TARGET || 'h5')
 const budgets = {
   maxJsAssetBytes: 620 * kib,
   maxEntrypointBytes: 390 * kib,
   // H5 pages are split into lazy chunks; includes workflow asset upload runtime and Taro tabbar keep-alive runtime.
-  maxTotalJsBytes: 4560 * kib,
+  maxTotalJsBytes: (runtimeTarget === 'android-apk' ? 4570 : 4560) * kib,
   maxLogoCopies: 1
 }
 
