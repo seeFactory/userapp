@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveMediaPreviewUrl } from '../src/utils/mediaPreview.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const source = (file) => readFileSync(resolve(root, file), 'utf8')
@@ -18,6 +19,11 @@ for (const pattern of ['createGenerationQuote', "request('/generation-quotes'", 
 }
 for (const pattern of [
   'channelOffersOf',
+  'availabilityStatus',
+  'disabledReason',
+  'channelSelectionUnavailable',
+  "offer.selectable !== false",
+  "AppIcon name='lock'",
   'effectiveChannelOfferId',
   'quoteId: activeQuote?.quoteId',
   'prepareWorkReuseContext(reuseWorkId',
@@ -37,6 +43,10 @@ for (const pattern of ['signed-put', 'uploadViaSignedPut', 'videoReferenceTarget
 for (const pattern of ['captureVideoFrame', 'firstFrameCache', 'video-play-overlay']) {
   includes(media, pattern, `work media must include ${pattern}`)
 }
+includes(media, 'resolveMediaPreviewUrl', 'work media must use the shared preview resolver')
+assert.equal(resolveMediaPreviewUrl({ mediaKind: 'image', mediaUrl: 'https://cdn.example/assets/123?format=webp' }), 'https://cdn.example/assets/123?format=webp')
+assert.equal(resolveMediaPreviewUrl({ mediaKind: 'video', mediaUrl: 'https://cdn.example/video/123' }), '')
+assert.equal(resolveMediaPreviewUrl({ mediaKind: 'video', mediaUrl: 'https://cdn.example/video/123', coverUrl: 'https://cdn.example/cover/456' }), 'https://cdn.example/cover/456')
 
 console.log(JSON.stringify({
   checked: [
@@ -44,6 +54,7 @@ console.log(JSON.stringify({
     'complete work reuse restoration',
     'configurable multi-reference uploads',
     'runtime-aware signed PUT uploads',
-    'H5 video first-frame preview'
+    'H5 video first-frame preview',
+    'extension-independent image and explicit video cover preview'
   ]
 }, null, 2))
