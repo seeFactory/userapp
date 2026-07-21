@@ -303,6 +303,11 @@ pnpm verify
 
 ## Changelog
 
+### 2026-07-21 - 多运行端公共源码对齐
+
+- Main、TMA、微信、支付宝、抖音、QQ、Android 和 APK 正式分支已统一公共生成、渠道状态与功能门禁源码，仅保留分支白名单中的平台登录、支付、构建和原生工程差异。
+- 公共体积校验按运行端使用独立预算：H5/TMA 保持 4560 KiB，Android APK Web 使用 4570 KiB；单文件和入口预算保持不变。
+
 ### 2026-07-20 - 渠道置灰与不可选状态
 
 - 渠道选项支持 `selectable/availabilityStatus/disabledReason`，保留展示测试中、维护中、暂未开放和价格配置中的渠道。
