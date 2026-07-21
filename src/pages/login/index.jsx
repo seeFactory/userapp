@@ -80,6 +80,13 @@ function readWindowParams() {
   }
 }
 
+function getDefaultH5LoginRedirectUri() {
+  if (typeof window === 'undefined') return ''
+  const hash = window.location.hash || ''
+  const hashPath = hash.startsWith('#/pages/login/index') ? hash.split('?')[0] : '#/pages/login/index'
+  return `${window.location.origin}${window.location.pathname}${hashPath}`
+}
+
 function randomBase64Url(byteLength = 48) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
   if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
@@ -148,8 +155,7 @@ export default function Login() {
 
   const xRedirectUri = useMemo(() => {
     if (loginConfig.xRedirectUri) return loginConfig.xRedirectUri
-    if (typeof window === 'undefined') return ''
-    return `${window.location.origin}${window.location.pathname}`
+    return getDefaultH5LoginRedirectUri()
   }, [loginConfig.xRedirectUri])
 
   useEffect(() => {
@@ -345,7 +351,12 @@ export default function Login() {
       const acceptedAgreements = await ensureLoginAgreements()
       const codeVerifier = randomBase64Url()
       const codeChallenge = await sha256Base64Url(codeVerifier)
-      const result = await createXAuthorizeUrl({ codeChallenge, redirectUri: xRedirectUri })
+      const result = await createXAuthorizeUrl({
+        codeChallenge,
+        redirectUri: xRedirectUri,
+        callbackMode: 'h5',
+        h5ReturnUrl: getDefaultH5LoginRedirectUri()
+      })
       Taro.setStorageSync(X_CODE_VERIFIER_KEY, codeVerifier)
       Taro.setStorageSync(X_REDIRECT_URI_KEY, xRedirectUri)
       Taro.setStorageSync(X_RETURN_TO_KEY, target)
@@ -365,7 +376,7 @@ export default function Login() {
   }
 
   return (
-    <View className='login-wrap page-transition' onTouchStart={handleLoginTouchStart} onTouchEnd={handleLoginTouchEnd}>
+    <View className='login-wrap page-transition'>
       <PageBackButton fallbackUrl='/pages/index/index' />
       <BrandLogo size={58} className='login-logo' />
       <View className='login-card'>

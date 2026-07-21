@@ -424,6 +424,8 @@ export async function createXAuthorizeUrl(params) {
     codeChallenge: params.codeChallenge
   })
   if (params.redirectUri) query.set('redirectUri', params.redirectUri)
+  if (params.callbackMode) query.set('callbackMode', params.callbackMode)
+  if (params.h5ReturnUrl) query.set('h5ReturnUrl', params.h5ReturnUrl)
   return request(`/auth/h5/x/authorize-url?${query.toString()}`, { noAuth: true })
 }
 
