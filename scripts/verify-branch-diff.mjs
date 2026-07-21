@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const appRoot = resolve(scriptDir, "..");
+const workspaceRoot = basename(appRoot) === "app" ? resolve(appRoot, "..") : resolve(appRoot, "../..");
+const frontendRoot = resolve(workspaceRoot, "frontend");
 
 const defaultBaseRef = process.env.VERIFY_BRANCH_BASE || "origin/main";
 const baseRef = process.argv[2] || defaultBaseRef;
@@ -151,6 +159,7 @@ const prefixAllowed = {
 
 const branchRuntime = {
   main: "h5-google",
+  app: "h5-google",
   tma: "telegram-tma",
   wechat: "wechat-miniapp",
   qq: "qq-miniapp",
@@ -162,6 +171,7 @@ const branchRuntime = {
 
 const paymentRuntime = {
   main: "[]",
+  app: "[]",
   tma: "[]",
   wechat: "['wechat-miniapp']",
   qq: "['qq-miniapp']",
@@ -170,6 +180,11 @@ const paymentRuntime = {
   android: "[]",
   apk: "[]"
 };
+
+function branchRoot(branch) {
+  if (branch === "app") return resolve(workspaceRoot, "app");
+  return resolve(frontendRoot, branch);
+}
 
 function git(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
@@ -206,29 +221,28 @@ function show(ref, file) {
   return git(["show", `${ref}:${file}`]);
 }
 
-const resolvedBase = resolveRef(baseRef);
-assert.ok(resolvedBase, `Missing base ref: ${baseRef}`);
+function toPosix(filePath) {
+  return filePath.replace(/\\/g, "/");
+}
 
-const checked = [];
-for (const target of targets) {
-  const targetSpec = parseTargetSpec(target);
-  const resolvedTarget = resolveRef(targetSpec.ref);
-  assert.ok(resolvedTarget, `Missing target ref: ${targetSpec.input}`);
-  const branch = targetSpec.branchOverride || branchKeyFromRef(resolvedTarget);
-  assert.ok(exactAllowed[branch] || prefixAllowed[branch], `No branch diff policy for ${branch}.`);
+function listFiles(root, dir = "src") {
+  const absoluteDir = resolve(root, dir);
+  return readdirSync(absoluteDir).flatMap((name) => {
+    const absolutePath = join(absoluteDir, name);
+    const relativePath = toPosix(relative(root, absolutePath));
+    return statSync(absolutePath).isDirectory()
+      ? listFiles(root, relativePath)
+      : [relativePath];
+  });
+}
 
-  const changedFiles = git(["-c", "core.quotePath=false", "diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
-    .split(/\r?\n/)
-    .filter(Boolean);
-  const unexpectedFiles = changedFiles.filter((file) => !fileAllowed(branch, file));
-  assert.deepEqual(
-    unexpectedFiles,
-    [],
-    `${resolvedBase}..${resolvedTarget} contains non-platform code drift.`
-  );
+function normalizedSource(root, file) {
+  return readFileSync(resolve(root, file), "utf8").replace(/\r\n/g, "\n");
+}
 
-  const loginSource = show(resolvedTarget, "src/platform/login.js");
-  const paymentSource = show(resolvedTarget, "src/platform/payment.js");
+function assertBranchContract(branch, loginSource, paymentSource) {
+  assert.ok(branchRuntime[branch], `Missing runtime contract for ${branch}.`);
+  assert.ok(paymentRuntime[branch], `Missing payment contract for ${branch}.`);
   assert.ok(
     loginSource.includes(`LOGIN_BRANCH = '${branch}'`),
     `${branch} login module must identify LOGIN_BRANCH.`
@@ -245,11 +259,79 @@ for (const target of targets) {
     paymentSource.includes(`PLATFORM_PAY_RUNTIMES = ${paymentRuntime[branch]}`),
     `${branch} payment module must use ${paymentRuntime[branch]}.`
   );
-
-  checked.push({ branch, ref: resolvedTarget, changedFiles });
 }
 
-console.log(JSON.stringify({
-  baseRef: resolvedBase,
-  checked
-}, null, 2));
+function assertDirectoryBranchContract(branch) {
+  const root = branchRoot(branch);
+  assert.ok(existsSync(root), `Missing target branch directory: ${branch}`);
+
+  const loginSource = normalizedSource(root, "src/platform/login.js");
+  const paymentSource = normalizedSource(root, "src/platform/payment.js");
+  assertBranchContract(branch, loginSource, paymentSource);
+}
+
+function runRefChecks() {
+  const resolvedBase = resolveRef(baseRef);
+  assert.ok(resolvedBase, `Missing base ref: ${baseRef}`);
+
+  const checked = [];
+  for (const target of targets) {
+    const targetSpec = parseTargetSpec(target);
+    const resolvedTarget = resolveRef(targetSpec.ref);
+    assert.ok(resolvedTarget, `Missing target ref: ${targetSpec.input}`);
+    const branch = targetSpec.branchOverride || branchKeyFromRef(resolvedTarget);
+    assert.ok(exactAllowed[branch] || prefixAllowed[branch], `No branch diff policy for ${branch}.`);
+
+    const changedFiles = git(["-c", "core.quotePath=false", "diff", "--name-only", `${resolvedBase}..${resolvedTarget}`])
+      .split(/\r?\n/)
+      .filter(Boolean);
+    const unexpectedFiles = changedFiles.filter((file) => !fileAllowed(branch, file));
+    assert.deepEqual(unexpectedFiles, [], `${resolvedBase}..${resolvedTarget} contains non-platform code drift.`);
+
+    assertBranchContract(
+      branch,
+      show(resolvedTarget, "src/platform/login.js"),
+      show(resolvedTarget, "src/platform/payment.js")
+    );
+    checked.push({ branch, ref: resolvedTarget, changedFiles });
+  }
+
+  return { mode: "refs", baseRef: resolvedBase, checked };
+}
+
+function runDirectoryChecks() {
+  const baseBranch = process.env.VERIFY_BRANCH_DIRECTORY_BASE || "app";
+  const branches = (process.env.VERIFY_BRANCH_DIRECTORY_TARGETS || "tma,qq,wechat,alipay,douyin,apk")
+    .split(",")
+    .map((branch) => branch.trim())
+    .filter(Boolean);
+  const baseRoot = branchRoot(baseBranch);
+  assert.ok(existsSync(baseRoot), `Missing base branch directory: ${baseBranch}`);
+
+  const checked = [];
+  for (const branch of branches) {
+    const targetRoot = branchRoot(branch);
+    assert.ok(existsSync(targetRoot), `Missing target branch directory: ${branch}`);
+    const files = new Set([...listFiles(baseRoot), ...listFiles(targetRoot)]);
+    const unexpectedFiles = [...files]
+      .sort()
+      .filter((file) => !fileAllowed(branch, file))
+      .filter((file) => {
+        const baseFile = resolve(baseRoot, file);
+        const targetFile = resolve(targetRoot, file);
+        if (!existsSync(baseFile) || !existsSync(targetFile)) return true;
+        return normalizedSource(baseRoot, file) !== normalizedSource(targetRoot, file);
+      });
+    assert.deepEqual(unexpectedFiles, [], `${baseBranch} and ${branch} contain non-platform code drift.`);
+    assertDirectoryBranchContract(branch);
+    checked.push({ branch, changedFiles: [...files].filter((file) => fileAllowed(branch, file)) });
+  }
+
+  return { mode: "directories", baseBranch, checked };
+}
+
+const result = process.env.VERIFY_BRANCH_DIRECTORIES === "true"
+  ? runDirectoryChecks()
+  : runRefChecks();
+
+console.log(JSON.stringify(result, null, 2));

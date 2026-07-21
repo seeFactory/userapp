@@ -2,21 +2,22 @@ import { useEffect, useState } from 'react'
 import { View, Text, Image, Video } from '@tarojs/components'
 import AppIcon from './AppIcon'
 import { inferWorkMediaKind } from '../services/api'
+import { resolveMediaPreviewUrl } from '../utils/mediaPreview'
 
 const fallbackCover = 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'
 const firstFrameCache = new Map()
 const FRAME_CAPTURE_TIMEOUT = 8000
 
-function isImageUrl(url = '') {
-  return /\.(jpg|jpeg|png|webp|gif|bmp|avif)(\?|#|$)/i.test(String(url))
-}
-
 function resolveMedia(item = {}, fallbackUrl = fallbackCover) {
   const resultUrl = item.resultUrls?.[0] || ''
   const mediaUrl = item.mediaUrl || resultUrl || item.image || item.coverUrl || ''
   const mediaKind = item.mediaKind || inferWorkMediaKind(item, mediaUrl)
-  const rawPreviewUrl = item.previewUrl || item.coverUrl || (mediaKind === 'image' ? mediaUrl : '')
-  const previewUrl = isImageUrl(rawPreviewUrl) ? rawPreviewUrl : ''
+  const previewUrl = resolveMediaPreviewUrl({
+    mediaKind,
+    mediaUrl,
+    previewUrl: item.previewUrl,
+    coverUrl: item.coverUrl
+  })
   const imageUrl = previewUrl || (!mediaUrl || mediaKind !== 'video' ? fallbackUrl : '')
   return { mediaUrl, mediaKind, previewUrl, imageUrl }
 }
