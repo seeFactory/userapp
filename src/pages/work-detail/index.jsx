@@ -22,6 +22,7 @@ import {
   unpublishGalleryWork
 } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
+import { buildMediaDownloadCandidates, downloadMediaTempFile, saveMediaToAlbum } from '../../utils/mediaSave'
 import { isLoggedIn } from '../../utils/storage'
 
 function statusLabel(status) {
@@ -98,37 +99,6 @@ function buildShareLink({ ticket, id, source = 'gallery' }) {
     return `${window.location.origin}${window.location.pathname}#${path}`
   }
   return path
-}
-
-function downloadTempFile(url) {
-  return new Promise((resolve, reject) => {
-    Taro.downloadFile({
-      url,
-      success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
-          resolve(res.tempFilePath)
-          return
-        }
-        reject(new Error('文件下载失败，请稍后重试'))
-      },
-      fail: () => reject(new Error('文件下载失败，请检查网络或下载域名配置'))
-    })
-  })
-}
-
-function saveFileToAlbum(filePath, mediaKind) {
-  return new Promise((resolve, reject) => {
-    const api = mediaKind === 'video' ? Taro.saveVideoToPhotosAlbum : Taro.saveImageToPhotosAlbum
-    if (!api) {
-      reject(new Error(mediaKind === 'video' ? '当前平台暂不支持保存视频' : '当前平台暂不支持保存图片'))
-      return
-    }
-    api({
-      filePath,
-      success: resolve,
-      fail: () => reject(new Error('请确认已允许保存到相册，或稍后重试'))
-    })
-  })
 }
 
 export default function WorkDetail() {
@@ -290,7 +260,8 @@ export default function WorkDetail() {
     Taro.showLoading({ title: process.env.TARO_ENV === 'h5' ? '准备下载' : '保存中' })
     try {
       const data = await getDownloadUrl(work.id, detailMode === 'share' ? (work.shareTicket || ticket) : '')
-      url = data?.url || work.image
+      const candidates = buildMediaDownloadCandidates(data?.url, work)
+      url = candidates[0]
       if (!url) throw new Error('下载地址为空')
       const mediaKind = inferMediaKind(work, url)
       if (process.env.TARO_ENV === 'h5') {
@@ -309,8 +280,8 @@ export default function WorkDetail() {
         return
       }
 
-      const filePath = /^https?:\/\//i.test(url) ? await downloadTempFile(url) : url
-      await saveFileToAlbum(filePath, mediaKind)
+      const filePath = /^https?:\/\//i.test(url) ? await downloadMediaTempFile(candidates) : url
+      await saveMediaToAlbum(filePath, mediaKind)
       Taro.hideLoading()
       Taro.showToast({ title: mediaKind === 'video' ? '视频已保存' : '图片已保存', icon: 'success' })
     } catch (error) {
