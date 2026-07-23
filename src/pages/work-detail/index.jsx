@@ -407,6 +407,7 @@ export default function WorkDetail() {
         muted
         objectFit={mediaKind === 'video' ? 'contain' : 'cover'}
         showBadge={false}
+        previewOnClick={mediaKind === 'image'}
       />
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>

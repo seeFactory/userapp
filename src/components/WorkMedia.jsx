@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { View, Text, Image, Video } from '@tarojs/components'
 import AppIcon from './AppIcon'
 import { inferWorkMediaKind } from '../services/api'
-import { resolveMediaPreviewUrl } from '../utils/mediaPreview'
+import { previewImagesFullscreen } from '../utils/mediaFullscreen'
+import { buildImagePreviewUrls, resolveMediaPreviewUrl } from '../utils/mediaPreview'
 
 const fallbackCover = 'https://images.unsplash.com/photo-1535223289827-42f1e9919769?auto=format&fit=crop&w=900&q=80'
 const firstFrameCache = new Map()
@@ -120,15 +121,26 @@ export default function WorkMedia({
   loop = false,
   muted = true,
   showBadge = true,
-  objectFit = 'cover'
+  objectFit = 'cover',
+  previewOnClick = false
 }) {
   const [playing, setPlaying] = useState(false)
   const { mediaUrl, mediaKind, previewUrl, imageUrl } = resolveMedia(item, fallbackUrl)
   const isVideo = mediaKind === 'video' && mediaUrl
   const firstFrameUrl = useVideoFirstFrame(mediaUrl, isVideo && !previewUrl)
   const videoPreviewUrl = previewUrl || firstFrameUrl
-  const isInteractive = Boolean(isVideo && controls)
-  const isPlaying = Boolean(isInteractive && playing)
+  const imagePreviewUrls = buildImagePreviewUrls({
+    mediaKind,
+    mediaUrl,
+    resultUrls: item?.resultUrls,
+    imageUrl: item?.image,
+    previewUrl: item?.previewUrl,
+    coverUrl: item?.coverUrl
+  })
+  const isVideoInteractive = Boolean(isVideo && controls)
+  const isImageInteractive = Boolean(!isVideo && previewOnClick && imagePreviewUrls.length)
+  const isInteractive = isVideoInteractive || isImageInteractive
+  const isPlaying = Boolean(isVideoInteractive && playing)
   const coverMode = objectFit === 'contain' ? 'aspectFit' : 'aspectFill'
 
   useEffect(() => setPlaying(false), [mediaUrl])
@@ -153,15 +165,30 @@ export default function WorkMedia({
   }, [isPlaying, isVideo, mediaUrl, muted])
 
   const playVideo = (event) => {
-    if (!isInteractive || isPlaying) return
+    if (!isVideoInteractive || isPlaying) return
     event?.stopPropagation?.()
     setPlaying(true)
   }
 
+  const previewImage = (event) => {
+    if (!isImageInteractive) return
+    event?.stopPropagation?.()
+    previewImagesFullscreen({
+      current: imagePreviewUrls[0],
+      urls: imagePreviewUrls
+    })
+  }
+
+  const handleMediaClick = isImageInteractive
+    ? previewImage
+    : isVideoInteractive && !isPlaying
+      ? playVideo
+      : undefined
+
   return (
     <View
       className={`${className} work-media-frame ${isInteractive ? 'interactive-media-frame' : ''} ${isPlaying ? 'playing' : 'previewing'} ${isVideo ? 'video-media-frame' : 'image-media-frame'}`}
-      onClick={isInteractive && !isPlaying ? playVideo : undefined}
+      onClick={handleMediaClick}
     >
       {isVideo ? (
         isPlaying ? (
@@ -200,14 +227,14 @@ export default function WorkMedia({
           />
         )
       ) : (
-        <Image className='work-media-element' src={imageUrl || fallbackUrl} mode={coverMode} />
+        <Image className='work-media-element' src={imageUrl || fallbackUrl} mode={coverMode} showMenuByLongpress={isImageInteractive} />
       )}
-      {isVideo && isInteractive && !isPlaying ? (
+      {isVideo && isVideoInteractive && !isPlaying ? (
         <View className='video-play-overlay'>
           <View className='video-play-button'><AppIcon name='play' size={24} /></View>
         </View>
       ) : null}
-      {isVideo && showBadge && !isInteractive ? (
+      {isVideo && showBadge && !isVideoInteractive ? (
         <View className='video-preview-badge'>
           <AppIcon name='play' size={11} />
           <Text>视频</Text>
