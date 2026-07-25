@@ -9,9 +9,11 @@ const source = (file) => readFileSync(resolve(root, file), 'utf8')
 const includes = (text, pattern, message) => assert.ok(text.includes(pattern), message)
 
 const api = source('src/services/api.js')
+const buildConfig = source('config/index.js')
 const tool = source('src/pages/tool/index.jsx')
 const detail = source('src/pages/work-detail/index.jsx')
 const upload = source('src/utils/upload.js')
+const workflowFields = source('src/components/WorkflowRunFormFields.jsx')
 const media = source('src/components/WorkMedia.jsx')
 
 for (const pattern of ['createGenerationQuote', "request('/generation-quotes'", 'prepareWorkReuseContext', '/reuse-context']) {
@@ -33,6 +35,7 @@ for (const pattern of [
   'const readyActionText = Number(config.maxCount || 1) > 1',
   'if (leftovers.length) slotUploadItems[slots[0].slotKey]',
   'normalizeImageForVideoReference',
+  'mimeType: policy.mimeType || file.mimeType',
   'width: file.width',
   'height: file.height',
   'duration: file.duration'
@@ -40,8 +43,20 @@ for (const pattern of [
 for (const pattern of ['reuseWorkId=', '<Text>做同款</Text>', '<Text>重新生成</Text>', '<WorkMedia']) {
   includes(detail, pattern, `work detail must include ${pattern}`)
 }
-for (const pattern of ['signed-put', 'uploadViaSignedPut', 'videoReferenceTargets']) {
+for (const pattern of [
+  'signed-put',
+  'uploadViaSignedPut',
+  'videoReferenceTargets',
+  'inferUploadMimeType',
+  'uploadFailureMessage',
+  'url not in domain',
+  'onProgress?.'
+]) {
   includes(upload, pattern, `upload utility must include ${pattern}`)
+}
+includes(workflowFields, 'mimeType: policy.mimeType || file.mimeType', 'workflow uploads must persist the MIME signed by the backend')
+for (const pattern of ['uploadRuntime', "name: 'upload-runtime'", "chunks: 'all'", 'enforce: true']) {
+  includes(buildConfig, pattern, `build config must keep the shared upload runtime chunk: ${pattern}`)
 }
 for (const pattern of ['captureVideoFrame', 'firstFrameCache', 'video-play-overlay']) {
   includes(media, pattern, `work media must include ${pattern}`)
@@ -56,6 +71,8 @@ console.log(JSON.stringify({
     'public channel selection and locked quotes',
     'complete work reuse restoration',
     'configurable multi-reference uploads',
+    'miniapp MIME inference and actionable upload failures',
+    'deduplicated shared upload runtime chunk',
     'runtime-aware signed PUT uploads',
     'H5 video first-frame preview',
     'extension-independent image and explicit video cover preview'
