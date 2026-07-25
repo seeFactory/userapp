@@ -305,6 +305,13 @@ pnpm verify
 
 ## Changelog
 
+### 2026-07-25 - 小程序图片上传失败系统修复
+
+- 临时素材缺少 MIME 时按标准 MIME、文件扩展名和素材类型依次推断，避免微信 `chooseMedia` 返回空 MIME 后产生不完整的 OSS 签名表单。
+- signed POST 继续消费 Backend 策略，但 Backend 会为小程序返回已加入合法域名的 OSS CNAME；素材写库优先采用服务端最终 MIME，保持签名对象与资产记录一致。
+- 上传失败信息区分 `uploadFile` 域名白名单、网络超时、用户取消、文件超限、OSS HTTP 状态和签名凭证错误，便于现场判断失败层级。
+- 工具素材上传和 Workflow 动态上传同步修复，GIF/M4V 与服务端允许格式对齐，并纳入生成核心契约；H5 类产物将上传工具抽为单一公共 chunk，维持既有体积预算；本轮不调用生图或生视频任务。
+
 ### 2026-07-25 - Provider 多参考图上传恢复
 
 - 对标 `sidclouds/ALADDIN_AI_APP main@2e0a4dd` 的配置驱动上传逻辑，确认各运行端原本已支持按 `maxCount` 多选、计算剩余数量、继续添加和槽位提交；单图问题来自后端 Provider 工具目录统一返回上限 1。

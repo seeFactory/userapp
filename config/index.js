@@ -59,6 +59,22 @@ module.exports = defineConfig({
     }
   },
   h5: {
+    webpackChain(chain) {
+      const current = chain.optimization.get('splitChunks') || {}
+      chain.optimization.splitChunks({
+        ...current,
+        cacheGroups: {
+          ...(current.cacheGroups || {}),
+          uploadRuntime: {
+            test: /[\\/]src[\\/]utils[\\/]upload\.js$/,
+            name: 'upload-runtime',
+            chunks: 'all',
+            enforce: true,
+            priority: 30
+          }
+        }
+      })
+    },
     publicPath: '/',
     staticDirectory: 'static',
     devServer: {
