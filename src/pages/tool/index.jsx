@@ -7,6 +7,7 @@ import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, InlineNotice, PageLoading } from '../../components/PageState'
 import { firstCryptoRoute } from '../../utils/cryptoRoute'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { isPlatformPaymentRuntime, isTelegramStarsRuntime } from '../../platform/payment'
 import { goPage } from '../../utils/navigation'
 import { chooseTypedFiles, formatFileSize, normalizeImageForVideoReference, uploadLimits, uploadToOss, validateUploadFile } from '../../utils/upload'
@@ -530,6 +531,11 @@ export default function ToolPage() {
   const [toolError, setToolError] = useState('')
   const { config, loading: configLoading } = useAppConfig()
   const generationEnabled = isFeatureEnabled(config, 'generation')
+  useMiniappShare({
+    title: `用 ${tool?.name || 'AI 工具'} 开始创作`,
+    path: '/pages/tool/index',
+    query: { id: tool?.toolKey || params.id }
+  })
 
   const loadTool = () => {
     if (configLoading) {

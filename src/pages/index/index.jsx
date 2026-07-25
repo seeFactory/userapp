@@ -7,6 +7,7 @@ import ModelLogo from '../../components/ModelLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
 import { useAuthState } from '../../hooks/useAuthState'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { fetchTools } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
 
@@ -80,6 +81,10 @@ function modelLogoOf(tool) {
 }
 
 export default function Index() {
+  useMiniappShare({
+    title: '用 seeFactory 开始 AI 生图与视频创作',
+    path: '/pages/index/index'
+  })
   const { loggedIn } = useAuthState()
   const { config, loading: configLoading } = useAppConfig()
   const generationEnabled = isFeatureEnabled(config, 'generation')

@@ -4,8 +4,10 @@ import { View, Text } from '@tarojs/components'
 import Shell from '../../components/Shell'
 import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
+import NativeShareButton from '../../components/NativeShareButton'
 import WorkMedia from '../../components/WorkMedia'
 import { ErrorState, PageLoading } from '../../components/PageState'
+import { isWechatMiniappRuntime, useMiniappShare } from '../../hooks/useMiniappShare'
 import {
   cancelGenerationTask,
   createWorkShareTicket,
@@ -20,6 +22,7 @@ import {
   unpublishGalleryWork
 } from '../../services/api'
 import { goPage, goTab } from '../../utils/navigation'
+import { buildMediaDownloadCandidates, downloadMediaTempFile, saveMediaToAlbum } from '../../utils/mediaSave'
 import { isLoggedIn } from '../../utils/storage'
 
 function statusLabel(status) {
@@ -98,37 +101,6 @@ function buildShareLink({ ticket, id, source = 'gallery' }) {
   return path
 }
 
-function downloadTempFile(url) {
-  return new Promise((resolve, reject) => {
-    Taro.downloadFile({
-      url,
-      success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300 && res.tempFilePath) {
-          resolve(res.tempFilePath)
-          return
-        }
-        reject(new Error('文件下载失败，请稍后重试'))
-      },
-      fail: () => reject(new Error('文件下载失败，请检查网络或下载域名配置'))
-    })
-  })
-}
-
-function saveFileToAlbum(filePath, mediaKind) {
-  return new Promise((resolve, reject) => {
-    const api = mediaKind === 'video' ? Taro.saveVideoToPhotosAlbum : Taro.saveImageToPhotosAlbum
-    if (!api) {
-      reject(new Error(mediaKind === 'video' ? '当前平台暂不支持保存视频' : '当前平台暂不支持保存图片'))
-      return
-    }
-    api({
-      filePath,
-      success: resolve,
-      fail: () => reject(new Error('请确认已允许保存到相册，或稍后重试'))
-    })
-  })
-}
-
 export default function WorkDetail() {
   const { id, source, ticket } = getCurrentInstance().router?.params || {}
   const [work, setWork] = useState(null)
@@ -138,6 +110,19 @@ export default function WorkDetail() {
   const [refreshingTask, setRefreshingTask] = useState(false)
   const [cancelingTask, setCancelingTask] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const workCanShare = Boolean(work?.status === 'success' && !work?.lockedUntilPurchase)
+  const preparedShareTicket = work?.shareTicket || ticket || ''
+  const galleryShareReady = detailMode === 'gallery' && Boolean(work?.id) && !preparedShareTicket
+  const nativeShareReady = workCanShare && Boolean(galleryShareReady || preparedShareTicket)
+  const nativeShareQuery = galleryShareReady
+    ? { id: work?.id, source: 'gallery' }
+    : { ticket: preparedShareTicket, source: 'share' }
+  useMiniappShare({
+    enabled: nativeShareReady,
+    title: work?.title ? `${work.title} - seeFactory AI 作品` : 'seeFactory AI 作品',
+    path: '/pages/work-detail/index',
+    query: nativeShareQuery
+  })
 
   const loadWorkDetail = () => {
     let mounted = true
@@ -275,7 +260,8 @@ export default function WorkDetail() {
     Taro.showLoading({ title: process.env.TARO_ENV === 'h5' ? '准备下载' : '保存中' })
     try {
       const data = await getDownloadUrl(work.id, detailMode === 'share' ? (work.shareTicket || ticket) : '')
-      url = data?.url || work.image
+      const candidates = buildMediaDownloadCandidates(data?.url, work)
+      url = candidates[0]
       if (!url) throw new Error('下载地址为空')
       const mediaKind = inferMediaKind(work, url)
       if (process.env.TARO_ENV === 'h5') {
@@ -294,8 +280,8 @@ export default function WorkDetail() {
         return
       }
 
-      const filePath = /^https?:\/\//i.test(url) ? await downloadTempFile(url) : url
-      await saveFileToAlbum(filePath, mediaKind)
+      const filePath = /^https?:\/\//i.test(url) ? await downloadMediaTempFile(candidates) : url
+      await saveMediaToAlbum(filePath, mediaKind)
       Taro.hideLoading()
       Taro.showToast({ title: mediaKind === 'video' ? '视频已保存' : '图片已保存', icon: 'success' })
     } catch (error) {
@@ -331,6 +317,13 @@ export default function WorkDetail() {
         ? buildShareLink({ id: work.id, source: 'gallery' })
         : buildShareLink({ ticket: shareTicket, id: work.id, source: 'share' })
       Taro.hideLoading()
+      if (isWechatMiniappRuntime()) {
+        try {
+          await Taro.showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+        } catch (_) {}
+        Taro.showToast({ title: '分享已就绪，请再次点击分享', icon: 'none' })
+        return
+      }
       try {
         Taro.showShareMenu({ withShareTicket: true })
       } catch (_) {}
@@ -414,6 +407,7 @@ export default function WorkDetail() {
         muted
         objectFit={mediaKind === 'video' ? 'contain' : 'cover'}
         showBadge={false}
+        previewOnClick={mediaKind === 'image'}
       />
       <View className='section-head'>
         <View className='panel-brand-row section-brand-row'>
@@ -487,10 +481,17 @@ export default function WorkDetail() {
           <AppIcon name='download' size={16} />
           <Text>{lockedUntilPurchase ? '购买后保存' : work.downloadEnabled === false && publicLikeDetail ? '不可保存' : '保存'}</Text>
         </View>
-        <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
-          <AppIcon name='share' size={16} />
-          <Text>{lockedUntilPurchase ? '购买后分享' : sharing ? '生成中' : '分享'}</Text>
-        </View>
+        {isWechatMiniappRuntime() && nativeShareReady ? (
+          <NativeShareButton className='ghost-button glass-button native-share-button'>
+            <AppIcon name='share' size={16} />
+            <Text>分享</Text>
+          </NativeShareButton>
+        ) : (
+          <View className={canShare && !sharing ? 'ghost-button glass-button' : 'ghost-button glass-button disabled'} onClick={canShare ? shareWork : undefined}>
+            <AppIcon name='share' size={16} />
+            <Text>{lockedUntilPurchase ? '购买后分享' : sharing ? '生成中' : '分享'}</Text>
+          </View>
+        )}
       </View>
       {publicLikeDetail ? (
         <View className='hero-actions'>

@@ -6,11 +6,16 @@ import AppIcon from '../../components/AppIcon'
 import BrandLogo from '../../components/BrandLogo'
 import { EmptyState, ErrorState, PageLoading } from '../../components/PageState'
 import { isFeatureEnabled, useAppConfig } from '../../hooks/useAppConfig'
+import { useMiniappShare } from '../../hooks/useMiniappShare'
 import { fetchPromptCases, fetchToolCategories, fetchTools } from '../../services/api'
 import { goPage } from '../../utils/navigation'
 import { isLoggedIn, requireLogin } from '../../utils/storage'
 
 export default function CreateCenter() {
+  useMiniappShare({
+    title: '发现适合你的 AI 创作工具与提示词',
+    path: '/pages/create-center/index'
+  })
   const [category, setCategory] = useState('all')
   const [keyword, setKeyword] = useState('')
   const [cases, setCases] = useState([])

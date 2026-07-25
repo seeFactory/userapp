@@ -305,9 +305,9 @@ assertIncludesAll(detail, "work detail public/download contract", [
   "catch(() => fetchGalleryWork(id)",
   "downloadEnabled === false",
   "getDownloadUrl",
-  "Taro.downloadFile",
-  "Taro.saveVideoToPhotosAlbum",
-  "Taro.saveImageToPhotosAlbum",
+  "buildMediaDownloadCandidates",
+  "downloadMediaTempFile",
+  "saveMediaToAlbum",
   "createWorkShareTicket",
   "publishGalleryWork",
   "unpublishGalleryWork",
@@ -340,6 +340,16 @@ assertIncludesAll(toolPage, "tool page resolution/model option contract", [
   "...(usesAssetSlots ? { inputAssets } : { inputAssetIds: assetIds })",
   "const generationParams = {",
   "const generationRequestPayload = {"
+]);
+
+const mediaSave = source("src/utils/mediaSave.js");
+assertIncludesAll(mediaSave, "WeChat allowlisted media save contract", [
+  "Taro.downloadFile",
+  "Taro.saveVideoToPhotosAlbum",
+  "Taro.saveImageToPhotosAlbum",
+  "Taro.getSetting",
+  "Taro.openSetting",
+  "scope.writePhotosAlbum"
 ]);
 
 const workflowLinearPage = source("src/pages/workflow-linear/index.jsx");
@@ -507,7 +517,9 @@ assertIncludesAll(packageSource, "package.json verification contract", [
   "\"verify:env-example\"",
   "\"verify:branch-diff\"",
   "\"verify:generation-core-upgrades\"",
-  "pnpm verify:runtime-contract && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:generation-core-upgrades && pnpm verify:branch-diff && pnpm build:all"
+  "\"verify:weapp-share\"",
+  "\"verify:weapp-media-save\"",
+  "pnpm verify:runtime-contract && pnpm verify:weapp-share && pnpm verify:weapp-media-save && pnpm verify:env-example && pnpm verify:feedback-system && pnpm verify:generation-core-upgrades && pnpm verify:branch-diff && pnpm build:all"
 ]);
 
 const envExample = source(".env.example");

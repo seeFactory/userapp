@@ -16,6 +16,7 @@ const platformRuntimeTargets = {
 const runtimeTarget = process.env.SEEFACTORY_RUNTIME_TARGET || platformRuntimeTargets[process.env.TARO_ENV] || 'h5'
 const domesticMiniappTargets = new Set(['wechat-miniapp', 'alipay-miniapp', 'douyin-miniapp', 'qq-miniapp'])
 const apiBase = process.env.SEEFACTORY_API_BASE || (domesticMiniappTargets.has(runtimeTarget) ? domesticMiniappApiBase : localApiBase)
+const weappDownloadOrigins = process.env.SEEFACTORY_WEAPP_DOWNLOAD_ORIGINS || 'https://sf-oss.sidcloud.cn'
 
 module.exports = defineConfig({
   projectName: 'seeFactory',
@@ -47,7 +48,8 @@ module.exports = defineConfig({
     'process.env.SEEFACTORY_X_REDIRECT_URI': JSON.stringify(xRedirectUri),
     'process.env.SEEFACTORY_DEV_LOGIN_ENABLED': JSON.stringify(devLoginEnabled ? 'true' : 'false'),
     'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion),
-    'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)
+    'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget),
+    'process.env.SEEFACTORY_WEAPP_DOWNLOAD_ORIGINS': JSON.stringify(weappDownloadOrigins)
   },
   copy: {
     patterns: [

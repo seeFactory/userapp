@@ -39,7 +39,8 @@ const expectedKeys = [
   "SEEFACTORY_CLIENT_VERSION",
   "SEEFACTORY_GOOGLE_CLIENT_ID",
   "SEEFACTORY_X_REDIRECT_URI",
-  "SEEFACTORY_DEV_LOGIN_ENABLED"
+  "SEEFACTORY_DEV_LOGIN_ENABLED",
+  "SEEFACTORY_WEAPP_DOWNLOAD_ORIGINS"
 ];
 
 assert.deepEqual(
@@ -60,6 +61,7 @@ assert.match(
 assert.equal(env.get("SEEFACTORY_GOOGLE_CLIENT_ID"), "", "Google client id must remain empty in .env.example.");
 assert.equal(env.get("SEEFACTORY_X_REDIRECT_URI"), "", "X redirect URI must remain empty in .env.example.");
 assert.equal(env.get("SEEFACTORY_DEV_LOGIN_ENABLED"), "false", "Development login must be disabled by default.");
+assert.equal(env.get("SEEFACTORY_WEAPP_DOWNLOAD_ORIGINS"), "https://sf-oss.sidcloud.cn", "WeChat downloads must default to the approved OSS domain.");
 
 const api = read("src/services/api.js");
 const taroConfig = read("config/index.js");
@@ -85,7 +87,8 @@ for (const pattern of [
   "platformRuntimeTargets[process.env.TARO_ENV]",
   "domesticMiniappApiBase = 'https://seefactory-api.sidcloud.cn/api/v1'",
   "'process.env.SEEFACTORY_CLIENT_VERSION': JSON.stringify(clientVersion)",
-  "'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)"
+  "'process.env.SEEFACTORY_RUNTIME_TARGET': JSON.stringify(runtimeTarget)",
+  "'process.env.SEEFACTORY_WEAPP_DOWNLOAD_ORIGINS': JSON.stringify(weappDownloadOrigins)"
 ]) {
   assertIncludes(taroConfig, pattern, `config/index.js must include ${pattern}.`);
 }
