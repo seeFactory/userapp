@@ -235,7 +235,7 @@ export default function WorkflowRunFormFields({
             type: file.type,
             url: policy.publicUrl,
             ossKey: policy.ossKey,
-            mimeType: file.mimeType,
+            mimeType: policy.mimeType || file.mimeType,
             size: file.size
           })
           successCount += 1
