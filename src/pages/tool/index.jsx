@@ -919,7 +919,7 @@ export default function ToolPage() {
             type: file.type,
             url: policy.publicUrl,
             ossKey: policy.ossKey,
-            mimeType: file.mimeType,
+            mimeType: policy.mimeType || file.mimeType,
             size: file.size,
             width: file.width,
             height: file.height,

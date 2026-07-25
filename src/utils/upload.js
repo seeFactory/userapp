@@ -48,6 +48,40 @@ export function getExt(input = '') {
   return parts.length > 1 ? parts.pop().toLowerCase() : ''
 }
 
+const mimeTypeByExtension = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
+  m4v: 'video/x-m4v',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac'
+}
+
+const defaultMimeTypeByKind = {
+  image: 'image/jpeg',
+  video: 'video/mp4',
+  audio: 'audio/mpeg',
+  file: 'application/octet-stream'
+}
+
+export function inferUploadMimeType(file = {}, fallbackType = 'image') {
+  const rawMimeType = String(file.mimeType || file.type || file.originalFileObj?.type || '')
+    .split(';')[0]
+    .trim()
+    .toLowerCase()
+  if (rawMimeType.includes('/')) return rawMimeType
+  const filePath = file.tempFilePath || file.path || file.url || ''
+  const name = file.name || file.originalFileObj?.name || filePath
+  return mimeTypeByExtension[getExt(name || filePath)] || defaultMimeTypeByKind[fallbackType] || defaultMimeTypeByKind.file
+}
+
 function inferFileType(file, fallbackType = 'image') {
   const fileType = file.fileType || file.kind || ''
   const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
@@ -65,7 +99,6 @@ function normalizeFile(file, fallbackType, index) {
   const filePath = file.tempFilePath || file.path || file.url || ''
   const name = file.name || file.originalFileObj?.name || filePath.split(/[\\/]/).pop() || `${fallbackType}-${Date.now()}-${index}`
   const type = inferFileType(file, fallbackType)
-  const rawMimeType = file.mimeType || file.type || file.originalFileObj?.type || ''
   const width = Number(file.width || file.originalFileObj?.width || 0)
   const height = Number(file.height || file.originalFileObj?.height || 0)
   return {
@@ -75,7 +108,7 @@ function normalizeFile(file, fallbackType, index) {
     filePath,
     previewPath: file.thumbTempFilePath || filePath,
     size: Number(file.size || file.originalFileObj?.size || 0),
-    mimeType: String(rawMimeType).includes('/') ? rawMimeType : '',
+    mimeType: inferUploadMimeType(file, type),
     width: Number.isFinite(width) && width > 0 ? Math.floor(width) : undefined,
     height: Number.isFinite(height) && height > 0 ? Math.floor(height) : undefined,
     originalFileObj: file.originalFileObj || file.originalFile || null
@@ -244,17 +277,34 @@ function uploadViaSignedPut(policy, file, onProgress) {
         if (value !== undefined && value !== null && value !== '') xhr.setRequestHeader(key, String(value))
       })
       xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) onProgress(Math.max(1, Math.min(95, Math.round((event.loaded / event.total) * 100))))
+        if (event.lengthComputable) onProgress?.(Math.max(1, Math.min(95, Math.round((event.loaded / event.total) * 100))))
       }
       xhr.onload = () => xhr.status >= 200 && xhr.status < 300
         ? resolve({ statusCode: xhr.status, data: xhr.responseText })
-        : reject(new Error('OSS 上传失败，请稍后重试'))
-      xhr.onerror = () => reject(new Error('素材上传失败，请检查网络或上传域名配置'))
+        : reject(new Error(uploadFailureMessage({ statusCode: xhr.status, data: xhr.responseText })))
+      xhr.onerror = () => reject(new Error(uploadFailureMessage({ errMsg: 'uploadFile:fail network error' })))
       xhr.send(blob)
     } catch (error) {
       reject(error)
     }
   })
+}
+
+export function uploadFailureMessage(input = {}) {
+  const statusCode = Number(input.statusCode || input.status || 0)
+  const rawData = typeof input.data === 'string' ? input.data : ''
+  const detail = `${input.errMsg || input.message || ''} ${rawData}`.toLowerCase()
+  if (detail.includes('domain list') || detail.includes('url not in domain')) {
+    return '上传域名未加入小程序 uploadFile 合法域名，请联系管理员更新白名单'
+  }
+  if (detail.includes('timeout')) return '素材上传超时，请检查网络后重试'
+  if (detail.includes('abort') || detail.includes('cancel')) return '素材上传已取消'
+  if (statusCode === 413 || detail.includes('entitytoolarge')) return '素材超过上传大小限制，请压缩后重试'
+  if (statusCode === 401 || statusCode === 403 || detail.includes('accessdenied') || detail.includes('signature')) {
+    return '上传凭证校验失败，请重新选择素材后重试'
+  }
+  if (statusCode > 0) return `OSS 上传失败（HTTP ${statusCode}），请稍后重试`
+  return '素材上传失败，请检查网络后重试'
 }
 
 export function uploadToOss(policy, file, onProgress) {
@@ -270,12 +320,12 @@ export function uploadToOss(policy, file, onProgress) {
           resolve(res)
           return
         }
-        reject(new Error('OSS 上传失败，请稍后重试'))
+        reject(new Error(uploadFailureMessage(res)))
       },
-      fail: () => reject(new Error('素材上传失败，请检查网络或上传域名配置'))
+      fail: (error) => reject(new Error(uploadFailureMessage(error)))
     })
     if (task?.progress) {
-      task.progress((event) => onProgress(Math.max(1, Math.min(95, event.progress || 1))))
+      task.progress((event) => onProgress?.(Math.max(1, Math.min(95, event.progress || 1))))
     }
   })
 }

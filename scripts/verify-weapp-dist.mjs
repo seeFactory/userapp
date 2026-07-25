@@ -93,6 +93,8 @@ assert.ok(joined.includes("showmenu:!0"), "WeApp full-screen image preview must 
 assert.ok(joined.includes("showShareMenu"), "WeApp dist must include share menu control.");
 assert.ok(joined.includes("hideShareMenu"), "WeApp dist must include share menu privacy control.");
 assert.ok(joined.includes('openType:"share"'), "WeApp dist must include native share buttons.");
+assert.ok(joined.includes("domain list") && joined.includes("url not in domain"), "WeApp dist must classify uploadFile domain allow-list failures.");
+assert.ok(joined.includes("image/jpeg") && joined.includes("image/png"), "WeApp dist must infer standard image MIME types before upload.");
 
 for (const pattern of forbiddenApiPatterns) {
   assert.ok(!joined.includes(pattern), `WeApp dist must not include ${pattern}.`);
@@ -116,7 +118,8 @@ console.log(JSON.stringify({
     "WeApp public pages enable friend and timeline sharing",
     "WeApp agent invitations enable friend-only sharing",
     "WeApp bundle includes share menu state control",
-    "WeApp bundle includes native open-type share buttons"
+    "WeApp bundle includes native open-type share buttons",
+    "WeApp bundle includes upload MIME inference and domain diagnostics"
   ],
   appWxss: appWxssPath,
   projectConfig: projectConfigPath
