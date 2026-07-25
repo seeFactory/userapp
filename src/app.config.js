@@ -22,5 +22,19 @@ export default defineAppConfig({
     navigationBarTitleText: 'seeFactory',
     navigationBarTextStyle: 'white',
     backgroundColor: '#05070D'
-  }
+  },
+  tabBar: {
+    color: '#98AAC2',
+    selectedColor: '#FF35B5',
+    backgroundColor: '#05070D',
+    borderStyle: 'black',
+    list: [
+      { pagePath: 'pages/index/index', text: '首页' },
+      { pagePath: 'pages/create-center/index', text: '创作' },
+      { pagePath: 'pages/gallery/index', text: '广场' },
+      { pagePath: 'pages/works/index', text: '作品' },
+      { pagePath: 'pages/mine/index', text: '我的' }
+    ]
+  },
+  lazyCodeLoading: 'requiredComponents'
 })
