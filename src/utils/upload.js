@@ -314,6 +314,7 @@ export function uploadToOss(policy, file, onProgress) {
       url: policy.uploadUrl,
       filePath: file.filePath,
       name: 'file',
+      header: policy.headers || {},
       formData: policy.fields,
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
