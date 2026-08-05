@@ -305,6 +305,11 @@ pnpm verify
 
 ## Changelog
 
+### 2026-08-06 - 灾备上传签名头全端同步
+
+- 上传工具在 `Taro.uploadFile` 中原样转发后端策略的 `headers`；正式 OSS signed POST 保持兼容，服务器本地存储灾备模式可携带短期 `x-upload-token`，用户端仍按 `/assets/upload-token -> 上传 -> /assets` 原流程工作。
+- H5、TMA、微信、支付宝、抖音、QQ 和 Android Web 目标构建均通过；H5 与 TMA 已部署，四类小程序和 Android 产物已完成平台发布前校验。公网只上传并清理 1x1 PNG 验收文件，未调用任何生图或生视频模型。
+
 ### 2026-07-25 - 小程序图片上传失败系统修复
 
 - 临时素材缺少 MIME 时按标准 MIME、文件扩展名和素材类型依次推断，避免微信 `chooseMedia` 返回空 MIME 后产生不完整的 OSS 签名表单。
