@@ -399,6 +399,7 @@ assertIncludesAll(uploadUtil, "miniapp shared upload utility contract", [
   "export const uploadLimits",
   "export async function chooseTypedFiles(config)",
   "export function uploadToOss(policy, file, onProgress)",
+  "header: policy.headers || {}",
   "export function validateUploadFile(file, config"
 ]);
 const workflowCasesPage = source("src/pages/workflow-cases/index.jsx");
